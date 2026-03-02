@@ -10,6 +10,7 @@ pub const TokenType = enum {
 
     // operators
     Equal,
+    DoubleEqual,
     Plus,
     Minus,
     Multiply,
@@ -19,6 +20,7 @@ pub const TokenType = enum {
     LessThanEqual,
     GreaterThanEqual,
     NotEqual,
+    BooleanOpNot,
 
     // literals
     Identifier,
