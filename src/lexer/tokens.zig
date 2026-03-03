@@ -7,7 +7,8 @@ pub const TokenType = enum {
     RParen,
     LCurly,
     RCurly,
-
+    Underscore,
+    Dot,
     // operators
     Equal,
     DoubleEqual,
@@ -27,11 +28,18 @@ pub const TokenType = enum {
     Digit,
     String,
 
+    // boolean literals
+    KwTrue,
+    KwFalse,
+
     // keywords
-    KwInt,
     KwReturn,
     KwIf,
     KwElse,
+
+    // keywords with types
+    KwInt,
+    KwBool,
 
     EOF,
 };

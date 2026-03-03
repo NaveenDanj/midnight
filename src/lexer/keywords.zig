@@ -10,6 +10,10 @@ pub fn lookupKeyword(ident: []const u8) ?TokenType {
         return TokenType.KwIf;
     } else if (std.mem.eql(u8, "else", ident)) {
         return TokenType.KwElse;
+    } else if (std.mem.eql(u8, "true", ident)) {
+        return TokenType.KwTrue;
+    } else if (std.mem.eql(u8, "false", ident)) {
+        return TokenType.KwFalse;
     } else {
         return null;
     }

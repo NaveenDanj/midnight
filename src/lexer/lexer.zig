@@ -24,6 +24,7 @@ pub const Lexer = struct {
         var tokens: std.ArrayList(Token) = .empty;
 
         while (!self.isAtEnd()) {
+            self.skipWhitespace();
             self.start = self.current;
             try tokens.append(allocator, self.scanToken());
         }
@@ -38,59 +39,91 @@ pub const Lexer = struct {
         return tokens;
     }
 
+    fn skipWhitespace(self: *Lexer) void {
+        while (!self.isAtEnd()) {
+            const c = self.peek();
+            switch (c) {
+                ' ', '\r', '\t' => {
+                    _ = self.advance();
+                },
+                '\n' => {
+                    _ = self.advance();
+                    self.line += 1;
+                    self.column = 0;
+                },
+                else => return,
+            }
+        }
+    }
+
     pub fn scanToken(self: *Lexer) Token {
         if (self.isAtEnd()) {
             return self.makeToken(TokenType.EOF);
         }
+
         const c = self.advance();
 
-        return switch (c) {
-            ';' => self.makeToken(TokenType.Semicolon),
-            ',' => self.makeToken(TokenType.Comma),
-            ')' => self.makeToken(TokenType.RParen),
-            '(' => self.makeToken(TokenType.LParen),
-            '{' => self.makeToken(TokenType.LCurly),
-            '}' => self.makeToken(TokenType.RCurly),
+        switch (c) {
+            ';' => return self.makeToken(TokenType.Semicolon),
+            ',' => return self.makeToken(TokenType.Comma),
+            ')' => return self.makeToken(TokenType.RParen),
+            '(' => return self.makeToken(TokenType.LParen),
+            '{' => return self.makeToken(TokenType.LCurly),
+            '}' => return self.makeToken(TokenType.RCurly),
+            '.' => return self.makeToken(TokenType.Dot),
 
-            '+' => self.makeToken(TokenType.Plus),
-            '-' => self.makeToken(TokenType.Minus),
-            '*' => self.makeToken(TokenType.Multiply),
-            '/' => self.makeToken(TokenType.Divide),
+            '+' => return self.makeToken(TokenType.Plus),
+            '-' => return self.makeToken(TokenType.Minus),
+            '*' => return self.makeToken(TokenType.Multiply),
+            '/' => return self.makeToken(TokenType.Divide),
 
-            '!' => if (self.isMatch('=')) self.makeToken(TokenType.NotEqual) else self.makeToken(TokenType.BooleanOpNot),
-            '=' => if (self.isMatch('=')) self.makeToken(TokenType.DoubleEqual) else self.makeToken(TokenType.Equal),
-            '<' => if (self.isMatch('=')) self.makeToken(TokenType.LessThanEqual) else self.makeToken(TokenType.LessThanEqual),
-            '>' => if (self.isMatch('=')) self.makeToken(TokenType.GreaterThanEqual) else self.makeToken(TokenType.GreaterThanEqual),
+            '!' => return if (self.isMatch('='))
+                self.makeToken(TokenType.NotEqual)
+            else
+                self.makeToken(TokenType.BooleanOpNot),
 
-            ' ', '\r', '\t' => self.scanToken(), // skip whitespace
-            '\n' => {
-                self.line += 1;
-                self.column = 0;
-                return self.scanToken();
-            },
+            '=' => return if (self.isMatch('='))
+                self.makeToken(TokenType.DoubleEqual)
+            else
+                self.makeToken(TokenType.Equal),
 
-            else => {
-                if (std.ascii.isAlphabetic(c)) {
-                    while (std.ascii.isAlphabetic(self.peek())) {
-                        _ = self.advance();
-                    }
-                    const ident = self.source[self.start..self.current];
-                    const kw = lookupKeyword(ident);
-                    if (kw) |token_type| {
-                        return self.makeToken(token_type);
-                    } else {
-                        return self.makeToken(TokenType.Identifier);
-                    }
-                } else if (std.ascii.isDigit(c)) {
-                    while (std.ascii.isDigit(self.peek())) {
-                        _ = self.advance();
-                    }
-                    return self.makeToken(TokenType.Digit);
-                } else {
-                    return self.makeToken(TokenType.EOF);
-                }
-            },
-        };
+            '<' => return if (self.isMatch('='))
+                self.makeToken(TokenType.LessThanEqual)
+            else
+                self.makeToken(TokenType.LessThan),
+
+            '>' => return if (self.isMatch('='))
+                self.makeToken(TokenType.GreaterThanEqual)
+            else
+                self.makeToken(TokenType.GreaterThan),
+
+            else => {},
+        }
+
+        if (std.ascii.isAlphabetic(c) or c == '_') {
+            while (!self.isAtEnd() and
+                (std.ascii.isAlphabetic(self.peek()) or
+                    std.ascii.isDigit(self.peek()) or
+                    self.peek() == '_'))
+            {
+                _ = self.advance();
+            }
+
+            const ident = self.source[self.start..self.current];
+            if (lookupKeyword(ident)) |token_type| {
+                return self.makeToken(token_type);
+            }
+            return self.makeToken(TokenType.Identifier);
+        }
+
+        if (std.ascii.isDigit(c)) {
+            while (!self.isAtEnd() and (std.ascii.isDigit(self.peek()) or self.peek() == '.')) {
+                _ = self.advance();
+            }
+            return self.makeToken(TokenType.Digit);
+        }
+
+        return self.makeToken(TokenType.EOF);
     }
 
     pub fn makeToken(self: *Lexer, kind: TokenType) Token {

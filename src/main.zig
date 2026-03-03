@@ -15,7 +15,6 @@ pub fn main() !void {
     std.debug.print("Source code:\n{s}\n", .{content});
 
     var lexer = Lexer.init(content);
-
     var token_list = try lexer.lexAll(allocator);
 
     for (token_list.items) |token| {

@@ -1,3 +1,9 @@
-int main() {
-    return 5 + 10;
+func main() void {
+    return add(5,100.78);
+}
+
+func add( int _num1 ,  int _num2) int {
+    int total = _num1 + _num2;
+    student.score = total;
+    return total;
 }
