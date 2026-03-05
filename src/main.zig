@@ -20,7 +20,7 @@ pub fn main() !void {
     for (token_list.items) |token| {
         std.debug.print(
             "Token: {d} '{s}' at line {d}, column {d}\n",
-            .{ token.kind, token.lexeme, token.line, token.column },
+            .{ token.kind, token.lexeme, token.line + 1, token.column },
         );
     }
 

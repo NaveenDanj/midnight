@@ -9,6 +9,7 @@ pub const TokenType = enum {
     RCurly,
     Underscore,
     Dot,
+
     // operators
     Equal,
     DoubleEqual,
