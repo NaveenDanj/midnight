@@ -1,15 +1,8 @@
 
-
-func main() void {
-    return add(5,100.78);
+func main() int {
+    var int total = 100;
 }
 
-func add( int _num1 ,  int _num2) int {
-    int total = _num1 + _num2;
-    return total;
-}
-
-func mult( int _num1 ,  int _num2) int {
-    int total = _num1 * _num2;
-    return total;
+func add(int num1 , int num2) int {
+    var int total = 100.99;
 }

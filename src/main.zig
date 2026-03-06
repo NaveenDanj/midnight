@@ -1,6 +1,7 @@
 const std = @import("std");
 const midnight = @import("midnight");
 const Lexer = @import("lexer/lexer.zig").Lexer;
+const Parser = @import("parser/parser.zig").Parser;
 const Token = @import("lexer/tokens.zig").Token;
 
 pub fn main() !void {
@@ -16,12 +17,12 @@ pub fn main() !void {
 
     var lexer = Lexer.init(content);
     var token_list = try lexer.lexAll(allocator);
+    var parser = Parser.init(allocator, token_list.items);
+    const funcList = try parser.parseProgram();
 
-    for (token_list.items) |token| {
-        std.debug.print(
-            "Token: {d} '{s}' at line {d}, column {d}\n",
-            .{ token.kind, token.lexeme, token.line + 1, token.column },
-        );
+    for (funcList) |func| {
+        std.debug.print("Parsed function: {s}\n", .{func.name});
+        std.debug.print("Return type: {s}\n", .{func.returnType});
     }
 
     defer token_list.deinit(allocator);
