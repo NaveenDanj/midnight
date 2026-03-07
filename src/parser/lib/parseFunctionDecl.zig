@@ -2,12 +2,20 @@ const Parser = @import("../parser.zig").Parser;
 const std = @import("std");
 const parseBlock = @import("./parseBlock.zig").parseBlock;
 const BlockStmt = @import("./parseBlock.zig").BlockStmt;
+const Type = @import("../../semantic/types.zig").Type;
+const Expr = @import("./parseExpr.zig").Expr;
+const parseExpr = @import("./parseExpr.zig").parseExpr;
 
 pub const FunctionDecl = struct {
     name: []const u8,
     params: []*Param,
     body: *BlockStmt,
     returnType: []const u8,
+};
+
+pub const ReturnStatement = struct {
+    expression: *Expr,
+    resolvedType: ?Type = null,
 };
 
 const Param = struct { dataType: []const u8, name: []const u8 };
@@ -57,4 +65,13 @@ pub fn parseParameters(self: *Parser) ![]*Param {
     _ = try self.expect(.RParen);
 
     return params.toOwnedSlice(self.allocator);
+}
+
+pub fn parseReturnStatement(self: *Parser) !*ReturnStatement {
+    _ = try self.expect(.KwReturn);
+    const expr = try parseExpr(self);
+    const ret = try self.allocator.create(ReturnStatement);
+    ret.* = .{ .expression = expr, .resolvedType = null };
+    _ = try self.expect(.Semicolon);
+    return ret;
 }

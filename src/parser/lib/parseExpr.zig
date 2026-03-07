@@ -13,6 +13,7 @@ pub const Expr = union(enum) {
     FloatLiteral: Types.FloatLiteral,
     BoolLiteral: Types.BooleanLiteral,
     StringLiteral: Types.StringLiteral,
+    Identifier: IdentifierExpr,
 };
 
 pub const BinaryExpr = struct {
@@ -20,6 +21,11 @@ pub const BinaryExpr = struct {
     operator: []const u8,
     right: *Expr,
     resolvedType: ?Type = null,
+};
+
+pub const IdentifierExpr = struct {
+    name: []const u8,
+    resolved_type: ?Type = null,
 };
 
 pub fn parseExpr(self: *Parser) ParserError!*Expr {
@@ -61,6 +67,10 @@ pub fn parseInfix(self: *Parser, left: *Expr, op: Token) ParserError!*Expr {
 }
 
 pub fn parsePrimary(self: *Parser) ParserError!*Expr {
+    if (self.check(.Identifier)) {
+        return try parseIdentifier(self);
+    }
+
     if (self.check(.IntegerLiteral)) {
         return try parseInteger(self);
     }
@@ -128,4 +138,18 @@ pub fn parseBoolean(self: *Parser) ParserError!*Expr {
         expr.* = .{ .BoolLiteral = boolLiteral };
         return expr;
     }
+}
+
+pub fn parseIdentifier(self: *Parser) ParserError!*Expr {
+    const token = try self.expect(.Identifier);
+
+    const ident = IdentifierExpr{
+        .name = token.lexeme,
+        .resolved_type = null,
+    };
+
+    const expr = try self.allocator.create(Expr);
+    expr.* = .{ .Identifier = ident };
+
+    return expr;
 }

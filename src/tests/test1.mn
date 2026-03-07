@@ -4,5 +4,6 @@ func main() int {
 }
 
 func add(int num1 , int num2) int {
-    var int total = true + name;
+    var int total = (name + 100) + (200 * 10) / 2;
+    return total;
 }
