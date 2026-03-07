@@ -4,5 +4,5 @@ func main() int {
 }
 
 func add(int num1 , int num2) int {
-    var int total = 100.99;
+    var int total = true + name;
 }

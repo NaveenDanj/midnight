@@ -1,6 +1,6 @@
 const std = @import("std");
 const Parser = @import("../parser.zig").Parser;
-const Statement = @import("./commTypes.zig").Statement;
+const Statement = @import("./parseStatement.zig").Statement;
 const parseStatement = @import("./parseStatement.zig").parseStatement;
 
 pub const BlockStmt = struct {

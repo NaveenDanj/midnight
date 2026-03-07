@@ -15,8 +15,8 @@ pub const TokenType = enum {
     DoubleEqual,
     Plus,
     Minus,
-    Multiply,
-    Divide,
+    Star,
+    Slash,
     LessThan,
     GreaterThan,
     LessThanEqual,
@@ -27,7 +27,10 @@ pub const TokenType = enum {
     // literals
     Identifier,
     Digit,
-    String,
+    IntegerLiteral,
+    FloatLiteral,
+    StringLiteral,
+    BooleanLiteral,
 
     // boolean literals
     KwTrue,

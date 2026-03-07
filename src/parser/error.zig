@@ -1,6 +1,1 @@
-pub const ParserError = error{
-    UnexpectedEndOfFile,
-    UnExpectedToken,
-    UnExpectedEndOfLine,
-    TokenNotFound,
-};
+pub const ParserError = error{ UnexpectedEndOfFile, UnExpectedToken, UnExpectedEndOfLine, TokenNotFound, OutOfMemory };

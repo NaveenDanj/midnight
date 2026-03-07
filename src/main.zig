@@ -20,6 +20,10 @@ pub fn main() !void {
     var parser = Parser.init(allocator, token_list.items);
     const funcList = try parser.parseProgram();
 
+    // for (token_list.items) |token| {
+    //     std.debug.print("Token: {s} (line {d}, column {d})\n", .{ token.lexeme, token.line, token.column });
+    // }
+
     for (funcList) |func| {
         std.debug.print("Parsed function: {s}\n", .{func.name});
         std.debug.print("Return type: {s}\n", .{func.returnType});

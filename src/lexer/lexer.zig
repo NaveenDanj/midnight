@@ -74,8 +74,8 @@ pub const Lexer = struct {
 
             '+' => return self.makeToken(TokenType.Plus),
             '-' => return self.makeToken(TokenType.Minus),
-            '*' => return self.makeToken(TokenType.Multiply),
-            '/' => return self.makeToken(TokenType.Divide),
+            '*' => return self.makeToken(TokenType.Star),
+            '/' => return self.makeToken(TokenType.Slash),
 
             '!' => return if (self.isMatch('='))
                 self.makeToken(TokenType.NotEqual)
@@ -117,10 +117,22 @@ pub const Lexer = struct {
         }
 
         if (std.ascii.isDigit(c)) {
+            var hasDot = false;
             while (!self.isAtEnd() and (std.ascii.isDigit(self.peek()) or self.peek() == '.')) {
+                if (self.peek() == '.') {
+                    if (hasDot) {
+                        break;
+                    }
+                    hasDot = true;
+                }
                 _ = self.advance();
             }
-            return self.makeToken(TokenType.Digit);
+
+            if (hasDot) {
+                return self.makeToken(TokenType.FloatLiteral);
+            }
+            return self.makeToken(TokenType.IntegerLiteral);
+            // return self.makeToken(.Digit);
         }
 
         return self.makeToken(TokenType.EOF);

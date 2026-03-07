@@ -1,0 +1,131 @@
+const std = @import("std");
+const Parser = @import("../parser.zig").Parser;
+const Type = @import("../../semantic/types.zig").Type;
+const Types = @import("../../semantic/types.zig");
+const ParserError = @import("../error.zig").ParserError;
+const Precedence = @import("./operator.zig").Precedence;
+const mapOperatorToPrecedence = @import("./operator.zig").mapOperatorToPrecedence;
+const Token = @import("../../lexer/tokens.zig").Token;
+
+pub const Expr = union(enum) {
+    Binary: BinaryExpr,
+    IntLiteral: Types.IntLiteral,
+    FloatLiteral: Types.FloatLiteral,
+    BoolLiteral: Types.BooleanLiteral,
+    StringLiteral: Types.StringLiteral,
+};
+
+pub const BinaryExpr = struct {
+    left: *Expr,
+    operator: []const u8,
+    right: *Expr,
+    resolvedType: ?Type = null,
+};
+
+pub fn parseExpr(self: *Parser) ParserError!*Expr {
+    return try parsePrecedence(self, .lowest);
+}
+
+pub fn parsePrecedence(self: *Parser, precedence: Precedence) ParserError!*Expr {
+    var left = try parsePrimary(self);
+
+    while (true) {
+        const next = self.peek() orelse break;
+        const next_prec = mapOperatorToPrecedence(next.kind);
+
+        if (@intFromEnum(precedence) >= @intFromEnum(next_prec))
+            break;
+
+        const op = self.advance() orelse return ParserError.UnExpectedToken;
+        left = try parseInfix(self, left, op);
+    }
+
+    return left;
+}
+
+pub fn parseInfix(self: *Parser, left: *Expr, op: Token) ParserError!*Expr {
+    const precedence = mapOperatorToPrecedence(op.kind);
+    const right = try parsePrecedence(self, precedence);
+
+    const binary = BinaryExpr{
+        .left = left,
+        .operator = op.lexeme,
+        .right = right,
+        .resolvedType = null,
+    };
+
+    const expr = try self.allocator.create(Expr);
+    expr.* = .{ .Binary = binary };
+
+    return expr;
+}
+
+pub fn parsePrimary(self: *Parser) ParserError!*Expr {
+    if (self.check(.IntegerLiteral)) {
+        return try parseInteger(self);
+    }
+
+    if (self.check(.FloatLiteral)) {
+        return try parseFloat(self);
+    }
+
+    if (self.check(.KwTrue) or self.check(.KwFalse)) {
+        return try parseBoolean(self);
+    }
+
+    if (self.match(.LParen)) {
+        const expr = try parseExpr(self);
+        _ = try self.expect(.RParen);
+        return expr;
+    }
+
+    return ParserError.UnExpectedToken;
+}
+
+pub fn parseInteger(self: *Parser) ParserError!*Expr {
+    const token = try self.expect(.IntegerLiteral);
+    const intLiteral = Types.IntLiteral{
+        .value = std.fmt.parseInt(i64, token.lexeme, 10) catch 0,
+        .resolved_type = null,
+    };
+    const expr = try self.allocator.create(Expr);
+    expr.* = .{ .IntLiteral = intLiteral };
+    return expr;
+}
+
+pub fn parseFloat(self: *Parser) ParserError!*Expr {
+    const token = try self.expect(.FloatLiteral);
+    const floatLiteral = Types.FloatLiteral{
+        .value = std.fmt.parseFloat(f64, token.lexeme) catch 0,
+        .resolved_type = null,
+    };
+    const expr = try self.allocator.create(Expr);
+    expr.* = .{ .FloatLiteral = floatLiteral };
+    return expr;
+}
+
+pub fn parseBoolean(self: *Parser) ParserError!*Expr {
+    const boolCheckToken = self.check(.KwTrue);
+
+    if (boolCheckToken) {
+        _ = try self.expect(.KwTrue);
+        const boolLiteral = Types.BooleanLiteral{
+            .value = true,
+            .resolved_type = null,
+        };
+
+        const expr = try self.allocator.create(Expr);
+        expr.* = .{ .BoolLiteral = boolLiteral };
+        return expr;
+    } else {
+        _ = try self.expect(.KwFalse);
+        const boolLiteral = Types.BooleanLiteral{
+            .value = false,
+            .resolved_type = null,
+        };
+
+        const expr = try self.allocator.create(Expr);
+        expr.* = .{ .BoolLiteral = boolLiteral };
+        return expr;
+    }
+}
