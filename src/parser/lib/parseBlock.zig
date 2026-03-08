@@ -2,12 +2,13 @@ const std = @import("std");
 const Parser = @import("../parser.zig").Parser;
 const Statement = @import("./parseStatement.zig").Statement;
 const parseStatement = @import("./parseStatement.zig").parseStatement;
+const ParserError = @import("../error.zig").ParserError;
 
 pub const BlockStmt = struct {
     statements: []*Statement,
 };
 
-pub fn parseBlock(self: *Parser) !*BlockStmt {
+pub fn parseBlock(self: *Parser) ParserError!*BlockStmt {
     _ = try self.expect(.LCurly);
     const ArrayList = std.ArrayList;
     var statements = try ArrayList(*Statement).initCapacity(self.allocator, 0);
