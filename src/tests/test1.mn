@@ -9,7 +9,7 @@ func add(int num1 , int num2) int {
 }
 
 func max(int a , int b) int {
-    if (a + b) {
+    if (a == b) {
         return a;
     } else {
         if(b) {

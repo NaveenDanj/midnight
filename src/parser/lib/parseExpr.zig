@@ -25,7 +25,7 @@ pub const BinaryExpr = struct {
 
 pub const IdentifierExpr = struct {
     name: []const u8,
-    resolved_type: ?Type = null,
+    resolvedType: ?Type = null,
 };
 
 pub fn parseExpr(self: *Parser) ParserError!*Expr {
@@ -96,7 +96,7 @@ pub fn parseInteger(self: *Parser) ParserError!*Expr {
     const token = try self.expect(.IntegerLiteral);
     const intLiteral = Types.IntLiteral{
         .value = std.fmt.parseInt(i64, token.lexeme, 10) catch 0,
-        .resolved_type = null,
+        .resolvedType = null,
     };
     const expr = try self.allocator.create(Expr);
     expr.* = .{ .IntLiteral = intLiteral };
@@ -107,7 +107,7 @@ pub fn parseFloat(self: *Parser) ParserError!*Expr {
     const token = try self.expect(.FloatLiteral);
     const floatLiteral = Types.FloatLiteral{
         .value = std.fmt.parseFloat(f64, token.lexeme) catch 0,
-        .resolved_type = null,
+        .resolvedType = null,
     };
     const expr = try self.allocator.create(Expr);
     expr.* = .{ .FloatLiteral = floatLiteral };
@@ -121,7 +121,7 @@ pub fn parseBoolean(self: *Parser) ParserError!*Expr {
         _ = try self.expect(.KwTrue);
         const boolLiteral = Types.BooleanLiteral{
             .value = true,
-            .resolved_type = null,
+            .resolvedType = null,
         };
 
         const expr = try self.allocator.create(Expr);
@@ -131,7 +131,7 @@ pub fn parseBoolean(self: *Parser) ParserError!*Expr {
         _ = try self.expect(.KwFalse);
         const boolLiteral = Types.BooleanLiteral{
             .value = false,
-            .resolved_type = null,
+            .resolvedType = null,
         };
 
         const expr = try self.allocator.create(Expr);
@@ -145,7 +145,7 @@ pub fn parseIdentifier(self: *Parser) ParserError!*Expr {
 
     const ident = IdentifierExpr{
         .name = token.lexeme,
-        .resolved_type = null,
+        .resolvedType = null,
     };
 
     const expr = try self.allocator.create(Expr);

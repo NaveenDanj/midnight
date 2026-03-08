@@ -39,20 +39,20 @@ pub const Type = struct {
 
 pub const IntLiteral = struct {
     value: i64,
-    resolved_type: ?Type = null,
+    resolvedType: ?Type = null,
 };
 
 pub const FloatLiteral = struct {
     value: f64,
-    resolved_type: ?Type = null,
+    resolvedType: ?Type = null,
 };
 
 pub const BooleanLiteral = struct {
     value: bool,
-    resolved_type: ?Type = null,
+    resolvedType: ?Type = null,
 };
 
 pub const StringLiteral = struct {
     value: []const u8,
-    resolved_type: ?Type = null,
+    resolvedType: ?Type = null,
 };
