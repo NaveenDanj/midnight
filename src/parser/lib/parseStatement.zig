@@ -5,10 +5,12 @@ const BlockStmt = @import("./parseBlock.zig").BlockStmt;
 const VariableDecl = @import("./parseVarDec.zig").VarDecl;
 const ReturnStatement = @import("./parseFunctionDecl.zig").ReturnStatement;
 const IfStatement = @import("parseIf.zig").IfStatement;
+const WhileStatement = @import("parseWhile.zig").WhileStatement;
 
 const parseVarDecl = @import("./parseVarDec.zig").parseVarDecl;
 const parseReturnStatement = @import("./parseFunctionDecl.zig").parseReturnStatement;
 const parseIfStatement = @import("parseIf.zig").parseIfStatement;
+const parseWhileStatement = @import("parseWhile.zig").parseWhileStatement;
 
 pub const Statement = union(enum) {
     FunctionDecl: *FunctionDecl,
@@ -16,6 +18,7 @@ pub const Statement = union(enum) {
     VariableDecl: *VariableDecl,
     ReturnStatement: *ReturnStatement,
     IfStatement: *IfStatement,
+    WhileStatement: *WhileStatement,
 };
 
 pub fn parseStatement(self: *Parser) ParserError!*Statement {
@@ -33,6 +36,11 @@ pub fn parseStatement(self: *Parser) ParserError!*Statement {
         const ifStatement = try parseIfStatement(self);
         const statement = try self.allocator.create(Statement);
         statement.* = .{ .IfStatement = ifStatement };
+        return statement;
+    } else if (self.check(.KwWhile)) {
+        const whileStatement = try parseWhileStatement(self);
+        const statement = try self.allocator.create(Statement);
+        statement.* = .{ .WhileStatement = whileStatement };
         return statement;
     } else {
         return ParserError.UnExpectedToken;

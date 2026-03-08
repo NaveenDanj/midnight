@@ -19,3 +19,18 @@ func max(int a , int b) int {
     }
     return b;
 }
+
+func fibbonachi(int num) int {
+    var int counter = 0;
+
+    while(counter < num) {
+
+        if(counter == 0) {
+            return 0;
+        } else {
+            return counter;
+        }
+    }
+
+    return counter;
+}
