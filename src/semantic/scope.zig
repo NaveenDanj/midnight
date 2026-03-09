@@ -26,15 +26,15 @@ pub const ScopeStack = struct {
     }
 
     pub fn declareSymbol(self: *ScopeStack, symbolName: []const u8, kind: SymbolKind, symbolType: Type) !void {
-        const currentScope = self.scopeStack.items[self.scopeStack.len - 1];
+        var currentScope = &self.scopeStack.items[self.scopeStack.items.len - 1];
 
         if (currentScope.symbols.contains(symbolName)) {
             return SemanticError.SymbolAlreadyDeclared;
         }
 
-        const symbol = try self.allocator.create(Symbol);
-        symbol.* = .{ .name = symbolName, .kind = kind, .symbolType = symbolType };
-        _ = currentScope.symbols.put(symbolName, symbol);
+        // const symbol = try self.allocator.create(Symbol);
+        const symbol = Symbol{ .name = symbolName, .kind = kind, .symbolType = symbolType };
+        _ = try currentScope.symbols.put(symbolName, symbol);
     }
 
     pub fn lookupSymbol(self: *ScopeStack, symbolName: []const u8) ?Symbol {

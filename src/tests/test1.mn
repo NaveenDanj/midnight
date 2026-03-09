@@ -5,10 +5,11 @@ func main() int {
 
 func add(int num1 , int num2) int {
     var int total = (num1 + num2) + 100;
+    const int PI = 3.14;
     return total;
 }
 
-func max(int a , int b) int {
+func max(int a , int b , int c) int {
     if (a == b) {
         return a;
     } else {

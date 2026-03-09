@@ -20,6 +20,8 @@ pub fn lookupKeyword(ident: []const u8) ?TokenType {
         return TokenType.KwVar;
     } else if (std.mem.eql(u8, "while", ident)) {
         return TokenType.KwWhile;
+    } else if (std.mem.eql(u8, "const", ident)) {
+        return TokenType.KwConst;
     } else {
         return null;
     }

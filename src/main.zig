@@ -3,6 +3,7 @@ const midnight = @import("midnight");
 const Lexer = @import("lexer/lexer.zig").Lexer;
 const Parser = @import("parser/parser.zig").Parser;
 const Token = @import("lexer/tokens.zig").Token;
+const SemanticAnalyzer = @import("semantic/anaylzer.zig").SemanticAnalyzer;
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
@@ -19,6 +20,11 @@ pub fn main() !void {
     var token_list = try lexer.lexAll(allocator);
     var parser = Parser.init(allocator, token_list.items);
     const funcList = try parser.parseProgram();
+
+    var semanticAnalyzer = try SemanticAnalyzer.init(allocator);
+    for (funcList) |func| {
+        try semanticAnalyzer.analyzeFunctionDecl(func);
+    }
 
     for (token_list.items) |token| {
         std.debug.print("Token: {s} (line {d}, column {d})\n", .{ token.lexeme, token.line + 1, token.column });

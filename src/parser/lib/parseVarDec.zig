@@ -1,5 +1,6 @@
 const Parser = @import("../parser.zig").Parser;
 const parseExpr = @import("./parseExpr.zig").parseExpr;
+const ParserError = @import("../error.zig").ParserError;
 const Expr = @import("./parseExpr.zig").Expr;
 
 pub const VarDecl = struct {
@@ -9,7 +10,16 @@ pub const VarDecl = struct {
 };
 
 pub fn parseVarDecl(self: *Parser) !*VarDecl {
-    _ = try self.expect(.KwVar);
+    if (!self.check(.KwVar) and !self.check(.KwConst)) {
+        return ParserError.UnExpectedToken;
+    }
+
+    if (self.check(.KwConst)) {
+        _ = try self.expect(.KwConst);
+    } else {
+        _ = try self.expect(.KwVar);
+    }
+
     const dataType = try self.expect(.KwInt);
     const name = try self.expect(.Identifier);
     _ = try self.expect(.Equal);

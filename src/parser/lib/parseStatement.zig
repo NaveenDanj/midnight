@@ -22,7 +22,7 @@ pub const Statement = union(enum) {
 };
 
 pub fn parseStatement(self: *Parser) ParserError!*Statement {
-    if (self.check(.KwVar)) {
+    if (self.check(.KwVar) or self.check(.KwConst)) {
         const varDecl = try parseVarDecl(self);
         const statement = try self.allocator.create(Statement);
         statement.* = .{ .VariableDecl = varDecl };
