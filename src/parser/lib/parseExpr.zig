@@ -79,6 +79,10 @@ pub fn parsePrimary(self: *Parser) ParserError!*Expr {
         return try parseFloat(self);
     }
 
+    if (self.check(.StringLiteral)) {
+        return try parseString(self);
+    }
+
     if (self.check(.KwTrue) or self.check(.KwFalse)) {
         return try parseBoolean(self);
     }
@@ -138,6 +142,17 @@ pub fn parseBoolean(self: *Parser) ParserError!*Expr {
         expr.* = .{ .BoolLiteral = boolLiteral };
         return expr;
     }
+}
+
+pub fn parseString(self: *Parser) ParserError!*Expr {
+    const token = try self.expect(.StringLiteral);
+    const stringLiteral = Types.StringLiteral{
+        .value = token.lexeme,
+        .resolvedType = null,
+    };
+    const expr = try self.allocator.create(Expr);
+    expr.* = .{ .StringLiteral = stringLiteral };
+    return expr;
 }
 
 pub fn parseIdentifier(self: *Parser) ParserError!*Expr {

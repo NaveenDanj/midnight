@@ -5,12 +5,13 @@ const BlockStmt = @import("./parseBlock.zig").BlockStmt;
 const Type = @import("../../semantic/types.zig").Type;
 const Expr = @import("./parseExpr.zig").Expr;
 const parseExpr = @import("./parseExpr.zig").parseExpr;
+const checkForType = @import("parseVarDec.zig").checkForType;
 
 pub const FunctionDecl = struct {
     name: []const u8,
     params: []*Param,
     body: *BlockStmt,
-    returnType: []const u8,
+    returnType: Type,
 };
 
 pub const ReturnStatement = struct {
@@ -18,7 +19,7 @@ pub const ReturnStatement = struct {
     resolvedType: ?Type = null,
 };
 
-const Param = struct { dataType: []const u8, name: []const u8 };
+const Param = struct { dataType: Type, name: []const u8 };
 
 pub fn parseFunctionDecl(self: *Parser) !*FunctionDecl {
     _ = try self.expect(.KwFunc);
@@ -26,7 +27,7 @@ pub fn parseFunctionDecl(self: *Parser) !*FunctionDecl {
     _ = try self.expect(.LParen);
     const params = try parseParameters(self);
 
-    const returnTypeToken = try self.expect(.KwInt);
+    const returnType = try checkForType(self);
 
     const body = try parseBlock(self);
     const func = try self.allocator.create(FunctionDecl);
@@ -35,7 +36,7 @@ pub fn parseFunctionDecl(self: *Parser) !*FunctionDecl {
         .name = name.lexeme,
         .params = params,
         .body = body,
-        .returnType = returnTypeToken.lexeme,
+        .returnType = returnType,
     };
 
     return func;
@@ -46,12 +47,12 @@ pub fn parseParameters(self: *Parser) ![]*Param {
     var params = try ArrayList(*Param).initCapacity(self.allocator, 0);
 
     while (!self.check(.RParen)) {
-        const dataType = try self.expect(.KwInt);
+        const dataType = try checkForType(self);
         const paramName = try self.expect(.Identifier);
 
         const param = try self.allocator.create(Param);
         param.* = .{
-            .dataType = dataType.lexeme,
+            .dataType = dataType,
             .name = paramName.lexeme,
         };
 

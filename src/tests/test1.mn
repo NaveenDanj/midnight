@@ -1,6 +1,7 @@
 
 func main() int {
     var int total = hello;
+    var string name = "hello world" + "Naveen Dhananjaya";
     var bool flag = false;
     const float PI = 3.14;
     

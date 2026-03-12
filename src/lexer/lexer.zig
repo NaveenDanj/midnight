@@ -76,6 +76,7 @@ pub const Lexer = struct {
             '-' => return self.makeToken(TokenType.Minus),
             '*' => return self.makeToken(TokenType.Star),
             '/' => return self.makeToken(TokenType.Slash),
+            '"' => return self.scanString(),
 
             '!' => return if (self.isMatch('='))
                 self.makeToken(TokenType.NotEqual)
@@ -174,5 +175,23 @@ pub const Lexer = struct {
         self.current += 1;
         self.column += 1;
         return true;
+    }
+
+    pub fn scanString(self: *Lexer) Token {
+        while (!self.isAtEnd() and self.peek() != '"') {
+            if (self.peek() == '\n') {
+                self.line += 1;
+                self.column = 0;
+            }
+            _ = self.advance();
+        }
+
+        if (self.isAtEnd()) {
+            return self.makeToken(TokenType.EOF);
+        }
+
+        _ = self.advance();
+
+        return self.makeToken(TokenType.StringLiteral);
     }
 };
