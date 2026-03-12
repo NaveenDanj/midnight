@@ -1,6 +1,18 @@
 
 func main() int {
     var int total = hello;
+    var bool flag = false;
+    const float PI = 3.14;
+    
+    if(test) {
+        var int total = 100;
+    }
+
+    while(true) {
+        var int total = 200;
+        var bool isTrue = false;
+    }
+
 }
 
 func add(int num1 , int num2) int {

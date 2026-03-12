@@ -48,6 +48,9 @@ pub const TokenType = enum {
     // keywords with types
     KwInt,
     KwBool,
+    KwFloat,
+    KwVoid,
+    KwString,
 
     EOF,
 };

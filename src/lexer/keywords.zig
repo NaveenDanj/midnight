@@ -22,6 +22,12 @@ pub fn lookupKeyword(ident: []const u8) ?TokenType {
         return TokenType.KwWhile;
     } else if (std.mem.eql(u8, "const", ident)) {
         return TokenType.KwConst;
+    } else if (std.mem.eql(u8, "float", ident)) {
+        return TokenType.KwFloat;
+    } else if (std.mem.eql(u8, "bool", ident)) {
+        return TokenType.KwBool;
+    } else if (std.mem.eql(u8, "string", ident)) {
+        return TokenType.KwString;
     } else {
         return null;
     }
