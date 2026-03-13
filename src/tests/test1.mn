@@ -1,7 +1,7 @@
-
 func main() int {
-    var int total = hello;
-    var string name = "hello world" + "Naveen Dhananjaya";
+    var string total = "hello";
+    var string name = "hello world" + "Naveen Dhananjaya 
+    hello helooo";
     var bool flag = false;
     const float PI = 3.14;
     
@@ -10,41 +10,8 @@ func main() int {
     }
 
     while(true) {
-        var int total = 200;
+        var bool total = "false";
         var bool isTrue = false;
     }
 
-}
-
-func add(int num1 , int num2) int {
-    var int total = (num1 + num2) + 100;
-    const int PI = 3.14;
-    return total;
-}
-
-func max(int a , int b , int c) int {
-    if (a == b) {
-        return a;
-    } else {
-        if(b) {
-            return c;
-        }
-        return b;
-    }
-    return b;
-}
-
-func fibbonachi(int num) int {
-    var int counter = 0;
-
-    while(counter < num) {
-
-        if(counter == 0) {
-            return 0;
-        } else {
-            return counter;
-        }
-    }
-
-    return counter;
 }
