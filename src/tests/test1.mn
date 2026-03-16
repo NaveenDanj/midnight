@@ -1,4 +1,3 @@
-
 struct Person {
     var string first_name;
     var string last_name;
@@ -16,7 +15,7 @@ func main() int {
     const float PI = 3.14;
     
     if(test == true) {
-        var int total = 100;
+        var int total = "hello";
     }
 
     while(true) {
