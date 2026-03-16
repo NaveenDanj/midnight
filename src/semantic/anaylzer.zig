@@ -8,6 +8,7 @@ const types = @import("./types.zig");
 const BlockStmt = @import("../parser/lib/parseBlock.zig").BlockStmt;
 const BinaryExpr = @import("../parser/lib/parseExpr.zig").BinaryExpr;
 const Expr = @import("../parser/lib/parseExpr.zig").Expr;
+const Statement = @import("../parser/lib/parseStatement.zig").Statement;
 
 pub const SemanticAnalyzer = struct {
     allocator: std.mem.Allocator,
@@ -16,6 +17,28 @@ pub const SemanticAnalyzer = struct {
     pub fn init(allocator: std.mem.Allocator) !SemanticAnalyzer {
         const scopeStack = try ScopeStack.init(allocator);
         return .{ .allocator = allocator, .scopeStack = scopeStack };
+    }
+
+    pub fn analyzeProgram(self: *SemanticAnalyzer, statements: []*Statement) SemanticError!void {
+        for (statements) |stmt| {
+            switch (stmt.*) {
+                .FunctionDecl => {
+                    try self.analyzeFunctionDecl(stmt.FunctionDecl);
+                },
+                .Block => {
+                    try self.analyzeBlock(stmt.Block);
+                },
+                .VariableDecl => {
+                    try self.analyzeVarDecl(stmt.VariableDecl);
+                },
+                .WhileStatement => {
+                    try self.analyzeWhileLoop(stmt.WhileStatement);
+                },
+                else => {
+                    // Handle other statement types.
+                },
+            }
+        }
     }
 
     pub fn analyzeFunctionDecl(self: *SemanticAnalyzer, funcDecl: *FunctionDecl) SemanticError!void {

@@ -19,23 +19,17 @@ pub fn main() !void {
     var lexer = Lexer.init(content);
     var token_list = try lexer.lexAll(allocator);
     var parser = Parser.init(allocator, token_list.items);
-    const funcList = try parser.parseProgram();
+    const statements = try parser.parseProgram();
 
     var semanticAnalyzer = try SemanticAnalyzer.init(allocator);
-    for (funcList) |func| {
-        try semanticAnalyzer.analyzeFunctionDecl(func);
-    }
+    try semanticAnalyzer.analyzeProgram(statements);
 
     for (token_list.items) |token| {
         std.debug.print("Token: {s} (line {d}, column {d})\n", .{ token.lexeme, token.line + 1, token.column });
     }
 
-    for (funcList) |func| {
-        std.debug.print("Parsed function: {s}\n", .{func.name});
-
-        for (func.body.statements) |statement| {
-            std.debug.print("  Statement: {any}\n", .{statement});
-        }
+    for (statements) |stmt| {
+        std.debug.print("Parsed statement: {any}\n", .{stmt});
     }
 
     defer token_list.deinit(allocator);

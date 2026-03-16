@@ -1,17 +1,29 @@
+
+struct Person {
+    var string first_name;
+    var string last_name;
+    
+    func greet() string {
+        return first_name + last_name;
+    }
+}
+
 func main() int {
-    var string total = "hello";
-    var string name = "hello world" + "Naveen Dhananjaya 
-    hello helooo";
+    const string first_name = "Naveen";
+    const string last_name = "Hettiwaththa";
+    const string fullName = first_name +" "+ last_name;  
     var bool flag = false;
     const float PI = 3.14;
     
-    if(test) {
+    if(test == true) {
         var int total = 100;
     }
 
     while(true) {
-        var bool total = "false";
+        var bool total = false;
         var bool isTrue = false;
     }
+
+    return 12;
 
 }

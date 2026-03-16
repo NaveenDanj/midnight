@@ -6,11 +6,14 @@ const VariableDecl = @import("./parseVarDec.zig").VarDecl;
 const ReturnStatement = @import("./parseFunctionDecl.zig").ReturnStatement;
 const IfStatement = @import("parseIf.zig").IfStatement;
 const WhileStatement = @import("parseWhile.zig").WhileStatement;
+const StructStmt = @import("./parseStruct.zig").StructStmt;
 
 const parseVarDecl = @import("./parseVarDec.zig").parseVarDecl;
 const parseReturnStatement = @import("./parseFunctionDecl.zig").parseReturnStatement;
 const parseIfStatement = @import("parseIf.zig").parseIfStatement;
 const parseWhileStatement = @import("parseWhile.zig").parseWhileStatement;
+const parseFunctionDecl = @import("./parseFunctionDecl.zig").parseFunctionDecl;
+const parseStructStatement = @import("./parseStruct.zig").parseStructStatement;
 
 pub const Statement = union(enum) {
     FunctionDecl: *FunctionDecl,
@@ -19,6 +22,7 @@ pub const Statement = union(enum) {
     ReturnStatement: *ReturnStatement,
     IfStatement: *IfStatement,
     WhileStatement: *WhileStatement,
+    StructDecl: *StructStmt,
 };
 
 pub fn parseStatement(self: *Parser) ParserError!*Statement {
@@ -41,6 +45,16 @@ pub fn parseStatement(self: *Parser) ParserError!*Statement {
         const whileStatement = try parseWhileStatement(self);
         const statement = try self.allocator.create(Statement);
         statement.* = .{ .WhileStatement = whileStatement };
+        return statement;
+    } else if (self.check(.KwFunc)) {
+        const funcDecl = try parseFunctionDecl(self);
+        const statement = try self.allocator.create(Statement);
+        statement.* = .{ .FunctionDecl = funcDecl };
+        return statement;
+    } else if (self.check(.KwStruct)) {
+        const structDecl = try parseStructStatement(self);
+        const statement = try self.allocator.create(Statement);
+        statement.* = .{ .StructDecl = structDecl };
         return statement;
     } else {
         return ParserError.UnExpectedToken;

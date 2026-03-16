@@ -19,7 +19,7 @@ pub const ReturnStatement = struct {
     resolvedType: ?Type = null,
 };
 
-const Param = struct { dataType: Type, name: []const u8 };
+pub const Param = struct { dataType: Type, name: []const u8 };
 
 pub fn parseFunctionDecl(self: *Parser) !*FunctionDecl {
     _ = try self.expect(.KwFunc);

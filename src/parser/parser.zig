@@ -2,7 +2,10 @@ const std = @import("std");
 const tokens = @import("../lexer//tokens.zig");
 const errors = @import("./error.zig").ParserError;
 const FunctionDecl = @import("./lib/parseFunctionDecl.zig").FunctionDecl;
+const Statement = @import("./lib/parseStatement.zig").Statement;
+
 const parseFunctionDecl = @import("./lib/parseFunctionDecl.zig").parseFunctionDecl;
+const parseStatement = @import("./lib/parseStatement.zig").parseStatement;
 
 pub const Parser = struct {
     tokens: []tokens.Token,
@@ -13,15 +16,15 @@ pub const Parser = struct {
         return .{ .tokens = tokens_list, .current = 0, .allocator = allocator };
     }
 
-    pub fn parseProgram(self: *Parser) ![]*FunctionDecl {
-        var functions: std.ArrayList(*FunctionDecl) = .empty;
+    pub fn parseProgram(self: *Parser) ![]*Statement {
+        var statements: std.ArrayList(*Statement) = .empty;
 
         while (!self.check(.EOF)) {
-            const func = try parseFunctionDecl(self);
-            try functions.append(self.allocator, func);
+            const stmt = try parseStatement(self);
+            try statements.append(self.allocator, stmt);
         }
 
-        return functions.items;
+        return statements.items;
     }
 
     pub fn peek(self: *Parser) ?tokens.Token {
