@@ -1,1 +1,1 @@
-pub const SemanticError = error{ TypeMismatch, UndefinedVariable, UndefinedFunction, SymbolAlreadyDeclared, OutOfMemory };
+pub const SemanticError = error{ TypeMismatch, UndefinedVariable, UndefinedFunction, SymbolAlreadyDeclared, OutOfMemory, MissingReturnStatement };

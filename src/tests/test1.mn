@@ -23,6 +23,5 @@ func main() int {
         var bool isTrue = false;
     }
 
-    return 12;
-
+    return 1000;
 }

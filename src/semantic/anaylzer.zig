@@ -45,6 +45,33 @@ pub const SemanticAnalyzer = struct {
         try self.scopeStack.pushScope();
         defer self.scopeStack.popScope();
 
+        const expectedRetType = funcDecl.returnType;
+
+        if (expectedRetType.kind == .VOID) {
+            // Ensure that there are no return statements with values in the function body.
+            for (funcDecl.body.statements) |stmt| {
+                if (stmt.* == .ReturnStatement) {
+                    return SemanticError.TypeMismatch;
+                }
+            }
+        } else {
+            var hasReturnWithValue = false;
+            for (funcDecl.body.statements) |stmt| {
+                if (stmt.* == .ReturnStatement) {
+                    const retStmt = stmt.ReturnStatement;
+                    const actualRetType = try self.evaluateExprType(retStmt.expression);
+                    if (!self.areTypesCompatible(expectedRetType, actualRetType)) {
+                        return SemanticError.TypeMismatch;
+                    }
+                    hasReturnWithValue = true;
+                }
+            }
+
+            if (!hasReturnWithValue) {
+                return SemanticError.MissingReturnStatement;
+            }
+        }
+
         for (funcDecl.params) |param| {
             try self.scopeStack.declareSymbol(param.name, .function, param.dataType);
         }
