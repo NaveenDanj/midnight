@@ -34,6 +34,13 @@ pub const Parser = struct {
         return self.tokens[self.current];
     }
 
+    pub fn peekNext(self: *Parser) ?tokens.Token {
+        if (self.current + 1 >= self.tokens.len) {
+            return null;
+        }
+        return self.tokens[self.current + 1];
+    }
+
     pub fn advance(self: *Parser) ?tokens.Token {
         if (self.current >= self.tokens.len) {
             return null;

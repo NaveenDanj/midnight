@@ -10,4 +10,5 @@ pub const Symbol = struct {
     name: []const u8,
     kind: SymbolKind,
     symbolType: Type,
+    IsImmutable: bool,
 };

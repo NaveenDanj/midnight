@@ -13,6 +13,11 @@ pub const VarDecl = struct {
     initializer: *Expr,
 };
 
+pub const VarAssign = struct {
+    name: []const u8,
+    value: *Expr,
+};
+
 pub const varTypeList = [_]TokenType{ .KwInt, .KwFloat, .KwBool, .KwVoid, .KwString };
 
 pub fn parseVarDecl(self: *Parser) !*VarDecl {
@@ -45,6 +50,21 @@ pub fn parseVarDecl(self: *Parser) !*VarDecl {
     };
 
     return varDec;
+}
+
+pub fn parseVarAssignment(self: *Parser) ParserError!*VarAssign {
+    const nameToken = try self.expect(.Identifier);
+    _ = try self.expect(.Equal);
+    const value = try parseExpr(self);
+    _ = try self.expect(.Semicolon);
+
+    const varAssign = try self.allocator.create(VarAssign);
+    varAssign.* = .{
+        .name = nameToken.lexeme,
+        .value = value,
+    };
+
+    return varAssign;
 }
 
 pub fn checkForType(self: *Parser) ParserError!Type {

@@ -28,7 +28,7 @@
 
  Next steps / TODO:
 [X] Return statement semantic checks
-🔲 Assignment expressions semantic checks
+[X] Assignment expressions semantic checks
 🔲 Function call semantic checks
 🔲 Struct member access and method calls semantic checks
 🔲 More expression types (unary, ternary, etc.)

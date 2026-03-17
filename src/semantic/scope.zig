@@ -25,7 +25,7 @@ pub const ScopeStack = struct {
         _ = self.scopeStack.pop();
     }
 
-    pub fn declareSymbol(self: *ScopeStack, symbolName: []const u8, kind: SymbolKind, symbolType: Type) !void {
+    pub fn declareSymbol(self: *ScopeStack, symbolName: []const u8, kind: SymbolKind, symbolType: Type, isImmutable: bool) !void {
         var currentScope = &self.scopeStack.items[self.scopeStack.items.len - 1];
 
         if (currentScope.symbols.contains(symbolName)) {
@@ -33,7 +33,7 @@ pub const ScopeStack = struct {
         }
 
         // const symbol = try self.allocator.create(Symbol);
-        const symbol = Symbol{ .name = symbolName, .kind = kind, .symbolType = symbolType };
+        const symbol = Symbol{ .name = symbolName, .kind = kind, .symbolType = symbolType, .IsImmutable = isImmutable };
         _ = try currentScope.symbols.put(symbolName, symbol);
     }
 

@@ -9,7 +9,7 @@ const BlockStmt = @import("../parser/lib/parseBlock.zig").BlockStmt;
 const BinaryExpr = @import("../parser/lib/parseExpr.zig").BinaryExpr;
 const Expr = @import("../parser/lib/parseExpr.zig").Expr;
 const Statement = @import("../parser/lib/parseStatement.zig").Statement;
-
+const VarAssign = @import("../parser/lib/parseVarDec.zig").VarAssign;
 pub const SemanticAnalyzer = struct {
     allocator: std.mem.Allocator,
     scopeStack: ScopeStack,
@@ -33,6 +33,9 @@ pub const SemanticAnalyzer = struct {
                 },
                 .WhileStatement => {
                     try self.analyzeWhileLoop(stmt.WhileStatement);
+                },
+                .VarAssignment => {
+                    try self.analyzeVarAssignment(stmt.VarAssignment);
                 },
                 else => {
                     // Handle other statement types.
@@ -73,7 +76,7 @@ pub const SemanticAnalyzer = struct {
         }
 
         for (funcDecl.params) |param| {
-            try self.scopeStack.declareSymbol(param.name, .function, param.dataType);
+            try self.scopeStack.declareSymbol(param.name, .function, param.dataType, false);
         }
         try self.analyzeBlock(funcDecl.body);
     }
@@ -92,6 +95,9 @@ pub const SemanticAnalyzer = struct {
                     try self.analyzeWhileLoop(stmt.WhileStatement);
                 },
 
+                .VarAssignment => {
+                    try self.analyzeVarAssignment(stmt.VarAssignment);
+                },
                 else => {
                     // Handle other statement types.
                 },
@@ -100,7 +106,7 @@ pub const SemanticAnalyzer = struct {
     }
 
     pub fn analyzeVarDecl(self: *SemanticAnalyzer, varDecl: *VarDecl) SemanticError!void {
-        try self.scopeStack.declareSymbol(varDecl.name, .variable, varDecl.varType);
+        try self.scopeStack.declareSymbol(varDecl.name, .variable, varDecl.varType, varDecl.immutable);
         const varType = varDecl.varType;
         const initType = try self.evaluateExprType(varDecl.initializer);
 
@@ -179,5 +185,24 @@ pub const SemanticAnalyzer = struct {
         }
 
         return types.Type{ .kind = .VOID };
+    }
+
+    pub fn analyzeVarAssignment(self: *SemanticAnalyzer, varAssign: *VarAssign) SemanticError!void {
+        const symbol = self.scopeStack.lookupSymbol(varAssign.name) orelse return SemanticError.UndefinedVariable;
+
+        if (symbol.kind != .variable) {
+            return SemanticError.TypeMismatch;
+        }
+
+        if (symbol.IsImmutable) {
+            return SemanticError.SymbolImmutable;
+        }
+
+        const symbolType = symbol.symbolType;
+        const exprKind = try self.evaluateExprType(varAssign.value);
+
+        if (!self.areTypesCompatible(symbolType, exprKind)) {
+            return SemanticError.TypeMismatch;
+        }
     }
 };

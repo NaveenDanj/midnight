@@ -30,6 +30,16 @@ pub fn main() !void {
 
     for (statements) |stmt| {
         std.debug.print("Parsed statement: {any}\n", .{stmt});
+
+        if (stmt.* == .FunctionDecl) {
+            for (stmt.FunctionDecl.params) |param| {
+                std.debug.print("  Param: {s} of type {any}\n", .{ param.name, param.dataType });
+            }
+
+            for (stmt.FunctionDecl.body.statements) |bodyStmt| {
+                std.debug.print("  Body statement: {any}\n", .{bodyStmt});
+            }
+        }
     }
 
     defer token_list.deinit(allocator);
