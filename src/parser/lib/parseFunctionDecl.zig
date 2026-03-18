@@ -4,14 +4,20 @@ const parseBlock = @import("./parseBlock.zig").parseBlock;
 const BlockStmt = @import("./parseBlock.zig").BlockStmt;
 const Type = @import("../../semantic/types.zig").Type;
 const Expr = @import("./parseExpr.zig").Expr;
-const parseExpr = @import("./parseExpr.zig").parseExpr;
 const checkForType = @import("parseVarDec.zig").checkForType;
+const parseExpr = @import("parseExpr.zig").parseExpr;
 
 pub const FunctionDecl = struct {
     name: []const u8,
     params: []*Param,
     body: *BlockStmt,
     returnType: Type,
+};
+
+pub const FunctionCallStmt = struct {
+    name: []const u8,
+    args: []*Expr,
+    resolvedType: ?Type = null,
 };
 
 pub const ReturnStatement = struct {
@@ -75,4 +81,27 @@ pub fn parseReturnStatement(self: *Parser) !*ReturnStatement {
     ret.* = .{ .expression = expr, .resolvedType = null };
     _ = try self.expect(.Semicolon);
     return ret;
+}
+
+pub fn parseFunctionCall(self: *Parser) !*FunctionCallStmt {
+    const funcName = try self.expect(.Identifier);
+    _ = try self.expect(.LParen);
+
+    var exprList = try std.ArrayList(*Expr).initCapacity(self.allocator, 0);
+
+    while (!self.check(.RParen)) {
+        const expr = try parseExpr(self);
+        try exprList.append(self.allocator, expr);
+
+        if (!self.check(.RParen)) {
+            _ = try self.expect(.Comma);
+        }
+    }
+
+    _ = try self.expect(.RParen);
+    _ = try self.expect(.Semicolon);
+
+    const varAssignment = try self.allocator.create(FunctionCallStmt);
+    varAssignment.* = .{ .args = exprList.items, .name = funcName.lexeme, .resolvedType = null };
+    return varAssignment;
 }

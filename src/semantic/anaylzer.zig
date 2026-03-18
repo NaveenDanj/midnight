@@ -20,6 +20,8 @@ pub const SemanticAnalyzer = struct {
     }
 
     pub fn analyzeProgram(self: *SemanticAnalyzer, statements: []*Statement) SemanticError!void {
+        try self.scopeStack.pushScope();
+        defer self.scopeStack.popScope();
         for (statements) |stmt| {
             switch (stmt.*) {
                 .FunctionDecl => {
@@ -181,6 +183,9 @@ pub const SemanticAnalyzer = struct {
                 const idExpr = expr.Identifier;
                 const symbol = self.scopeStack.lookupSymbol(idExpr.name) orelse return SemanticError.UndefinedVariable;
                 return symbol.symbolType;
+            },
+            .FunctionCall => {
+                return types.STRING;
             },
         }
 

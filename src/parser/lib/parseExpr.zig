@@ -6,6 +6,7 @@ const ParserError = @import("../error.zig").ParserError;
 const Precedence = @import("./operator.zig").Precedence;
 const mapOperatorToPrecedence = @import("./operator.zig").mapOperatorToPrecedence;
 const Token = @import("../../lexer/tokens.zig").Token;
+const FunctionCallStmt = @import("./parseFunctionDecl.zig").FunctionCallStmt;
 
 pub const Expr = union(enum) {
     Binary: BinaryExpr,
@@ -14,6 +15,7 @@ pub const Expr = union(enum) {
     BoolLiteral: Types.BooleanLiteral,
     StringLiteral: Types.StringLiteral,
     Identifier: IdentifierExpr,
+    FunctionCall: FunctionCallStmt,
 };
 
 pub const BinaryExpr = struct {
@@ -67,6 +69,10 @@ pub fn parseInfix(self: *Parser, left: *Expr, op: Token) ParserError!*Expr {
 }
 
 pub fn parsePrimary(self: *Parser) ParserError!*Expr {
+    if (self.check(.Identifier) and self.peekNext().?.kind == .LParen) {
+        return try parseFuncCallExpr(self);
+    }
+
     if (self.check(.Identifier)) {
         return try parseIdentifier(self);
     }
@@ -166,5 +172,33 @@ pub fn parseIdentifier(self: *Parser) ParserError!*Expr {
     const expr = try self.allocator.create(Expr);
     expr.* = .{ .Identifier = ident };
 
+    return expr;
+}
+
+pub fn parseFuncCallExpr(self: *Parser) ParserError!*Expr {
+    const funcName = try self.expect(.Identifier);
+    _ = try self.expect(.LParen);
+
+    var exprList = try std.ArrayList(*Expr).initCapacity(self.allocator, 0);
+
+    while (!self.check(.RParen)) {
+        const expr = try parseExpr(self);
+        try exprList.append(self.allocator, expr);
+
+        if (!self.check(.RParen)) {
+            _ = try self.expect(.Comma);
+        }
+    }
+
+    _ = try self.expect(.RParen);
+
+    const funcCall = FunctionCallStmt{
+        .name = funcName.lexeme,
+        .args = exprList.items,
+        .resolvedType = null,
+    };
+
+    const expr = try self.allocator.create(Expr);
+    expr.* = .{ .FunctionCall = funcCall };
     return expr;
 }

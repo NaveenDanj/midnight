@@ -8,6 +8,7 @@ const IfStatement = @import("parseIf.zig").IfStatement;
 const WhileStatement = @import("parseWhile.zig").WhileStatement;
 const StructStmt = @import("./parseStruct.zig").StructStmt;
 const VarAssign = @import("./parseVarDec.zig").VarAssign;
+const FunctionCallStmt = @import("./parseFunctionDecl.zig").FunctionCallStmt;
 
 const parseVarDecl = @import("./parseVarDec.zig").parseVarDecl;
 const parseReturnStatement = @import("./parseFunctionDecl.zig").parseReturnStatement;
@@ -16,17 +17,9 @@ const parseWhileStatement = @import("parseWhile.zig").parseWhileStatement;
 const parseFunctionDecl = @import("./parseFunctionDecl.zig").parseFunctionDecl;
 const parseStructStatement = @import("./parseStruct.zig").parseStructStatement;
 const parseVarAssignment = @import("./parseVarDec.zig").parseVarAssignment;
+const parseFunctionCall = @import("parseFunctionDecl.zig").parseFunctionCall;
 
-pub const Statement = union(enum) {
-    FunctionDecl: *FunctionDecl,
-    Block: *BlockStmt,
-    VariableDecl: *VariableDecl,
-    ReturnStatement: *ReturnStatement,
-    IfStatement: *IfStatement,
-    WhileStatement: *WhileStatement,
-    StructDecl: *StructStmt,
-    VarAssignment: *VarAssign,
-};
+pub const Statement = union(enum) { FunctionDecl: *FunctionDecl, Block: *BlockStmt, VariableDecl: *VariableDecl, ReturnStatement: *ReturnStatement, IfStatement: *IfStatement, WhileStatement: *WhileStatement, StructDecl: *StructStmt, VarAssignment: *VarAssign, FunctionCallStatement: *FunctionCallStmt };
 
 pub fn parseStatement(self: *Parser) ParserError!*Statement {
     if (self.check(.KwVar) or self.check(.KwConst)) {
@@ -63,6 +56,11 @@ pub fn parseStatement(self: *Parser) ParserError!*Statement {
         const varAssign = try parseVarAssignment(self);
         const statement = try self.allocator.create(Statement);
         statement.* = .{ .VarAssignment = varAssign };
+        return statement;
+    } else if (self.check(.Identifier) and self.peekNext().?.kind == .LParen) {
+        const funcCall = try parseFunctionCall(self);
+        const statement = try self.allocator.create(Statement);
+        statement.* = .{ .FunctionCallStatement = funcCall };
         return statement;
     } else {
         return ParserError.UnExpectedToken;

@@ -1,3 +1,5 @@
+const float PI = 3.14; 
+
 struct Person {
     var string first_name;
     var string last_name;
@@ -13,17 +15,25 @@ func main() int {
     const string fullName = first_name + " " + last_name;  
     var bool flag = false;
     const float PI = 3.14;
+    const int a = 100;
+    const int b = 200;
 
     flag = false;
     
     if(test == true) {
-        var int total = "hello";
+        var string total = "hello" + parseName("hello" , "world");
+        flag = false;
+    }else {
+        var int total = 100;
+        flag = true;
     }
 
     while(true) {
         var bool total = false;
         var bool isTrue = false;
     }
+
+    asd(100 + a , 200 + b);
 
     return 1000;
 }
@@ -32,5 +42,15 @@ func main() int {
 func main2() int {
     var int a = 10;
     a = 1 * 100;
+
+    if(parseName("Hello" , "World") == "Hello World") {
+        var string total = "hello" + parseName("hello" , "world");
+    }
+
+    parseName("Hello" , "World");
     return 100;
+}
+
+func add(int a , int b) string {
+    return "hello world";
 }
