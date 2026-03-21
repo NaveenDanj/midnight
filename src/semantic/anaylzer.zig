@@ -96,7 +96,7 @@ pub const SemanticAnalyzer = struct {
         }
 
         for (funcDecl.params) |param| {
-            try self.scopeStack.declareSymbol(param.name, .function, param.dataType, false, &[_]types.Type{});
+            try self.scopeStack.declareSymbol(param.name, .parameter, param.dataType, false, &[_]types.Type{});
         }
         try self.analyzeBlock(funcDecl.body);
     }

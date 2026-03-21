@@ -18,6 +18,7 @@ pub fn main() !void {
 
     var lexer = Lexer.init(content);
     var token_list = try lexer.lexAll(allocator);
+
     var parser = Parser.init(allocator, token_list.items);
     const statements = try parser.parseProgram();
 

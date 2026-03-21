@@ -40,6 +40,6 @@ func main() int {
     return 100.20;
 }
 
-func add(int a , int b) string {
-    return "hello world";
+func add(int a , int b) int {
+    return a + b;
 }
