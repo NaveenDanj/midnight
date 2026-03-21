@@ -29,11 +29,10 @@
  Next steps / TODO:
 [X] Return statement semantic checks
 [X] Assignment expressions semantic checks
-🔲 Function call semantic checks
+[X] Function call semantic checks
 🔲 Struct member access and method calls semantic checks
 🔲 More expression types (unary, ternary, etc.)
 🔲 Full error reporting with line numbers and context
 🔲 Intermediate Representation (IR) generation
-🔲 Optional: GPU / SPIR-V code generation
 🔲 Optional: Optimizations
 🔲 Optional: Code emission / target backend

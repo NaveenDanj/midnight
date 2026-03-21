@@ -9,10 +9,10 @@ struct Person {
     }
 }
 
-func main2(int a , int b) int {
+func main2(int a , int b) bool {
     var int a = 10;
     a = 1 * 100;
-    return 100;
+    return true;
 }
 
 func main() int {
@@ -26,12 +26,18 @@ func main() int {
 
     flag = false;
     
-    while(true) {
+    while(main2(10 , 20)) {
         var bool total = false;
         var bool isTrue = false;
     }
 
-    return 1000;
+    if (flag) {
+        var int x = 10;
+    } else {
+        var int y = 0;
+    }
+
+    return 100.20;
 }
 
 func add(int a , int b) string {

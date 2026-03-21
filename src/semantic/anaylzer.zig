@@ -11,6 +11,7 @@ const Expr = @import("../parser/lib/parseExpr.zig").Expr;
 const Statement = @import("../parser/lib/parseStatement.zig").Statement;
 const VarAssign = @import("../parser/lib/parseVarDec.zig").VarAssign;
 const FunctionCallStmt = @import("../parser/lib/parseFunctionDecl.zig").FunctionCallStmt;
+const IfStatement = @import("../parser/lib/parseIf.zig").IfStatement;
 
 pub const SemanticAnalyzer = struct {
     allocator: std.mem.Allocator,
@@ -43,6 +44,9 @@ pub const SemanticAnalyzer = struct {
                 },
                 .FunctionCallStatement => {
                     try self.analyzeFunctionCall(stmt.FunctionCallStatement);
+                },
+                .IfStatement => {
+                    try self.analyzeIfStatement(stmt.IfStatement);
                 },
                 else => {
                     // Handle other statement types.
@@ -106,6 +110,9 @@ pub const SemanticAnalyzer = struct {
                 .VariableDecl => {
                     try self.analyzeVarDecl(stmt.VariableDecl);
                 },
+                .IfStatement => {
+                    try self.analyzeIfStatement(stmt.IfStatement);
+                },
 
                 .WhileStatement => {
                     try self.analyzeWhileLoop(stmt.WhileStatement);
@@ -138,7 +145,26 @@ pub const SemanticAnalyzer = struct {
     }
 
     pub fn analyzeWhileLoop(self: *SemanticAnalyzer, whileStmt: *WhileStatement) SemanticError!void {
+        const condType = try self.evaluateExprType(whileStmt.expression);
+
+        if (condType.kind != .BOOL) {
+            return SemanticError.TypeMismatch;
+        }
+
         try self.analyzeBlock(whileStmt.body);
+    }
+
+    pub fn analyzeIfStatement(self: *SemanticAnalyzer, ifStmt: *IfStatement) SemanticError!void {
+        const condType = try self.evaluateExprType(ifStmt.expression);
+
+        if (condType.kind != .BOOL) {
+            return SemanticError.TypeMismatch;
+        }
+
+        try self.analyzeBlock(ifStmt.thenBlock);
+        if (ifStmt.elseBlock) |elseBranch| {
+            try self.analyzeBlock(elseBranch);
+        }
     }
 
     pub fn areTypesCompatible(_: *SemanticAnalyzer, expected: types.Type, actual: types.Type) bool {
