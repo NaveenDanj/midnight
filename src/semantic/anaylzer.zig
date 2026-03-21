@@ -10,6 +10,8 @@ const BinaryExpr = @import("../parser/lib/parseExpr.zig").BinaryExpr;
 const Expr = @import("../parser/lib/parseExpr.zig").Expr;
 const Statement = @import("../parser/lib/parseStatement.zig").Statement;
 const VarAssign = @import("../parser/lib/parseVarDec.zig").VarAssign;
+const FunctionCallStmt = @import("../parser/lib/parseFunctionDecl.zig").FunctionCallStmt;
+
 pub const SemanticAnalyzer = struct {
     allocator: std.mem.Allocator,
     scopeStack: ScopeStack,
@@ -39,6 +41,9 @@ pub const SemanticAnalyzer = struct {
                 .VarAssignment => {
                     try self.analyzeVarAssignment(stmt.VarAssignment);
                 },
+                .FunctionCallStatement => {
+                    try self.analyzeFunctionCall(stmt.FunctionCallStatement);
+                },
                 else => {
                     // Handle other statement types.
                 },
@@ -47,13 +52,22 @@ pub const SemanticAnalyzer = struct {
     }
 
     pub fn analyzeFunctionDecl(self: *SemanticAnalyzer, funcDecl: *FunctionDecl) SemanticError!void {
+        const statement = try self.allocator.create(Statement);
+        statement.* = .{ .FunctionDecl = funcDecl };
+
+        var paramTypes = try std.ArrayList(types.Type).initCapacity(self.allocator, 0);
+        for (funcDecl.params) |param| {
+            try paramTypes.append(self.allocator, param.dataType);
+        }
+
+        try self.scopeStack.declareSymbol(funcDecl.name, .function, funcDecl.returnType, true, paramTypes.items);
+
         try self.scopeStack.pushScope();
         defer self.scopeStack.popScope();
 
         const expectedRetType = funcDecl.returnType;
 
         if (expectedRetType.kind == .VOID) {
-            // Ensure that there are no return statements with values in the function body.
             for (funcDecl.body.statements) |stmt| {
                 if (stmt.* == .ReturnStatement) {
                     return SemanticError.TypeMismatch;
@@ -78,7 +92,7 @@ pub const SemanticAnalyzer = struct {
         }
 
         for (funcDecl.params) |param| {
-            try self.scopeStack.declareSymbol(param.name, .function, param.dataType, false);
+            try self.scopeStack.declareSymbol(param.name, .function, param.dataType, false, &[_]types.Type{});
         }
         try self.analyzeBlock(funcDecl.body);
     }
@@ -100,6 +114,9 @@ pub const SemanticAnalyzer = struct {
                 .VarAssignment => {
                     try self.analyzeVarAssignment(stmt.VarAssignment);
                 },
+                .FunctionCallStatement => {
+                    try self.analyzeFunctionCall(stmt.FunctionCallStatement);
+                },
                 else => {
                     // Handle other statement types.
                 },
@@ -108,7 +125,10 @@ pub const SemanticAnalyzer = struct {
     }
 
     pub fn analyzeVarDecl(self: *SemanticAnalyzer, varDecl: *VarDecl) SemanticError!void {
-        try self.scopeStack.declareSymbol(varDecl.name, .variable, varDecl.varType, varDecl.immutable);
+        const statement = try self.allocator.create(Statement);
+        statement.* = .{ .VariableDecl = varDecl };
+
+        try self.scopeStack.declareSymbol(varDecl.name, .variable, varDecl.varType, varDecl.immutable, &[_]types.Type{});
         const varType = varDecl.varType;
         const initType = try self.evaluateExprType(varDecl.initializer);
 
@@ -185,7 +205,12 @@ pub const SemanticAnalyzer = struct {
                 return symbol.symbolType;
             },
             .FunctionCall => {
-                return types.STRING;
+                const funcExpr = expr.FunctionCall;
+                const symbol = self.scopeStack.lookupSymbol(funcExpr.name) orelse return SemanticError.UndefinedVariable;
+                if (symbol.kind != .function) {
+                    return SemanticError.TypeMismatch;
+                }
+                return symbol.symbolType;
             },
         }
 
@@ -199,7 +224,7 @@ pub const SemanticAnalyzer = struct {
             return SemanticError.TypeMismatch;
         }
 
-        if (symbol.IsImmutable) {
+        if (symbol.isImmutable) {
             return SemanticError.SymbolImmutable;
         }
 
@@ -208,6 +233,26 @@ pub const SemanticAnalyzer = struct {
 
         if (!self.areTypesCompatible(symbolType, exprKind)) {
             return SemanticError.TypeMismatch;
+        }
+    }
+
+    pub fn analyzeFunctionCall(self: *SemanticAnalyzer, funcCall: *FunctionCallStmt) SemanticError!void {
+        const symbol = self.scopeStack.lookupSymbol(funcCall.name) orelse return SemanticError.UndefinedVariable;
+        const params = symbol.params;
+
+        if (symbol.kind != .function) {
+            return SemanticError.TypeMismatch;
+        }
+
+        if (params.len != funcCall.args.len) {
+            return SemanticError.ArgumentCountMismatch;
+        }
+
+        for (params, 0..) |expectedParam, i| {
+            const argType = try self.evaluateExprType(funcCall.args[i]);
+            if (!self.areTypesCompatible(expectedParam, argType)) {
+                return SemanticError.TypeMismatch;
+            }
         }
     }
 };

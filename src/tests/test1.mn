@@ -9,6 +9,12 @@ struct Person {
     }
 }
 
+func main2(int a , int b) int {
+    var int a = 10;
+    a = 1 * 100;
+    return 100;
+}
+
 func main() int {
     const string first_name = "Naveen";
     const string last_name = "Hettiwaththa";
@@ -20,35 +26,12 @@ func main() int {
 
     flag = false;
     
-    if(test == true) {
-        var string total = "hello" + parseName("hello" , "world");
-        flag = false;
-    }else {
-        var int total = 100;
-        flag = true;
-    }
-
     while(true) {
         var bool total = false;
         var bool isTrue = false;
     }
 
-    asd(100 + a , 200 + b);
-
     return 1000;
-}
-
-
-func main2() int {
-    var int a = 10;
-    a = 1 * 100;
-
-    if(parseName("Hello" , "World") == "Hello World") {
-        var string total = "hello" + parseName("hello" , "world");
-    }
-
-    parseName("Hello" , "World");
-    return 100;
 }
 
 func add(int a , int b) string {

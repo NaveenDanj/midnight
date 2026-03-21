@@ -10,6 +10,8 @@ pub const VOID = Type{ .kind = .VOID };
 
 pub const STRING = Type{ .kind = .STRING };
 
+pub const FUNCTION = Type{ .kind = .FUNCTION };
+
 pub const TypeError = error{
     TypeMismatch,
     InvalidType,
@@ -17,13 +19,7 @@ pub const TypeError = error{
     NotAVariable,
 };
 
-pub const TypeKind = enum {
-    INT,
-    BOOL,
-    FLOAT,
-    VOID,
-    STRING,
-};
+pub const TypeKind = enum { INT, BOOL, FLOAT, VOID, STRING, FUNCTION };
 
 pub const Type = struct {
     kind: TypeKind,
