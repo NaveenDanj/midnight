@@ -69,6 +69,12 @@ pub const SemanticAnalyzer = struct {
         try self.scopeStack.pushScope();
         defer self.scopeStack.popScope();
 
+        for (funcDecl.params) |param| {
+            try self.scopeStack.declareSymbol(param.name, .parameter, param.dataType, false, &[_]types.Type{});
+        }
+
+        try self.analyzeBlock(funcDecl.body);
+
         const expectedRetType = funcDecl.returnType;
 
         if (expectedRetType.kind == .VOID) {
@@ -82,8 +88,7 @@ pub const SemanticAnalyzer = struct {
             for (funcDecl.body.statements) |stmt| {
                 if (stmt.* == .ReturnStatement) {
                     const retStmt = stmt.ReturnStatement;
-                    const actualRetType = try self.evaluateExprType(retStmt.expression);
-                    if (!self.areTypesCompatible(expectedRetType, actualRetType)) {
+                    if (!self.areTypesCompatible(expectedRetType, retStmt.resolvedType orelse return SemanticError.TypeMismatch)) {
                         return SemanticError.TypeMismatch;
                     }
                     hasReturnWithValue = true;
@@ -94,11 +99,6 @@ pub const SemanticAnalyzer = struct {
                 return SemanticError.MissingReturnStatement;
             }
         }
-
-        for (funcDecl.params) |param| {
-            try self.scopeStack.declareSymbol(param.name, .parameter, param.dataType, false, &[_]types.Type{});
-        }
-        try self.analyzeBlock(funcDecl.body);
     }
 
     pub fn analyzeBlock(self: *SemanticAnalyzer, block: *BlockStmt) SemanticError!void {
@@ -123,6 +123,11 @@ pub const SemanticAnalyzer = struct {
                 },
                 .FunctionCallStatement => {
                     try self.analyzeFunctionCall(stmt.FunctionCallStatement);
+                },
+                .ReturnStatement => {
+                    const retStmt = stmt.ReturnStatement;
+                    const actualType = try self.evaluateExprType(retStmt.expression);
+                    retStmt.resolvedType = actualType;
                 },
                 else => {
                     // Handle other statement types.

@@ -41,5 +41,6 @@ func main() int {
 }
 
 func add(int a , int b) int {
-    return a + b;
+    var int constant = 4500;
+    return a + b + constant;
 }
