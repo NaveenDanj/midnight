@@ -111,3 +111,6 @@ Primary next steps:
 3. Better diagnostics with source spans
 4. Typed AST completion and improved return-flow analysis
 5. IR design and lowering pipeline
+
+## License
+This project is licensed under the MIT License - see the LICENSE file for details.
