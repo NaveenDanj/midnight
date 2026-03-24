@@ -3,6 +3,7 @@ const Type = @import("../../semantic/types.zig").Type;
 const Parser = @import("../parser.zig").Parser;
 const ParserError = @import("../error.zig").ParserError;
 const Param = @import("parseFunctionDecl.zig").Param;
+const Expr = @import("./parseExpr.zig").Expr;
 const parseParameters = @import("parseFunctionDecl.zig").parseParameters;
 const checkForType = @import("parseVarDec.zig").checkForType;
 const parseBlock = @import("./parseBlock.zig").parseBlock;
@@ -27,6 +28,12 @@ const StructPropertyField = struct {
 const StructMethodParameter = struct {
     name: []const u8,
     paramType: Type,
+};
+
+pub const MemberAccessExpr = struct {
+    object: ?*Expr = null,
+    memberName: []const u8,
+    resolvedType: ?Type = null,
 };
 
 const StructMethodField = struct { name: []const u8, parameters: []*Param, body: *BlockStmt, returnType: Type };

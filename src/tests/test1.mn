@@ -1,14 +1,5 @@
 const float PI = 3.14; 
 
-struct Person {
-    var string first_name;
-    var string last_name;
-    
-    func greet() string {
-        return first_name + last_name;
-    }
-}
-
 func main2(int a , int b) bool {
     var int a = 10;
     a = 1 * 100;
@@ -37,10 +28,13 @@ func main() int {
         var int y = 0;
     }
 
-    return 100.20;
+    return 100;
 }
 
 func add(int a , int b) int {
     var int constant = 4500;
+    constant = constant + 500 + person.first_name;
+    person.name = "Naveen";
     return a + b + constant;
 }
+

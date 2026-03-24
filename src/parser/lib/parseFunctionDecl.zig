@@ -15,6 +15,7 @@ pub const FunctionDecl = struct {
 };
 
 pub const FunctionCallStmt = struct {
+    callee: ?*Expr = null,
     name: []const u8,
     args: []*Expr,
     resolvedType: ?Type = null,
@@ -102,6 +103,6 @@ pub fn parseFunctionCall(self: *Parser) !*FunctionCallStmt {
     _ = try self.expect(.Semicolon);
 
     const varAssignment = try self.allocator.create(FunctionCallStmt);
-    varAssignment.* = .{ .args = exprList.items, .name = funcName.lexeme, .resolvedType = null };
+    varAssignment.* = .{ .args = exprList.items, .name = funcName.lexeme, .resolvedType = null, .callee = null };
     return varAssignment;
 }

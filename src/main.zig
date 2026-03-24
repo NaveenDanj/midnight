@@ -8,7 +8,7 @@ const SemanticAnalyzer = @import("semantic/anaylzer.zig").SemanticAnalyzer;
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
 
-    const file = try std.fs.cwd().openFile("./src/tests/test1.mn", .{});
+    const file = try std.fs.cwd().openFile("./src/tests/struct.mn", .{});
     defer file.close();
 
     const content = try file.readToEndAlloc(allocator, 1024 * 1024);

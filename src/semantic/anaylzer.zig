@@ -243,6 +243,20 @@ pub const SemanticAnalyzer = struct {
                 }
                 return symbol.symbolType;
             },
+            .MemberAccess => {
+                // const memberExpr = expr.MemberAccess;
+                // const objectType = try self.evaluateExprType(memberExpr.object orelse return SemanticError.TypeMismatch);
+
+                // if (objectType.kind != .STRUCT) {
+                //     return SemanticError.TypeMismatch;
+                // }
+
+                // const structDef = self.scopeStack.lookupSymbol(objectType.name) orelse return SemanticError.UndefinedVariable;
+
+                // const memberType = structDef.memberTypes.get(memberExpr.memberName) orelse return SemanticError.UndefinedVariable;
+                // return memberType;
+                return .{ .kind = .VOID };
+            },
         }
 
         return types.Type{ .kind = .VOID };

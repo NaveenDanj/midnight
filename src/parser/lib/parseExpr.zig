@@ -7,6 +7,7 @@ const Precedence = @import("./operator.zig").Precedence;
 const mapOperatorToPrecedence = @import("./operator.zig").mapOperatorToPrecedence;
 const Token = @import("../../lexer/tokens.zig").Token;
 const FunctionCallStmt = @import("./parseFunctionDecl.zig").FunctionCallStmt;
+const MemberAccessExpr = @import("./parseStruct.zig").MemberAccessExpr;
 
 pub const Expr = union(enum) {
     Binary: BinaryExpr,
@@ -16,6 +17,7 @@ pub const Expr = union(enum) {
     StringLiteral: Types.StringLiteral,
     Identifier: IdentifierExpr,
     FunctionCall: FunctionCallStmt,
+    MemberAccess: MemberAccessExpr,
 };
 
 pub const BinaryExpr = struct {
@@ -35,7 +37,7 @@ pub fn parseExpr(self: *Parser) ParserError!*Expr {
 }
 
 pub fn parsePrecedence(self: *Parser, precedence: Precedence) ParserError!*Expr {
-    var left = try parsePrimary(self);
+    var left = try parsePostFix(self);
 
     while (true) {
         const next = self.peek() orelse break;
@@ -68,11 +70,62 @@ pub fn parseInfix(self: *Parser, left: *Expr, op: Token) ParserError!*Expr {
     return expr;
 }
 
-pub fn parsePrimary(self: *Parser) ParserError!*Expr {
-    if (self.check(.Identifier) and self.peekNext().?.kind == .LParen) {
-        return try parseFuncCallExpr(self);
-    }
+pub fn parsePostFix(self: *Parser) ParserError!*Expr {
+    var expr = try parsePrimary(self);
 
+    while (true) {
+        if (self.match(.Dot)) {
+            const memberNameToken = try self.expect(.Identifier);
+
+            const memberAccess = MemberAccessExpr{
+                .object = expr,
+                .memberName = memberNameToken.lexeme,
+                .resolvedType = null,
+            };
+
+            const newExpr = try self.allocator.create(Expr);
+            newExpr.* = .{ .MemberAccess = memberAccess };
+            expr = newExpr;
+        }
+
+        if (self.match(.LParen)) {
+            var argList = try std.ArrayList(*Expr).initCapacity(self.allocator, 0);
+
+            while (!self.check(.RParen)) {
+                const arg = try parseExpr(self);
+                try argList.append(self.allocator, arg);
+
+                if (!self.check(.RParen)) {
+                    _ = try self.expect(.Comma);
+                }
+            }
+
+            _ = try self.expect(.RParen);
+
+            const funcCall = FunctionCallStmt{
+                .name = switch (expr.*) {
+                    .Identifier => expr.Identifier.name,
+                    .MemberAccess => expr.MemberAccess.memberName,
+                    else => return ParserError.UnExpectedToken,
+                },
+                .args = argList.items,
+                .resolvedType = null,
+                .callee = expr,
+            };
+
+            const newExpr = try self.allocator.create(Expr);
+            newExpr.* = .{ .FunctionCall = funcCall };
+            expr = newExpr;
+            
+        }
+
+        break;
+
+    }
+    return expr;
+}
+
+pub fn parsePrimary(self: *Parser) ParserError!*Expr {
     if (self.check(.Identifier)) {
         return try parseIdentifier(self);
     }

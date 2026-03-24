@@ -1,0 +1,27 @@
+struct Person {
+    var string first_name;
+    var string last_name;
+
+    func greet() string {
+        return first_name + last_name;
+    }
+
+}
+
+func add(int a , int b) int {
+    return a + b;
+}
+
+func main() int {
+
+    var int total = 100;
+    
+    const Person person1 = <first_name = "naveen", last_name = "hettiwaththa">;
+    const Person person2 = <first_name = "naveen", last_name = "hettiwaththa">;
+
+    total = total + 50 + add(100 , 200);
+    add(100 , 200);
+    return total;
+
+}
+
