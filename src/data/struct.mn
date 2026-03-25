@@ -14,14 +14,15 @@ func add(int a , int b) int {
 
 func main() int {
 
-    var int total = 100;
-    
-    const Person person1 = <first_name = "naveen", last_name = "hettiwaththa">;
-    const Person person2 = <first_name = "naveen", last_name = "hettiwaththa">;
+    const int person1 = Person{
+        first_name = add(25 , 25),
+        last_name = "Hettiwaththa"
+    };
 
+    var int total = 100;
     total = total + 50 + add(100 , 200);
     add(100 , 200);
     return total;
-
+    
 }
 

@@ -36,6 +36,17 @@ pub const MemberAccessExpr = struct {
     resolvedType: ?Type = null,
 };
 
+pub const StructInitExpr = struct {
+    structName: []const u8,
+    fields: []StructInitField,
+    resolvedType: ?Type = null,
+};
+
+pub const StructInitField = struct {
+    name: []const u8,
+    value: *Expr,
+};
+
 const StructMethodField = struct { name: []const u8, parameters: []*Param, body: *BlockStmt, returnType: Type };
 
 pub fn parseStructStatement(self: *Parser) ParserError!*StructStmt {

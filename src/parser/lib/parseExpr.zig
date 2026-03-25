@@ -8,6 +8,8 @@ const mapOperatorToPrecedence = @import("./operator.zig").mapOperatorToPrecedenc
 const Token = @import("../../lexer/tokens.zig").Token;
 const FunctionCallStmt = @import("./parseFunctionDecl.zig").FunctionCallStmt;
 const MemberAccessExpr = @import("./parseStruct.zig").MemberAccessExpr;
+const StructInitExpr = @import("./parseStruct.zig").StructInitExpr;
+const StructInitField = @import("./parseStruct.zig").StructInitField;
 
 pub const Expr = union(enum) {
     Binary: BinaryExpr,
@@ -18,6 +20,7 @@ pub const Expr = union(enum) {
     Identifier: IdentifierExpr,
     FunctionCall: FunctionCallStmt,
     MemberAccess: MemberAccessExpr,
+    StructInit: StructInitExpr,
 };
 
 pub const BinaryExpr = struct {
@@ -86,9 +89,7 @@ pub fn parsePostFix(self: *Parser) ParserError!*Expr {
             const newExpr = try self.allocator.create(Expr);
             newExpr.* = .{ .MemberAccess = memberAccess };
             expr = newExpr;
-        }
-
-        if (self.match(.LParen)) {
+        } else if (self.match(.LParen)) {
             var argList = try std.ArrayList(*Expr).initCapacity(self.allocator, 0);
 
             while (!self.check(.RParen)) {
@@ -116,16 +117,16 @@ pub fn parsePostFix(self: *Parser) ParserError!*Expr {
             const newExpr = try self.allocator.create(Expr);
             newExpr.* = .{ .FunctionCall = funcCall };
             expr = newExpr;
-            
-        }
-
-        break;
-
+        } else break;
     }
     return expr;
 }
 
 pub fn parsePrimary(self: *Parser) ParserError!*Expr {
+    if (self.check(.Identifier) and self.peekNext().?.kind == .LCurly) {
+        return try parseStructInitExpr(self);
+    }
+
     if (self.check(.Identifier)) {
         return try parseIdentifier(self);
     }
@@ -253,5 +254,41 @@ pub fn parseFuncCallExpr(self: *Parser) ParserError!*Expr {
 
     const expr = try self.allocator.create(Expr);
     expr.* = .{ .FunctionCall = funcCall };
+    return expr;
+}
+
+pub fn parseStructInitExpr(self: *Parser) ParserError!*Expr {
+    const structNameToken = try self.expect(.Identifier);
+    _ = try self.expect(.LCurly);
+
+    var fieldList = try std.ArrayList(StructInitField).initCapacity(self.allocator, 0);
+
+    while (!self.check(.RCurly)) {
+        const fieldNameToken = try self.expect(.Identifier);
+        _ = try self.expect(.Equal);
+        const fieldValue = try parseExpr(self);
+
+        const field = StructInitField{
+            .name = fieldNameToken.lexeme,
+            .value = fieldValue,
+        };
+
+        try fieldList.append(self.allocator, field);
+
+        if (!self.check(.RCurly)) {
+            _ = try self.expect(.Comma);
+        }
+    }
+
+    _ = try self.expect(.RCurly);
+
+    const structInit = StructInitExpr{
+        .structName = structNameToken.lexeme,
+        .fields = fieldList.items,
+        .resolvedType = null,
+    };
+
+    const expr = try self.allocator.create(Expr);
+    expr.* = .{ .StructInit = structInit };
     return expr;
 }

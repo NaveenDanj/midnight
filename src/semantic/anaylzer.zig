@@ -257,6 +257,9 @@ pub const SemanticAnalyzer = struct {
                 // return memberType;
                 return .{ .kind = .VOID };
             },
+            .StructInit => {
+                return .{ .kind = .VOID };
+            },
         }
 
         return types.Type{ .kind = .VOID };
