@@ -5,6 +5,7 @@ pub const SymbolKind = enum {
     variable,
     function,
     parameter,
+    structure,
 };
 
 pub const Symbol = struct {

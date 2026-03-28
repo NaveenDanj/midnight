@@ -1,6 +1,7 @@
 struct Person {
     var string first_name;
     var string last_name;
+    var int age;
 
     func greet() string {
         return first_name + last_name;
@@ -14,9 +15,16 @@ func add(int a , int b) int {
 
 func main() int {
 
-    const int person1 = Person{
-        first_name = add(25 , 25),
-        last_name = "Hettiwaththa"
+    const Person person1 = Person{
+        first_name = "Naveen",
+        last_name = "Hettiwaththa",
+        age = 24
+    };
+
+    const Person person2 = Person{
+        first_name = "Ravindu",
+        last_name = "Pata",
+        age = 24
     };
 
     var int total = 100;

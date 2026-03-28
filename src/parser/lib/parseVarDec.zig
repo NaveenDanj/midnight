@@ -68,11 +68,19 @@ pub fn parseVarAssignment(self: *Parser) ParserError!*VarAssign {
 }
 
 pub fn checkForType(self: *Parser) ParserError!Type {
+
+    // check for primitive types
     for (varTypeList) |dataType| {
         if (self.check(dataType)) {
             _ = try self.expect(dataType);
             return mapType(dataType);
         }
+    }
+
+    // check for user defined struct types
+    if (self.check(.Identifier)) {
+        const structNameToken = try self.expect(.Identifier);
+        return Type{ .kind = .STRUCT, .struct_name = structNameToken.lexeme };
     }
 
     return ParserError.UnExpectedToken;

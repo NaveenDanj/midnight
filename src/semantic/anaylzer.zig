@@ -1,5 +1,7 @@
 const std = @import("std");
 const ScopeStack = @import("scope.zig").ScopeStack;
+const SemanticContext = @import("./context.zig").SemanticContext;
+
 const FunctionDecl = @import("../parser/lib/parseFunctionDecl.zig").FunctionDecl;
 const VarDecl = @import("../parser/lib/parseVarDec.zig").VarDecl;
 const WhileStatement = @import("../parser/lib/parseWhile.zig").WhileStatement;
@@ -12,14 +14,18 @@ const Statement = @import("../parser/lib/parseStatement.zig").Statement;
 const VarAssign = @import("../parser/lib/parseVarDec.zig").VarAssign;
 const FunctionCallStmt = @import("../parser/lib/parseFunctionDecl.zig").FunctionCallStmt;
 const IfStatement = @import("../parser/lib/parseIf.zig").IfStatement;
+const StructStmt = @import("../parser/lib/parseStruct.zig").StructStmt;
+const StructInitExpr = @import("../parser/lib/parseStruct.zig").StructInitExpr;
 
 pub const SemanticAnalyzer = struct {
     allocator: std.mem.Allocator,
     scopeStack: ScopeStack,
+    context: SemanticContext,
 
     pub fn init(allocator: std.mem.Allocator) !SemanticAnalyzer {
         const scopeStack = try ScopeStack.init(allocator);
-        return .{ .allocator = allocator, .scopeStack = scopeStack };
+        const context = try SemanticContext.init(allocator);
+        return .{ .allocator = allocator, .scopeStack = scopeStack, .context = context };
     }
 
     pub fn analyzeProgram(self: *SemanticAnalyzer, statements: []*Statement) SemanticError!void {
@@ -47,6 +53,9 @@ pub const SemanticAnalyzer = struct {
                 },
                 .IfStatement => {
                     try self.analyzeIfStatement(stmt.IfStatement);
+                },
+                .StructDecl => {
+                    try self.analyzeStructStatement(stmt.StructDecl);
                 },
                 else => {
                     // Handle other statement types.
@@ -147,6 +156,11 @@ pub const SemanticAnalyzer = struct {
         if (!self.areTypesCompatible(varType, initType)) {
             return SemanticError.TypeMismatch;
         }
+
+        if (varType.kind == .STRUCT) {
+            const structDef = self.context.structs.get(varType.struct_name orelse return SemanticError.TypeMismatch) orelse return SemanticError.TypeMismatch;
+            try self.analyzeStructFields(structDef, &varDecl.initializer.StructInit);
+        }
     }
 
     pub fn analyzeWhileLoop(self: *SemanticAnalyzer, whileStmt: *WhileStatement) SemanticError!void {
@@ -173,6 +187,25 @@ pub const SemanticAnalyzer = struct {
     }
 
     pub fn areTypesCompatible(_: *SemanticAnalyzer, expected: types.Type, actual: types.Type) bool {
+        // const structDef = self.context.structs.get(expected.name) orelse return SemanticError.StructAlreadyDeclared
+
+        if (expected.kind == .STRUCT) {
+            if (actual.kind != .STRUCT) {
+                return false;
+            }
+
+            if (expected.struct_name) |expected_name| {
+                if (actual.struct_name) |actual_name| {
+                    return std.mem.eql(u8, expected_name, actual_name);
+                } else {
+                    std.debug.print("Expected struct name {s}, but actual has no struct name\n", .{expected_name});
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
         if (expected.kind == .VOID) {
             return false;
         }
@@ -213,7 +246,6 @@ pub const SemanticAnalyzer = struct {
 
                 return SemanticError.TypeMismatch;
             },
-
             .IntLiteral => {
                 expr.IntLiteral.resolvedType = types.INT;
                 return types.INT;
@@ -243,6 +275,16 @@ pub const SemanticAnalyzer = struct {
                 }
                 return symbol.symbolType;
             },
+            .StructInit => {
+                const structInit = expr.StructInit;
+                var symbol = self.scopeStack.lookupSymbol(structInit.structName) orelse return SemanticError.UndefinedVariable;
+                if (symbol.kind != .structure) {
+                    return SemanticError.TypeMismatch;
+                }
+                symbol.symbolType.struct_name = structInit.structName;
+                return symbol.symbolType;
+            },
+
             .MemberAccess => {
                 // const memberExpr = expr.MemberAccess;
                 // const objectType = try self.evaluateExprType(memberExpr.object orelse return SemanticError.TypeMismatch);
@@ -255,9 +297,6 @@ pub const SemanticAnalyzer = struct {
 
                 // const memberType = structDef.memberTypes.get(memberExpr.memberName) orelse return SemanticError.UndefinedVariable;
                 // return memberType;
-                return .{ .kind = .VOID };
-            },
-            .StructInit => {
                 return .{ .kind = .VOID };
             },
         }
@@ -300,6 +339,59 @@ pub const SemanticAnalyzer = struct {
             const argType = try self.evaluateExprType(funcCall.args[i]);
             if (!self.areTypesCompatible(expectedParam, argType)) {
                 return SemanticError.TypeMismatch;
+            }
+        }
+    }
+
+    pub fn analyzeStructStatement(self: *SemanticAnalyzer, structStmt: *StructStmt) SemanticError!void {
+        try self.scopeStack.declareSymbol(structStmt.name, .structure, types.STRUCT, true, &[_]types.Type{});
+        try self.context.addStruct(structStmt);
+    }
+
+    pub fn analyzeStructFields(self: *SemanticAnalyzer, structDef: *StructStmt, structInitStmt: *StructInitExpr) SemanticError!void {
+        var hashMap = std.StringHashMap(types.Type).init(self.allocator);
+        defer hashMap.deinit();
+
+        for (structDef.fields) |field| {
+            switch (field) {
+                .StructProperty => {
+                    const property = field.StructProperty;
+                    _ = try hashMap.put(property.name, property.fieldType);
+                },
+                .StructMethod => {
+                    // For now, we won't analyze method bodies during struct initialization.
+                },
+            }
+        }
+
+        for (structInitStmt.fields) |field| {
+            const expectedType = hashMap.get(field.name) orelse return SemanticError.StructFieldMismatch;
+            const actualType = try self.evaluateExprType(field.value);
+
+            if (!self.areTypesCompatible(expectedType, actualType)) {
+                return SemanticError.StructFieldMismatch;
+            }
+        }
+
+        for (structDef.fields) |field| {
+            switch (field) {
+                .StructProperty => |property_ptr| {
+                    const property = property_ptr.*;
+
+                    var found = false;
+
+                    for (structInitStmt.fields) |initField| {
+                        if (std.mem.eql(u8, initField.name, property.name)) {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found) {
+                        return SemanticError.StructFieldUnIntialized;
+                    }
+                },
+                else => {},
             }
         }
     }
