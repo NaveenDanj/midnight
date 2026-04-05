@@ -1,3 +1,4 @@
+const std = @import("std");
 const Parser = @import("../parser.zig").Parser;
 const ParserError = @import("../error.zig").ParserError;
 const FunctionDecl = @import("./parseFunctionDecl.zig").FunctionDecl;
@@ -51,18 +52,16 @@ pub fn parseStatement(self: *Parser) ParserError!*Statement {
         const structDecl = try parseStructStatement(self);
         const statement = try self.allocator.create(Statement);
         statement.* = .{ .StructDecl = structDecl };
-        return statement;
-    } else if (self.check(.Identifier) and self.peekNext().?.kind == .Equal) {
-        const varAssign = try parseVarAssignment(self);
-        const statement = try self.allocator.create(Statement);
-        statement.* = .{ .VarAssignment = varAssign };
-        return statement;
+        return statement;  
     } else if (self.check(.Identifier) and self.peekNext().?.kind == .LParen) {
         const funcCall = try parseFunctionCall(self);
         const statement = try self.allocator.create(Statement);
         statement.* = .{ .FunctionCallStatement = funcCall };
         return statement;
     } else {
-        return ParserError.UnExpectedToken;
+        const varAssign = try parseVarAssignment(self);
+        const statement = try self.allocator.create(Statement);
+        statement.* = .{ .VarAssignment = varAssign };
+        return statement;
     }
 }

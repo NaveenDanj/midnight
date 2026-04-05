@@ -29,6 +29,7 @@ func main() int {
 
     var int total = 100;
     total = total + 50 + add(100 , 200);
+    person2.first_name = "hello world";
     add(100 , 200);
     return total;
     
