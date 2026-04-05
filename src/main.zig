@@ -22,8 +22,8 @@ pub fn main() !void {
     var parser = Parser.init(allocator, token_list.items);
     const statements = try parser.parseProgram();
 
-    var semanticAnalyzer = try SemanticAnalyzer.init(allocator);
-    try semanticAnalyzer.analyzeProgram(statements);
+    // var semanticAnalyzer = try SemanticAnalyzer.init(allocator);
+    // try semanticAnalyzer.analyzeProgram(statements);
 
     for (token_list.items) |token| {
         std.debug.print("Token: {s} (line {d}, column {d})\n", .{ token.lexeme, token.line + 1, token.column });

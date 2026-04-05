@@ -1,3 +1,4 @@
+const std = @import("std");
 const Parser = @import("../parser.zig").Parser;
 const parseExpr = @import("./parseExpr.zig").parseExpr;
 const ParserError = @import("../error.zig").ParserError;
@@ -5,6 +6,8 @@ const Expr = @import("./parseExpr.zig").Expr;
 const Type = @import("../../semantic/types.zig").Type;
 const TypeKind = @import("../../semantic/types.zig").TypeKind;
 const TokenType = @import("../../lexer/tokens.zig").TokenType;
+const MemberAccessExpr = @import("./parseStruct.zig").MemberAccessExpr;
+
 
 pub const VarDecl = struct {
     immutable: bool,
@@ -14,7 +17,7 @@ pub const VarDecl = struct {
 };
 
 pub const VarAssign = struct {
-    name: []const u8,
+    target: *Expr,
     value: *Expr,
 };
 
@@ -53,14 +56,14 @@ pub fn parseVarDecl(self: *Parser) !*VarDecl {
 }
 
 pub fn parseVarAssignment(self: *Parser) ParserError!*VarAssign {
-    const nameToken = try self.expect(.Identifier);
+    const target = try parseLSide(self);
     _ = try self.expect(.Equal);
     const value = try parseExpr(self);
     _ = try self.expect(.Semicolon);
 
     const varAssign = try self.allocator.create(VarAssign);
     varAssign.* = .{
-        .name = nameToken.lexeme,
+        .target = target,
         .value = value,
     };
 
@@ -85,6 +88,34 @@ pub fn checkForType(self: *Parser) ParserError!Type {
 
     return ParserError.UnExpectedToken;
 }
+
+pub fn parseLSide (self: *Parser) ParserError!*Expr {
+    var expr = try parseExpr(self);
+
+    while(true) {
+        if (self.check(.Dot)) {
+            _ = try self.expect(.Dot);
+            const fieldNameToken = try self.expect(.Identifier);
+
+            const fieldAccess = try self.allocator.create(MemberAccessExpr);
+            
+            fieldAccess.* = .{
+                .object = expr,
+                .memberName = fieldNameToken.lexeme,
+                .resolvedType = null,
+            };
+
+            expr = try self.allocator.create(Expr);
+            expr.* = .{ .MemberAccess = fieldAccess.* };
+        // TODO: add support for array indexing here
+        } else {
+            break;
+        }
+    }
+
+    return expr;
+}
+
 
 pub fn mapType(tokenTypeKind: TokenType) Type {
     return switch (tokenTypeKind) {
