@@ -285,6 +285,11 @@ pub const SemanticAnalyzer = struct {
                 return symbol.symbolType;
             },
 
+            .ExpressionStmt => {
+                std.debug.print("Evaluating expression statement: {any}\n", .{expr.ExpressionStmt});
+                return try self.evaluateExprType(expr.ExpressionStmt);
+            },
+
             .MemberAccess => {
                 // const memberExpr = expr.MemberAccess;
                 // const objectType = try self.evaluateExprType(memberExpr.object orelse return SemanticError.TypeMismatch);
@@ -297,7 +302,45 @@ pub const SemanticAnalyzer = struct {
 
                 // const memberType = structDef.memberTypes.get(memberExpr.memberName) orelse return SemanticError.UndefinedVariable;
                 // return memberType;
-                return .{ .kind = .VOID };
+                // return .{ .kind = .VOID };
+
+                const object = expr.MemberAccess;
+                const memberName = object.memberName;
+                const objectType = try self.evaluateExprType(object.object orelse return SemanticError.TypeMismatch);
+
+                if (objectType.kind != .STRUCT) {
+                    return SemanticError.TypeMismatch;
+                }
+
+                const userDefinedType = self.context.structs.get(objectType.struct_name orelse return SemanticError.UndefinedVariable) orelse return SemanticError.UndefinedVariable;
+                
+                var found = false;
+
+                for (userDefinedType.fields) |field| {
+                    switch (field) {
+                        .StructProperty => |property_ptr| {
+                            const property = property_ptr.*;
+                            if (std.mem.eql(u8, property.name, memberName)) {
+                                found = true;
+                                return property.fieldType;
+                            }
+                        },
+                        .StructMethod => |method_ptr| {
+                            const method = method_ptr.*;
+                            if (std.mem.eql(u8, method.name, memberName)) {
+                                found = true;
+                                return method.returnType;
+                            }
+                        },
+                    }
+
+                }
+
+                if (!found) {
+                    return SemanticError.UndefinedVariable;
+                }
+                
+
             },
         }
 
@@ -305,22 +348,79 @@ pub const SemanticAnalyzer = struct {
     }
 
     pub fn analyzeVarAssignment(self: *SemanticAnalyzer, varAssign: *VarAssign) SemanticError!void {
-        const symbol = self.scopeStack.lookupSymbol(varAssign.name) orelse return SemanticError.UndefinedVariable;
 
-        if (symbol.kind != .variable) {
-            return SemanticError.TypeMismatch;
+        switch (varAssign.target.*) {
+            
+            .Identifier => {
+                const symbol = self.scopeStack.lookupSymbol(varAssign.target.Identifier.name) orelse return SemanticError.UndefinedVariable;
+
+                if (symbol.kind != .variable) {
+                    return SemanticError.TypeMismatch;
+                }
+
+                if (symbol.isImmutable) {
+                    return SemanticError.SymbolImmutable;
+                }
+
+                const symbolType = symbol.symbolType;
+                const exprKind = try self.evaluateExprType(varAssign.value);
+
+                if (!self.areTypesCompatible(symbolType, exprKind)) {
+                    return SemanticError.TypeMismatch;
+                }
+            },
+
+            .MemberAccess => {
+                const object = varAssign.target.MemberAccess.object orelse return SemanticError.TypeMismatch;
+                const objectType = try self.evaluateExprType(object);
+                const memberName = varAssign.target.MemberAccess.memberName;
+
+                if (objectType.kind != .STRUCT) {
+                    return SemanticError.TypeMismatch;
+                }
+
+                const userDefinedType = self.context.structs.get(objectType.struct_name orelse return SemanticError.UndefinedVariable) orelse return SemanticError.UndefinedVariable;
+                
+                var found = false;
+                for (userDefinedType.fields) |field| {
+
+                    switch (field) {
+                        .StructProperty => |property_ptr| {
+                            const property = property_ptr.*;
+                            if (std.mem.eql(u8, property.name, memberName)) {
+                                if (property.isImmutable) {
+                                    return SemanticError.SymbolImmutable;
+                                }
+                                const exprType = try self.evaluateExprType(varAssign.value);
+                                if (!self.areTypesCompatible(property.fieldType, exprType)) {
+                                    return SemanticError.TypeMismatch;
+                                }
+                                found = true;
+                                break;
+                            }
+                        },
+                        .StructMethod => |method_ptr| {
+                            const method = method_ptr.*;
+                            if (std.mem.eql(u8, method.name, memberName)) {
+                                return SemanticError.TypeMismatch;
+                            }
+                        },
+                    }
+
+                }
+
+                if (!found) {
+                    return SemanticError.UndefinedVariable;
+                }
+
+            },
+
+            else => {
+                return SemanticError.TypeMismatch;
+            },
+
         }
 
-        if (symbol.isImmutable) {
-            return SemanticError.SymbolImmutable;
-        }
-
-        const symbolType = symbol.symbolType;
-        const exprKind = try self.evaluateExprType(varAssign.value);
-
-        if (!self.areTypesCompatible(symbolType, exprKind)) {
-            return SemanticError.TypeMismatch;
-        }
     }
 
     pub fn analyzeFunctionCall(self: *SemanticAnalyzer, funcCall: *FunctionCallStmt) SemanticError!void {
