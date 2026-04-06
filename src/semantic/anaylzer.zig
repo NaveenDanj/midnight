@@ -339,8 +339,28 @@ pub const SemanticAnalyzer = struct {
                 if (!found) {
                     return SemanticError.UndefinedVariable;
                 }
-                
+            },
+            .Unary => {
+                const unary = expr.Unary;
+                const operandType = try self.evaluateExprType(unary.operand);
 
+                if (std.mem.eql(u8, unary.operator, "-")) {
+                    if (operandType.isNumeric()) {
+                        return operandType;
+                    } else {
+                        return SemanticError.TypeMismatch;
+                    }
+                }
+
+                if (std.mem.eql(u8, unary.operator, "!")) {
+                    if (operandType.kind == .BOOL) {
+                        return types.BOOL;
+                    } else {
+                        return SemanticError.TypeMismatch;
+                    }
+                }
+
+                return SemanticError.TypeMismatch;
             },
         }
 

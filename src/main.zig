@@ -25,9 +25,9 @@ pub fn main() !void {
     var semanticAnalyzer = try SemanticAnalyzer.init(allocator);
     try semanticAnalyzer.analyzeProgram(statements);
 
-    for (token_list.items) |token| {
-        std.debug.print("Token: {s} (line {d}, column {d})\n", .{ token.lexeme, token.line + 1, token.column });
-    }
+    // for (token_list.items) |token| {
+    //     std.debug.print("Token: {s} (line {d}, column {d})\n", .{ token.lexeme, token.line + 1, token.column });
+    // }
 
     for (statements) |stmt| {
         std.debug.print("Parsed statement: {any}\n", .{stmt});

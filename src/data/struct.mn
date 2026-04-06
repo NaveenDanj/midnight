@@ -21,6 +21,8 @@ func add(int a , int b) int {
 
 func main() int {
 
+    var int[] arr = [10,20,30,40]; 
+
     const Person person1 = Person{
         first_name = "Naveen",
         last_name = "Hettiwaththa",
@@ -43,6 +45,9 @@ func main() int {
 
     person1.first_name = "hello world";
     person1.sample.a = 500;
+    person1.sample.b = person1.sample.a;
+
+    var bool isIt = !true;
 
     var int total = 100;
     total = total + (100 * 200);
