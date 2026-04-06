@@ -30,8 +30,8 @@
 [X] Return statement semantic checks
 [X] Assignment expressions semantic checks
 [X] Function call semantic checks
-🔲 Struct member access and method calls semantic checks
-🔲 More expression types (unary, ternary, etc.)
+[X] Struct member access and method calls semantic checks
+[X] More expression types (unary, ternary, etc.)
 🔲 Full error reporting with line numbers and context
 🔲 Intermediate Representation (IR) generation
 🔲 Optional: Optimizations

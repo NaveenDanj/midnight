@@ -22,6 +22,7 @@ pub const Expr = union(enum) {
     MemberAccess: MemberAccessExpr,
     StructInit: StructInitExpr,
     ExpressionStmt: *Expr, // For expressions used as statements (e.g. function calls without assignment)
+    Unary: UnaryExpr,
 };
 
 pub const BinaryExpr = struct {
@@ -36,12 +37,19 @@ pub const IdentifierExpr = struct {
     resolvedType: ?Type = null,
 };
 
+pub const UnaryExpr = struct {
+    operator: []const u8,
+    operand: *Expr,
+    resolvedType: ?Type = null,
+};
+
+
 pub fn parseExpr(self: *Parser) ParserError!*Expr {
     return try parsePrecedence(self, .lowest);
 }
 
 pub fn parsePrecedence(self: *Parser, precedence: Precedence) ParserError!*Expr {
-    var left = try parsePostFix(self);
+    var left = try parsePrefix(self);
 
     while (true) {
         const next = self.peek() orelse break;
@@ -73,6 +81,28 @@ pub fn parseInfix(self: *Parser, left: *Expr, op: Token) ParserError!*Expr {
 
     return expr;
 }
+
+
+pub fn parsePrefix(self: *Parser) ParserError!*Expr {
+    if (self.check(.Minus) or self.check(.BooleanOpNot)) {
+        const op = self.advance() orelse return ParserError.UnExpectedToken;
+        const right = try parsePrecedence(self, .prefix);
+
+        const unary = UnaryExpr{
+            .operator = op.lexeme,
+            .operand = right,
+            .resolvedType = null,
+        };
+
+        const expr = try self.allocator.create(Expr);
+        expr.* = .{ .Unary = unary };
+
+        return expr;
+    }
+
+    return try parsePostFix(self);
+}
+
 
 pub fn parsePostFix(self: *Parser) ParserError!*Expr {
     var expr = try parsePrimary(self);
