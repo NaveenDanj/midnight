@@ -52,6 +52,7 @@ pub const TokenType = enum {
     KwFloat,
     KwVoid,
     KwString,
+    KwNull,
 
     EOF,
 };

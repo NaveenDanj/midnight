@@ -1,7 +1,13 @@
+struct Sample {
+    var int a;
+    var int b;
+}
+
 struct Person {
     var string first_name;
     var string last_name;
     var int age;
+    var Sample sample;
 
     func greet() string {
         return first_name + last_name;
@@ -18,22 +24,31 @@ func main() int {
     const Person person1 = Person{
         first_name = "Naveen",
         last_name = "Hettiwaththa",
-        age = 24
+        age = 24,
+        sample = Sample{
+            a = 100,
+            b = 200
+        }
     };
 
     const Person person2 = Person{
         first_name = "Ravindu",
         last_name = "Pata",
-        age = 24
+        age = 24,
+        sample = Sample{
+            a = 100,
+            b = 200
+        }
     };
 
+    person1.first_name = "hello world";
+    person1.sample.a = 500;
+
     var int total = 100;
-    total = total + 50 + add(100 , 200);
-    person2.first_name = "hello world";
-    person2.parent.first_name = "hello world";
-    person2.greet();
-    greet(10,20);
-    add(100 , 200);
+    total = total + (100 * 200);
+
+    add(100 , 100);
+
     return total;
     
 }

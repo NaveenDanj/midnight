@@ -60,9 +60,6 @@ pub fn parseStatement(self: *Parser) ParserError!*Statement {
     }
 }
 
-
-
-
 fn parseExpressionStatement(self: *Parser) ParserError!*Statement {
     const expr = try parseExpr(self);
     if (self.check(.Equal)) {
