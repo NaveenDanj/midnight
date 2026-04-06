@@ -55,11 +55,17 @@ pub fn parseVarDecl(self: *Parser) !*VarDecl {
     return varDec;
 }
 
-pub fn parseVarAssignment(self: *Parser) ParserError!*VarAssign {
-    const target = try parseLSide(self);
+pub fn parseVarAssignment(self: *Parser , target: *Expr) ParserError!*VarAssign {
     _ = try self.expect(.Equal);
     const value = try parseExpr(self);
     _ = try self.expect(.Semicolon);
+
+    // TODO: we should ideally check if the target is a valid lvalue (identifier or member access) here and return an error if it's not. For now, we'll just assume the programmer is doing the right thing and handle errors during semantic analysis.
+    switch (target.*) {
+        .Identifier => {},
+        .MemberAccess => {},
+        else => return ParserError.UnExpectedToken,
+    }
 
     const varAssign = try self.allocator.create(VarAssign);
     varAssign.* = .{

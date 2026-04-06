@@ -21,6 +21,7 @@ pub const Expr = union(enum) {
     FunctionCall: FunctionCallStmt,
     MemberAccess: MemberAccessExpr,
     StructInit: StructInitExpr,
+    ExpressionStmt: *Expr, // For expressions used as statements (e.g. function calls without assignment)
 };
 
 pub const BinaryExpr = struct {

@@ -19,8 +19,10 @@ const parseFunctionDecl = @import("./parseFunctionDecl.zig").parseFunctionDecl;
 const parseStructStatement = @import("./parseStruct.zig").parseStructStatement;
 const parseVarAssignment = @import("./parseVarDec.zig").parseVarAssignment;
 const parseFunctionCall = @import("parseFunctionDecl.zig").parseFunctionCall;
+const parseExpr = @import("./parseExpr.zig").parseExpr;
+const Expr = @import("./parseExpr.zig").Expr;
 
-pub const Statement = union(enum) { FunctionDecl: *FunctionDecl, Block: *BlockStmt, VariableDecl: *VariableDecl, ReturnStatement: *ReturnStatement, IfStatement: *IfStatement, WhileStatement: *WhileStatement, StructDecl: *StructStmt, VarAssignment: *VarAssign, FunctionCallStatement: *FunctionCallStmt };
+pub const Statement = union(enum) { FunctionDecl: *FunctionDecl, Block: *BlockStmt, VariableDecl: *VariableDecl, ReturnStatement: *ReturnStatement, IfStatement: *IfStatement, WhileStatement: *WhileStatement, StructDecl: *StructStmt, VarAssignment: *VarAssign, FunctionCallStatement: *FunctionCallStmt , ExpressionStmt: *Expr };
 
 pub fn parseStatement(self: *Parser) ParserError!*Statement {
     if (self.check(.KwVar) or self.check(.KwConst)) {
@@ -53,15 +55,28 @@ pub fn parseStatement(self: *Parser) ParserError!*Statement {
         const statement = try self.allocator.create(Statement);
         statement.* = .{ .StructDecl = structDecl };
         return statement;  
-    } else if (self.check(.Identifier) and self.peekNext().?.kind == .LParen) {
-        const funcCall = try parseFunctionCall(self);
-        const statement = try self.allocator.create(Statement);
-        statement.* = .{ .FunctionCallStatement = funcCall };
-        return statement;
     } else {
-        const varAssign = try parseVarAssignment(self);
+        return try parseExpressionStatement(self);
+    }
+}
+
+
+
+
+fn parseExpressionStatement(self: *Parser) ParserError!*Statement {
+    const expr = try parseExpr(self);
+    if (self.check(.Equal)) {
+        const varAssign = try parseVarAssignment(self, expr);
         const statement = try self.allocator.create(Statement);
         statement.* = .{ .VarAssignment = varAssign };
         return statement;
-    }
+    } else if (self.check(.Semicolon)) {
+        _ = try self.expect(.Semicolon);
+        const statement = try self.allocator.create(Statement);
+        statement.* = .{ .ExpressionStmt = expr };
+        return statement;
+    } 
+    
+    return ParserError.UnExpectedToken;
+
 }

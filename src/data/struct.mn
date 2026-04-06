@@ -30,6 +30,9 @@ func main() int {
     var int total = 100;
     total = total + 50 + add(100 , 200);
     person2.first_name = "hello world";
+    person2.parent.first_name = "hello world";
+    person2.greet();
+    greet(10,20);
     add(100 , 200);
     return total;
     
