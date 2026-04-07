@@ -38,7 +38,9 @@ pub fn parseVarDecl(self: *Parser) !*VarDecl {
         isImmutable = false;
     }
 
-    const dataType = try checkForType(self);
+    var dataType = try checkForType(self);
+    dataType = try checkForArrayType(self, dataType);
+    
     const name = try self.expect(.Identifier);
     _ = try self.expect(.Equal);
     const initializer = try parseExpr(self);
@@ -94,6 +96,19 @@ pub fn checkForType(self: *Parser) ParserError!Type {
 
     return ParserError.UnExpectedToken;
 }
+
+
+pub fn checkForArrayType(self: *Parser, baseType: Type) ParserError!Type {
+    if (self.check(.LBracket)) {
+        _ = try self.expect(.LBracket);
+        _ = try self.expect(.RBracket);
+        return Type{ .kind = baseType.kind, .struct_name = baseType.struct_name, .isArray = true };
+    }
+
+    return baseType;
+}
+
+
 
 pub fn parseLSide (self: *Parser) ParserError!*Expr {
     var expr = try parseExpr(self);

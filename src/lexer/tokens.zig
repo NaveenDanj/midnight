@@ -7,6 +7,8 @@ pub const TokenType = enum {
     RParen,
     LCurly,
     RCurly,
+    LBracket,
+    RBracket,
     Underscore,
     Dot,
 
@@ -45,6 +47,7 @@ pub const TokenType = enum {
     KwWhile,
     KwConst,
     KwStruct,
+    KwEmpty,
 
     // keywords with types
     KwInt,

@@ -70,6 +70,8 @@ pub const Lexer = struct {
             '(' => return self.makeToken(TokenType.LParen),
             '{' => return self.makeToken(TokenType.LCurly),
             '}' => return self.makeToken(TokenType.RCurly),
+            '[' => return self.makeToken(TokenType.LBracket),
+            ']' => return self.makeToken(TokenType.RBracket),
             '.' => return self.makeToken(TokenType.Dot),
 
             '+' => return self.makeToken(TokenType.Plus),

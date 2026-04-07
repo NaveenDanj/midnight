@@ -21,7 +21,7 @@ func add(int a , int b) int {
 
 func main() int {
 
-    var int[] arr = [10,20,30,40]; 
+    var string[] arr = ["hello" , "world"];
 
     const Person person1 = Person{
         first_name = "Naveen",
