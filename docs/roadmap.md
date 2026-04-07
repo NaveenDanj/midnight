@@ -4,18 +4,18 @@ This roadmap is based on current source implementation and TODO notes.
 
 ## Phase 1: Frontend Stabilization
 
-1. Implement struct member access semantics (`obj.field`, `obj.method()`).
+1. Add array indexing expressions (`arr[i]`) to parser and semantic analyzer.
 2. Add explicit method receiver semantics (`this`/`self`) in struct methods.
-3. Add unary expression parsing and semantic checks.
+3. Analyze struct method bodies with receiver-aware member resolution.
 4. Add better parser and semantic diagnostics with source context.
-5. Add focused unit tests for lexer/parser/semantic modules.
+5. Keep expanding focused lexer/parser/semantic unit coverage.
 
 ## Phase 2: Type System and AST Enrichment
 
 1. Attach resolved type information for every expression and statement where relevant.
 2. Improve function return analysis (path-sensitive).
 3. Add richer type compatibility policy (explicit numeric conversions, if desired).
-4. Add user-defined type symbols for structs and instance typing.
+4. Improve collection typing beyond homogeneous literals (indexing, element assignment rules).
 
 ## Phase 3: IR and Lowering
 
@@ -36,3 +36,4 @@ This roadmap is based on current source implementation and TODO notes.
 - Add benchmark inputs and performance tracking.
 - Maintain language specification docs as parser changes.
 - Add changelog/versioning strategy for syntax and semantics.
+- Keep docs synchronized with each parser/semantic milestone.

@@ -33,11 +33,19 @@
 - numeric literals (int/float)
 - string literals
 - boolean literals through keyword mapping
+- array delimiters (`[` and `]`)
 
 ## Keyword Resolution
 
 Identifier lexemes are post-processed by `lookupKeyword`.
 If no keyword matches, token kind remains `Identifier`.
+
+Current keyword set includes:
+
+- control/declaration keywords (`return`, `if`, `else`, `func`, `var`, `while`, `const`, `struct`)
+- type keywords (`int`, `float`, `bool`, `string`)
+- boolean keywords (`true`, `false`)
+- array-related keyword (`empty`)
 
 ## Numeric Literal Rules
 
@@ -57,3 +65,4 @@ If no keyword matches, token kind remains `Identifier`.
 - Invalid/unknown characters currently fall through to EOF token instead of dedicated lexical error token.
 - Column tracks increment with each `advance()`, but token column currently stores ending position rather than start position.
 - Comments are not yet implemented.
+- `KwNull` exists in token definitions but `null` is not currently mapped in keyword lookup.
