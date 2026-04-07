@@ -14,6 +14,8 @@ pub const FUNCTION = Type{ .kind = .FUNCTION };
 
 pub const STRUCT = Type{ .kind = .STRUCT };
 
+pub const EMPTY = Type{ .kind = .EMPTY };
+
 pub const TypeError = error{
     TypeMismatch,
     InvalidType,
@@ -21,11 +23,12 @@ pub const TypeError = error{
     NotAVariable,
 };
 
-pub const TypeKind = enum { INT, BOOL, FLOAT, VOID, STRING, FUNCTION, STRUCT };
+pub const TypeKind = enum { INT, BOOL, FLOAT, VOID, STRING, FUNCTION, STRUCT, EMPTY };
 
 pub const Type = struct {
     kind: TypeKind,
     struct_name: ?[]const u8 = null,
+    isArray: bool = false,
 
     pub fn isNumeric(self: Type) bool {
         return self.kind == .INT or self.kind == .FLOAT;

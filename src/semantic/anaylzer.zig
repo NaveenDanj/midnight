@@ -152,10 +152,18 @@ pub const SemanticAnalyzer = struct {
         try self.scopeStack.declareSymbol(varDecl.name, .variable, varDecl.varType, varDecl.immutable, &[_]types.Type{});
         const varType = varDecl.varType;
         const initType = try self.evaluateExprType(varDecl.initializer);
+        
+        if (varType.isArray and initType.kind == .EMPTY) {
+            // Allow empty arrays to be assigned to any array type
+            return;
+        }else{
+            
+            if (!self.areTypesCompatible(varType, initType)) {
+                return SemanticError.TypeMismatch;
+            }
 
-        if (!self.areTypesCompatible(varType, initType)) {
-            return SemanticError.TypeMismatch;
         }
+
 
         if (varType.kind == .STRUCT) {
             const structDef = self.context.structs.get(varType.struct_name orelse return SemanticError.TypeMismatch) orelse return SemanticError.TypeMismatch;
@@ -361,6 +369,26 @@ pub const SemanticAnalyzer = struct {
                 }
 
                 return SemanticError.TypeMismatch;
+            },
+            
+            .ArrayLiteral => {
+                
+                const arrayExpr = expr.ArrayLiteral;
+                
+                if (arrayExpr.elements.len == 0) {
+                    return types.Type{ .kind = .EMPTY, .isArray = true, .struct_name = null };
+                }
+
+                const firstElemType = try self.evaluateExprType(arrayExpr.elements[0]);
+                
+                for (arrayExpr.elements) |elem| {
+                    const elemType = try self.evaluateExprType(elem);
+                    if (!self.areTypesCompatible(firstElemType, elemType)) {
+                        return SemanticError.TypeMismatch;
+                    }
+                }
+
+                return types.Type{ .kind = firstElemType.kind, .isArray = true, .struct_name = firstElemType.struct_name };
             },
         }
 

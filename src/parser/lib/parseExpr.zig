@@ -10,6 +10,8 @@ const FunctionCallStmt = @import("./parseFunctionDecl.zig").FunctionCallStmt;
 const MemberAccessExpr = @import("./parseStruct.zig").MemberAccessExpr;
 const StructInitExpr = @import("./parseStruct.zig").StructInitExpr;
 const StructInitField = @import("./parseStruct.zig").StructInitField;
+const ArrayExpression = @import("./parseArray.zig").ArrayExpression;
+const parseArrayExpression = @import("./parseArray.zig").parseArrayExpression;
 
 pub const Expr = union(enum) {
     Binary: BinaryExpr,
@@ -18,6 +20,7 @@ pub const Expr = union(enum) {
     BoolLiteral: Types.BooleanLiteral,
     StringLiteral: Types.StringLiteral,
     Identifier: IdentifierExpr,
+    ArrayLiteral: ArrayExpression,
     FunctionCall: FunctionCallStmt,
     MemberAccess: MemberAccessExpr,
     StructInit: StructInitExpr,
@@ -156,6 +159,10 @@ pub fn parsePostFix(self: *Parser) ParserError!*Expr {
 pub fn parsePrimary(self: *Parser) ParserError!*Expr {
     if (self.check(.Identifier) and self.peekNext().?.kind == .LCurly) {
         return try parseStructInitExpr(self);
+    }
+
+    if (self.check(.LBracket)) {
+        return try parseArrayExpression(self);
     }
 
     if (self.check(.Identifier)) {

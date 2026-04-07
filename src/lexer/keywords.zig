@@ -30,6 +30,8 @@ pub fn lookupKeyword(ident: []const u8) ?TokenType {
         return TokenType.KwString;
     }else if (std.mem.eql(u8, "struct", ident)) {
         return TokenType.KwStruct;
+    } else if (std.mem.eql(u8, "empty", ident)) {
+        return TokenType.KwEmpty;
     } else {
         return null;
     }
