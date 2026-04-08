@@ -152,18 +152,15 @@ pub const SemanticAnalyzer = struct {
         try self.scopeStack.declareSymbol(varDecl.name, .variable, varDecl.varType, varDecl.immutable, &[_]types.Type{});
         const varType = varDecl.varType;
         const initType = try self.evaluateExprType(varDecl.initializer);
-        
+
         if (varType.isArray and initType.kind == .EMPTY) {
             // Allow empty arrays to be assigned to any array type
             return;
-        }else{
-            
+        } else {
             if (!self.areTypesCompatible(varType, initType)) {
                 return SemanticError.TypeMismatch;
             }
-
         }
-
 
         if (varType.kind == .STRUCT) {
             const structDef = self.context.structs.get(varType.struct_name orelse return SemanticError.TypeMismatch) orelse return SemanticError.TypeMismatch;
@@ -299,19 +296,6 @@ pub const SemanticAnalyzer = struct {
             },
 
             .MemberAccess => {
-                // const memberExpr = expr.MemberAccess;
-                // const objectType = try self.evaluateExprType(memberExpr.object orelse return SemanticError.TypeMismatch);
-
-                // if (objectType.kind != .STRUCT) {
-                //     return SemanticError.TypeMismatch;
-                // }
-
-                // const structDef = self.scopeStack.lookupSymbol(objectType.name) orelse return SemanticError.UndefinedVariable;
-
-                // const memberType = structDef.memberTypes.get(memberExpr.memberName) orelse return SemanticError.UndefinedVariable;
-                // return memberType;
-                // return .{ .kind = .VOID };
-
                 const object = expr.MemberAccess;
                 const memberName = object.memberName;
                 const objectType = try self.evaluateExprType(object.object orelse return SemanticError.TypeMismatch);
@@ -321,7 +305,7 @@ pub const SemanticAnalyzer = struct {
                 }
 
                 const userDefinedType = self.context.structs.get(objectType.struct_name orelse return SemanticError.UndefinedVariable) orelse return SemanticError.UndefinedVariable;
-                
+
                 var found = false;
 
                 for (userDefinedType.fields) |field| {
@@ -341,7 +325,6 @@ pub const SemanticAnalyzer = struct {
                             }
                         },
                     }
-
                 }
 
                 if (!found) {
@@ -370,17 +353,15 @@ pub const SemanticAnalyzer = struct {
 
                 return SemanticError.TypeMismatch;
             },
-            
             .ArrayLiteral => {
-                
                 const arrayExpr = expr.ArrayLiteral;
-                
+
                 if (arrayExpr.elements.len == 0) {
                     return types.Type{ .kind = .EMPTY, .isArray = true, .struct_name = null };
                 }
 
                 const firstElemType = try self.evaluateExprType(arrayExpr.elements[0]);
-                
+
                 for (arrayExpr.elements) |elem| {
                     const elemType = try self.evaluateExprType(elem);
                     if (!self.areTypesCompatible(firstElemType, elemType)) {
@@ -390,15 +371,28 @@ pub const SemanticAnalyzer = struct {
 
                 return types.Type{ .kind = firstElemType.kind, .isArray = true, .struct_name = firstElemType.struct_name };
             },
+            .ArrayAccess => {
+                const arrayAccess = expr.ArrayAccess;
+                const arrayType = try self.evaluateExprType(arrayAccess.array);
+
+                if (!arrayType.isArray) {
+                    return SemanticError.TypeMismatch;
+                }
+
+                const indexType = try self.evaluateExprType(arrayAccess.index);
+                if (indexType.kind != .INT) {
+                    return SemanticError.TypeMismatch;
+                }
+
+                return types.Type{ .kind = arrayType.kind, .isArray = true, .struct_name = arrayType.struct_name };
+            },
         }
 
         return types.Type{ .kind = .VOID };
     }
 
     pub fn analyzeVarAssignment(self: *SemanticAnalyzer, varAssign: *VarAssign) SemanticError!void {
-
         switch (varAssign.target.*) {
-            
             .Identifier => {
                 const symbol = self.scopeStack.lookupSymbol(varAssign.target.Identifier.name) orelse return SemanticError.UndefinedVariable;
 
@@ -428,10 +422,9 @@ pub const SemanticAnalyzer = struct {
                 }
 
                 const userDefinedType = self.context.structs.get(objectType.struct_name orelse return SemanticError.UndefinedVariable) orelse return SemanticError.UndefinedVariable;
-                
+
                 var found = false;
                 for (userDefinedType.fields) |field| {
-
                     switch (field) {
                         .StructProperty => |property_ptr| {
                             const property = property_ptr.*;
@@ -454,21 +447,39 @@ pub const SemanticAnalyzer = struct {
                             }
                         },
                     }
-
                 }
 
                 if (!found) {
                     return SemanticError.UndefinedVariable;
                 }
+            },
 
+            .ArrayAccess => {
+                const arrayAccess = varAssign.target.ArrayAccess;
+                const arrayType = try self.evaluateExprType(arrayAccess.array);
+
+                std.debug.print("Array type: {any}\n", .{arrayType});
+                std.debug.print("Array access expression: {s}\n", .{arrayAccess.array.*.ArrayAccess.array.*.Identifier.name});
+
+                if (!arrayType.isArray) {
+                    return SemanticError.TypeMismatch;
+                }
+
+                const indexType = try self.evaluateExprType(arrayAccess.index);
+                if (indexType.kind != .INT) {
+                    return SemanticError.TypeMismatch;
+                }
+
+                const exprType = try self.evaluateExprType(varAssign.value);
+                if (!self.areTypesCompatible(types.Type{ .kind = arrayType.kind, .isArray = false, .struct_name = arrayType.struct_name }, exprType)) {
+                    return SemanticError.TypeMismatch;
+                }
             },
 
             else => {
                 return SemanticError.TypeMismatch;
             },
-
         }
-
     }
 
     pub fn analyzeFunctionCall(self: *SemanticAnalyzer, funcCall: *FunctionCallStmt) SemanticError!void {

@@ -20,8 +20,15 @@ func add(int a , int b) int {
 }
 
 func main() int {
+    
+    var int index = 0;
+    
+    var string[] arr = [
+        ["hello" , "world"],
+        ["foo" , "bar"]
+    ];
 
-    var string[] arr = ["hello" , "world"];
+    arr[index][index] = "hello world";
 
     const Person person1 = Person{
         first_name = "Naveen",
