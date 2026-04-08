@@ -4,6 +4,8 @@ const Lexer = @import("lexer/lexer.zig").Lexer;
 const Parser = @import("parser/parser.zig").Parser;
 const Token = @import("lexer/tokens.zig").Token;
 const SemanticAnalyzer = @import("semantic/anaylzer.zig").SemanticAnalyzer;
+const generateIR = @import("ir/lower.zig").generateIR;
+const InstructionBuilder = @import("ir/builder.zig").InstructionBuilder;
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
@@ -42,6 +44,9 @@ pub fn main() !void {
             }
         }
     }
+
+    var irBuilder = InstructionBuilder.init(allocator);
+    try generateIR(&irBuilder, statements);
 
     defer token_list.deinit(allocator);
 }

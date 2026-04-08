@@ -24,4 +24,14 @@ pub const InstructionBuilder = struct {
         self.tempCounter += 1;
         return tempId;
     }
+
+    pub fn free(self: *InstructionBuilder) void {
+        self.instructions.deinit(self.allocator);
+    }
+
+    pub fn printIR(self: *InstructionBuilder) void {
+        for (self.instructions.items) |instr| {
+            std.debug.print("IR Instruction: {any}\n", .{instr});
+        }
+    }
 };
