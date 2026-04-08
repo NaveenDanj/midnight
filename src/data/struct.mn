@@ -8,6 +8,7 @@ struct Person {
     var string last_name;
     var int age;
     var Sample sample;
+    var int[] arr;
 
     func greet() string {
         return first_name + last_name;
@@ -28,7 +29,7 @@ func main() int {
         ["foo" , "bar"]
     ];
 
-    arr[index][index] = "hello world";
+    arr[index][index] = "naveen";
 
     const Person person1 = Person{
         first_name = "Naveen",
@@ -37,7 +38,8 @@ func main() int {
         sample = Sample{
             a = 100,
             b = 200
-        }
+        },
+        arr = [1,2,3]
     };
 
     const Person person2 = Person{
@@ -47,7 +49,8 @@ func main() int {
         sample = Sample{
             a = 100,
             b = 200
-        }
+        },
+        arr = [1,2,3]
     };
 
     person1.first_name = "hello world";
@@ -65,3 +68,12 @@ func main() int {
     
 }
 
+
+
+func factorial(int n) int {
+    if (n == 1) {
+        return 1;
+    }
+
+    return n * factorial(n-1); 
+}
