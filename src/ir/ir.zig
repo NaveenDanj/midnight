@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const Value = union(enum) {
+pub const Value = union(enum) {
     temp: u32,
     constantInt: i64,
     constantFloat: f64,
@@ -49,5 +49,21 @@ pub const Instruction = union(enum) { BinaryOp: struct {
     name: []const u8,
     value: Value,
 }, Return: struct {
+    value: Value,
+}, StoreField: struct {
+    object: Value,
+    fieldName: []const u8,
+    value: Value,
+}, LoadField: struct {
+    object: Value,
+    fieldName: []const u8,
+    dest: u32,
+}, LoadIndex: struct {
+    array: Value,
+    index: Value,
+    dest: u32,
+}, StoreIndex: struct {
+    array: Value,
+    index: Value,
     value: Value,
 } };

@@ -10,13 +10,13 @@ const InstructionBuilder = @import("ir/builder.zig").InstructionBuilder;
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
 
-    const file = try std.fs.cwd().openFile("./src/data/struct.mn", .{});
+    const file = try std.fs.cwd().openFile("./src/data/ir.mn", .{});
     defer file.close();
 
     const content = try file.readToEndAlloc(allocator, 1024 * 1024);
     defer allocator.free(content);
 
-    std.debug.print("Source code:\n{s}\n", .{content});
+    // std.debug.print("Source code:\n{s}\n", .{content});
 
     var lexer = Lexer.init(content);
     var token_list = try lexer.lexAll(allocator);
@@ -31,22 +31,26 @@ pub fn main() !void {
     //     std.debug.print("Token: {s} (line {d}, column {d})\n", .{ token.lexeme, token.line + 1, token.column });
     // }
 
-    for (statements) |stmt| {
-        std.debug.print("Parsed statement: {any}\n", .{stmt});
+    // for (statements) |stmt| {
+    //     std.debug.print("Parsed statement: {any}\n", .{stmt});
 
-        if (stmt.* == .FunctionDecl) {
-            for (stmt.FunctionDecl.params) |param| {
-                std.debug.print("  Param: {s} of type {any}\n", .{ param.name, param.dataType });
-            }
+    //     if (stmt.* == .FunctionDecl) {
+    //         for (stmt.FunctionDecl.params) |param| {
+    //             std.debug.print("  Param: {s} of type {any}\n", .{ param.name, param.dataType });
+    //         }
 
-            for (stmt.FunctionDecl.body.statements) |bodyStmt| {
-                std.debug.print("  Body statement: {any}\n", .{bodyStmt});
-            }
-        }
-    }
+    //         for (stmt.FunctionDecl.body.statements) |bodyStmt| {
+    //             std.debug.print("  Body statement: {any}\n", .{bodyStmt});
+    //         }
+    //     }
+    // }
 
     var irBuilder = InstructionBuilder.init(allocator);
     try generateIR(&irBuilder, statements);
+
+    for (irBuilder.instructions.items) |instrunction| {
+        std.debug.print("Generated IR instruction: {any}\n", .{instrunction});
+    }
 
     defer token_list.deinit(allocator);
 }

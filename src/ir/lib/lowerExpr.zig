@@ -1,10 +1,10 @@
 const std = @import("std");
-const Instruction = @import("./ir.zig").Instruction;
-const Value = @import("./ir.zig").Value;
-const InstructionBuilder = @import("./builder.zig").InstructionBuilder;
-const Expr = @import("../parser//lib//parseExpr.zig").Expr;
-const BinaryOp = @import("./ir.zig").BinaryOp;
-const Statement = @import("../parser/lib/parseStatement.zig").Statement;
+const Instruction = @import("../ir.zig").Instruction;
+const Value = @import("../ir.zig").Value;
+const InstructionBuilder = @import("../builder.zig").InstructionBuilder;
+const Expr = @import("../../parser/lib/parseExpr.zig").Expr;
+const BinaryOp = @import("../ir.zig").BinaryOp;
+const Statement = @import("../../parser/lib/parseStatement.zig").Statement;
 
 pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
     switch (expr.*) {
@@ -38,24 +38,80 @@ pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
             return .{ .temp = t };
         },
 
-        .BinaryExpr => {
-            const leftValue = try lowerExpression(builder, expr.BinaryExpr.left);
-            const rightValue = try lowerExpression(builder, expr.BinaryExpr.right);
+        .Binary => {
+            const leftValue = try lowerExpression(builder, expr.Binary.left);
+            const rightValue = try lowerExpression(builder, expr.Binary.right);
             const t = builder.newTemp();
 
             try builder.emit(.{ .BinaryOp = .{
-                .op = expr.Binary.operator,
+                .op = mapOperatorToBinaryOp(expr.Binary.operator),
                 .left = leftValue,
                 .right = rightValue,
                 .dest = t,
             } });
             return .{ .temp = t };
         },
+
+        .MemberAccess => {
+            const obj = try lowerExpression(builder, expr.MemberAccess.object.?);
+            const t = builder.newTemp();
+            try builder.emit(.{ .LoadField = .{
+                .object = obj,
+                .fieldName = expr.MemberAccess.memberName,
+                .dest = t,
+            } });
+            return .{ .temp = t };
+        },
+
+        .ArrayAccess => {
+            const array = try lowerExpression(builder, expr.ArrayAccess.array);
+            const index = try lowerExpression(builder, expr.ArrayAccess.index);
+            const t = builder.newTemp();
+            try builder.emit(.{ .LoadIndex = .{
+                .array = array,
+                .index = index,
+                .dest = t,
+            } });
+            return .{ .temp = t };
+        },
+
         // Handle other expression types (literals, variable references, function calls, etc.)
         else => {
             // For now, we just return a temporary value for any expression type
             // In a real implementation, you would generate the correct IR based on the expression kind
             return .{ .temp = builder.newTemp() };
+        },
+    }
+}
+
+pub fn lowerLValue(builder: *InstructionBuilder, expr: *Expr, value: Value) !void {
+    switch (expr.*) {
+        .Identifier => {
+            try builder.emit(.{ .StoreVar = .{ .name = expr.Identifier.name, .value = value } });
+        },
+
+        .MemberAccess => {
+            const obj = try lowerExpression(builder, expr.MemberAccess.object.?);
+            try builder.emit(.{ .StoreField = .{
+                .object = obj,
+                .fieldName = expr.MemberAccess.memberName,
+                .value = value,
+            } });
+        },
+
+        .ArrayAccess => {
+            const array = try lowerExpression(builder, expr.ArrayAccess.array);
+            const index = try lowerExpression(builder, expr.ArrayAccess.index);
+            try builder.emit(.{ .StoreIndex = .{
+                .array = array,
+                .index = index,
+                .value = value,
+            } });
+        },
+
+        // Handle other lvalue types (array indexing, struct field access, etc.)
+        else => {
+            @panic("Unsupported lvalue expression");
         },
     }
 }
