@@ -12,6 +12,7 @@ const StructInitExpr = @import("./parseStruct.zig").StructInitExpr;
 const StructInitField = @import("./parseStruct.zig").StructInitField;
 const ArrayExpression = @import("./parseArray.zig").ArrayExpression;
 const parseArrayExpression = @import("./parseArray.zig").parseArrayExpression;
+const ArrayAccess = @import("./parseArray.zig").ArrayAccess;
 
 pub const Expr = union(enum) {
     Binary: BinaryExpr,
@@ -21,6 +22,7 @@ pub const Expr = union(enum) {
     StringLiteral: Types.StringLiteral,
     Identifier: IdentifierExpr,
     ArrayLiteral: ArrayExpression,
+    ArrayAccess: ArrayAccess,
     FunctionCall: FunctionCallStmt,
     MemberAccess: MemberAccessExpr,
     StructInit: StructInitExpr,
@@ -150,6 +152,19 @@ pub fn parsePostFix(self: *Parser) ParserError!*Expr {
 
             const newExpr = try self.allocator.create(Expr);
             newExpr.* = .{ .FunctionCall = funcCall };
+            expr = newExpr;
+        } else if (self.match(.LBracket)) {
+            const indexExpr = try parseExpr(self);
+            _ = try self.expect(.RBracket);
+
+            const arrayAccess = ArrayAccess{
+                .array = expr,
+                .index = indexExpr,
+                .resolvedType = null,
+            };
+
+            const newExpr = try self.allocator.create(Expr);
+            newExpr.* = .{ .ArrayAccess = arrayAccess };
             expr = newExpr;
         } else break;
     }

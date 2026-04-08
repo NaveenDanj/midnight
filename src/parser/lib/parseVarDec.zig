@@ -7,7 +7,7 @@ const Type = @import("../../semantic/types.zig").Type;
 const TypeKind = @import("../../semantic/types.zig").TypeKind;
 const TokenType = @import("../../lexer/tokens.zig").TokenType;
 const MemberAccessExpr = @import("./parseStruct.zig").MemberAccessExpr;
-
+const ArrayAccess = @import("./parseArray.zig").ArrayAccess;
 
 pub const VarDecl = struct {
     immutable: bool,
@@ -40,7 +40,7 @@ pub fn parseVarDecl(self: *Parser) !*VarDecl {
 
     var dataType = try checkForType(self);
     dataType = try checkForArrayType(self, dataType);
-    
+
     const name = try self.expect(.Identifier);
     _ = try self.expect(.Equal);
     const initializer = try parseExpr(self);
@@ -57,15 +57,15 @@ pub fn parseVarDecl(self: *Parser) !*VarDecl {
     return varDec;
 }
 
-pub fn parseVarAssignment(self: *Parser , target: *Expr) ParserError!*VarAssign {
+pub fn parseVarAssignment(self: *Parser, target: *Expr) ParserError!*VarAssign {
     _ = try self.expect(.Equal);
     const value = try parseExpr(self);
     _ = try self.expect(.Semicolon);
 
-    // TODO: we should ideally check if the target is a valid lvalue (identifier or member access) here and return an error if it's not. For now, we'll just assume the programmer is doing the right thing and handle errors during semantic analysis.
     switch (target.*) {
         .Identifier => {},
         .MemberAccess => {},
+        .ArrayAccess => {},
         else => return ParserError.UnExpectedToken,
     }
 
@@ -97,7 +97,6 @@ pub fn checkForType(self: *Parser) ParserError!Type {
     return ParserError.UnExpectedToken;
 }
 
-
 pub fn checkForArrayType(self: *Parser, baseType: Type) ParserError!Type {
     if (self.check(.LBracket)) {
         _ = try self.expect(.LBracket);
@@ -108,18 +107,16 @@ pub fn checkForArrayType(self: *Parser, baseType: Type) ParserError!Type {
     return baseType;
 }
 
-
-
-pub fn parseLSide (self: *Parser) ParserError!*Expr {
+pub fn parseLSide(self: *Parser) ParserError!*Expr {
     var expr = try parseExpr(self);
 
-    while(true) {
+    while (true) {
         if (self.check(.Dot)) {
             _ = try self.expect(.Dot);
             const fieldNameToken = try self.expect(.Identifier);
 
             const fieldAccess = try self.allocator.create(MemberAccessExpr);
-            
+
             fieldAccess.* = .{
                 .object = expr,
                 .memberName = fieldNameToken.lexeme,
@@ -128,7 +125,21 @@ pub fn parseLSide (self: *Parser) ParserError!*Expr {
 
             expr = try self.allocator.create(Expr);
             expr.* = .{ .MemberAccess = fieldAccess.* };
-        // TODO: add support for array indexing here
+        } else if (self.check(.LBracket)) {
+            _ = try self.expect(.LBracket);
+            const indexExpr = try parseExpr(self);
+            _ = try self.expect(.RBracket);
+
+            const arrayAccess = try self.allocator.create(Expr);
+            arrayAccess.* = .{
+                .ArrayAccess = .{
+                    .array = expr,
+                    .index = indexExpr,
+                    .resolvedType = null,
+                },
+            };
+
+            expr = arrayAccess;
         } else {
             break;
         }
@@ -136,7 +147,6 @@ pub fn parseLSide (self: *Parser) ParserError!*Expr {
 
     return expr;
 }
-
 
 pub fn mapType(tokenTypeKind: TokenType) Type {
     return switch (tokenTypeKind) {

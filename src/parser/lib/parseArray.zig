@@ -11,6 +11,12 @@ pub const ArrayExpression = struct {
     resolvedType: ?Type = null,
 };
 
+pub const ArrayAccess = struct {
+    array: *Expr,
+    index: *Expr,
+    resolvedType: ?Type = null,
+};
+
 pub fn parseArrayExpression(self: *Parser) ParserError!*Expr {
     _ = try self.expect(.LBracket);
     var elementsList: std.ArrayList(*Expr) = .empty;
