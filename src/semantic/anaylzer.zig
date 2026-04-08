@@ -458,9 +458,6 @@ pub const SemanticAnalyzer = struct {
                 const arrayAccess = varAssign.target.ArrayAccess;
                 const arrayType = try self.evaluateExprType(arrayAccess.array);
 
-                std.debug.print("Array type: {any}\n", .{arrayType});
-                std.debug.print("Array access expression: {s}\n", .{arrayAccess.array.*.ArrayAccess.array.*.Identifier.name});
-
                 if (!arrayType.isArray) {
                     return SemanticError.TypeMismatch;
                 }
