@@ -1,2 +1,13 @@
 var int x = 100;
-x = x + 100;
+var int y = (x * 3) + 100;
+x = x + y + 100;
+
+func print(string message) string {
+    return message;
+}
+
+if (x > 100) {
+    print("grate than 100");
+}else{
+    print("less than 100");
+}

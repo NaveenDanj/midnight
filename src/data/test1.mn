@@ -7,9 +7,11 @@ func main2(int a , int b) bool {
 }
 
 func main() int {
+
     const string first_name = "Naveen";
     const string last_name = "Hettiwaththa";
     const string fullName = first_name + " " + last_name;  
+
     var bool flag = false;
     const float PI = 3.14;
     const int a = 100;

@@ -245,7 +245,7 @@ pub const SemanticAnalyzer = struct {
                     }
                 }
 
-                if (std.mem.eql(u8, binary.operator, "==") or std.mem.eql(u8, binary.operator, "!=")) {
+                if (std.mem.eql(u8, binary.operator, "==") or std.mem.eql(u8, binary.operator, "!=") or std.mem.eql(u8, binary.operator, "<") or std.mem.eql(u8, binary.operator, ">") or std.mem.eql(u8, binary.operator, "<=") or std.mem.eql(u8, binary.operator, ">=")) {
                     return types.Type{ .kind = .BOOL };
                 }
 

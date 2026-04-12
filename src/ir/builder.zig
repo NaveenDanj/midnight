@@ -6,12 +6,14 @@ pub const InstructionBuilder = struct {
     allocator: std.mem.Allocator,
     instructions: std.ArrayList(Instruction),
     tempCounter: u32,
+    labelCounter: u32,
 
     pub fn init(allocator: std.mem.Allocator) InstructionBuilder {
         return InstructionBuilder{
             .allocator = allocator,
             .instructions = std.ArrayList(Instruction).empty,
             .tempCounter = 0,
+            .labelCounter = 0,
         };
     }
 
@@ -23,6 +25,12 @@ pub const InstructionBuilder = struct {
         const tempId = self.tempCounter;
         self.tempCounter += 1;
         return tempId;
+    }
+
+    pub fn newLabel(self: *InstructionBuilder) u32 {
+        const labelId = self.labelCounter;
+        self.labelCounter += 1;
+        return labelId;
     }
 
     pub fn free(self: *InstructionBuilder) void {

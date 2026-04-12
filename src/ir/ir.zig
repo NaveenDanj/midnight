@@ -48,6 +48,13 @@ pub const Instruction = union(enum) { BinaryOp: struct {
 }, StoreVar: struct {
     name: []const u8,
     value: Value,
+}, JumpIfFalse: struct {
+    condition: Value,
+    label: u32,
+}, Jump: struct {
+    label: u32,
+}, Label: struct {
+    id: u32,
 }, Return: struct {
     value: Value,
 }, StoreField: struct {

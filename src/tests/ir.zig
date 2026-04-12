@@ -277,7 +277,7 @@ test "IR lowerVarAssignment lowers RHS before storing into array index" {
     try expect(builder.instructions.items[3] == .StoreIndex);
 }
 
-test "IR generateIR lowers only var assignments at top level" {
+test "IR generateIR lowers var declarations and assignments at top level" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
@@ -297,9 +297,54 @@ test "IR generateIR lowers only var assignments at top level" {
     var builder = InstructionBuilder.init(allocator);
     try generateIR(&builder, statements);
 
-    try expectEqual(@as(usize, 4), builder.instructions.items.len);
-    try expect(builder.instructions.items[0] == .LoadVar);
-    try expect(builder.instructions.items[1] == .LoadConstInt);
-    try expect(builder.instructions.items[2] == .BinaryOp);
-    try expect(builder.instructions.items[3] == .StoreVar);
+    try expectEqual(@as(usize, 6), builder.instructions.items.len);
+    try expect(builder.instructions.items[0] == .LoadConstInt);
+    try expect(builder.instructions.items[1] == .StoreVar);
+    try expect(builder.instructions.items[2] == .LoadVar);
+    try expect(builder.instructions.items[3] == .LoadConstInt);
+    try expect(builder.instructions.items[4] == .BinaryOp);
+    try expect(builder.instructions.items[5] == .StoreVar);
+}
+
+test "IR generateIR lowers if else statements with labels and jumps" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const source =
+        \\var bool cond = true;
+        \\if (cond) {
+        \\    var int x = 1;
+        \\} else {
+        \\    var int x = 2;
+        \\}
+    ;
+
+    var lexer = Lexer.init(source);
+    var token_list = try lexer.lexAll(std.testing.allocator);
+    defer token_list.deinit(std.testing.allocator);
+
+    var parser = Parser.init(allocator, token_list.items);
+    const statements = try parser.parseProgram();
+
+    var builder = InstructionBuilder.init(allocator);
+    try generateIR(&builder, statements);
+
+    try expectEqual(@as(usize, 11), builder.instructions.items.len);
+    try expect(builder.instructions.items[0] == .LoadConstBool);
+    try expect(builder.instructions.items[1] == .StoreVar);
+    try expect(builder.instructions.items[2] == .LoadVar);
+    try expect(builder.instructions.items[3] == .JumpIfFalse);
+    try expect(builder.instructions.items[4] == .LoadConstInt);
+    try expect(builder.instructions.items[5] == .StoreVar);
+    try expect(builder.instructions.items[6] == .Jump);
+    try expect(builder.instructions.items[7] == .Label);
+    try expect(builder.instructions.items[8] == .LoadConstInt);
+    try expect(builder.instructions.items[9] == .StoreVar);
+    try expect(builder.instructions.items[10] == .Label);
+
+    try expectEqual(@as(u32, 0), builder.instructions.items[3].JumpIfFalse.label);
+    try expectEqual(@as(u32, 1), builder.instructions.items[6].Jump.label);
+    try expectEqual(@as(u32, 0), builder.instructions.items[7].Label.id);
+    try expectEqual(@as(u32, 1), builder.instructions.items[10].Label.id);
 }
