@@ -75,6 +75,21 @@ pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
             return .{ .temp = t };
         },
 
+        .FunctionCall => {
+            var args = try std.ArrayList(Value).initCapacity(builder.allocator, expr.FunctionCall.args.len);
+
+            for (expr.FunctionCall.args) |arg| {
+                const v = try lowerExpression(builder, arg);
+                try args.append(builder.allocator, v);
+            }
+
+            const t = builder.newTemp();
+            try builder.emit(.{
+                .FunctionCall = .{ .name = expr.FunctionCall.name, .args = args.items, .dest = t },
+            });
+            return .{ .temp = t };
+        },
+
         // Handle other expression types (literals, variable references, function calls, etc.)
         else => {
             // For now, we just return a temporary value for any expression type

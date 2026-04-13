@@ -1,10 +1,13 @@
 var int x = 100;
 var int y = (x * 3) + 100;
 x = x + y + 100;
-var int[] arr = [1,2,3,4,5,6];
 
 func print(string message) string {
     return message;
+}
+
+func add(int a , int b) int {
+    return a + b;
 }
 
 if (x > 100) {
@@ -20,3 +23,6 @@ if (x > 100) {
 while( 10 > 1) {
     print("Infinite loop");
 }
+
+add(500 , 600);
+var int total = add( add(100 , 200) , 300);
