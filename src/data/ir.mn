@@ -1,6 +1,7 @@
 var int x = 100;
 var int y = (x * 3) + 100;
 x = x + y + 100;
+var int[] arr = [1,2,3,4,5,6];
 
 func print(string message) string {
     return message;
@@ -8,6 +9,14 @@ func print(string message) string {
 
 if (x > 100) {
     print("grate than 100");
+}
+
+if (x > 100) {
+    print("grate than 100");
 }else{
     print("less than 100");
+}
+
+while( 10 > 1) {
+    print("Infinite loop");
 }

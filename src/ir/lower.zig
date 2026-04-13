@@ -5,6 +5,8 @@ const IfStatement = @import("../parser/lib/parseIf.zig").IfStatement;
 const lowerVarAssignment = @import("./lib/lowerVar.zig").lowerVarAssignment;
 const lowerVarDeclaration = @import("./lib/lowerVar.zig").lowerVarDeclaration;
 const lowerExpression = @import("./lib/lowerExpr.zig").lowerExpression;
+const lowerIfStatement = @import("./lib/lowerFlowControl.zig").lowerIfStatement;
+const lowerWhileStatement = @import("./lib/lowerFlowControl.zig").lowerWhileStatement;
 
 pub fn generateIR(builder: *InstructionBuilder, statements: []*Statement) anyerror!void {
     for (statements) |stmt| {
@@ -24,6 +26,10 @@ pub fn lowerStatement(builder: *InstructionBuilder, stmt: *Statement) anyerror!v
             try lowerVarDeclaration(builder, stmt.VariableDecl);
             std.debug.print("Lowering variable declaration: {s}\n", .{stmt.VariableDecl.name});
         },
+        .WhileStatement => {
+            try lowerWhileStatement(builder, stmt.WhileStatement);
+            std.debug.print("Lowering while statement\n", .{});
+        },
         .IfStatement => {
             try lowerIfStatement(builder, stmt.IfStatement);
         },
@@ -39,25 +45,8 @@ pub fn lowerStatement(builder: *InstructionBuilder, stmt: *Statement) anyerror!v
     }
 }
 
-fn lowerStatements(builder: *InstructionBuilder, statements: []*Statement) anyerror!void {
+pub fn lowerStatements(builder: *InstructionBuilder, statements: []*Statement) anyerror!void {
     for (statements) |stmt| {
         try lowerStatement(builder, stmt);
     }
-}
-
-fn lowerIfStatement(builder: *InstructionBuilder, ifStmt: *IfStatement) anyerror!void {
-    const condition = try lowerExpression(builder, ifStmt.expression);
-    const elseLabel = builder.newLabel();
-    const endLabel = builder.newLabel();
-
-    try builder.emit(.{ .JumpIfFalse = .{ .condition = condition, .label = elseLabel } });
-    try lowerStatements(builder, ifStmt.thenBlock.statements);
-    try builder.emit(.{ .Jump = .{ .label = endLabel } });
-
-    try builder.emit(.{ .Label = .{ .id = elseLabel } });
-    if (ifStmt.elseBlock) |elseBlock| {
-        try lowerStatements(builder, elseBlock.statements);
-    }
-
-    try builder.emit(.{ .Label = .{ .id = endLabel } });
 }
