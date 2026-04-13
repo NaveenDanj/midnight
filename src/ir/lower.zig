@@ -7,6 +7,7 @@ const lowerVarDeclaration = @import("./lib/lowerVar.zig").lowerVarDeclaration;
 const lowerExpression = @import("./lib/lowerExpr.zig").lowerExpression;
 const lowerIfStatement = @import("./lib/lowerFlowControl.zig").lowerIfStatement;
 const lowerWhileStatement = @import("./lib/lowerFlowControl.zig").lowerWhileStatement;
+const lowerFunctionCall = @import("./lib/lowerFunction.zig").lowerFunctionCall;
 
 pub fn generateIR(builder: *InstructionBuilder, statements: []*Statement) anyerror!void {
     for (statements) |stmt| {
@@ -35,9 +36,22 @@ pub fn lowerStatement(builder: *InstructionBuilder, stmt: *Statement) anyerror!v
         },
         .ExpressionStmt => {
             std.debug.print("Lowering expression statement\n", .{});
+            switch (stmt.ExpressionStmt.*) {
+                .FunctionCall => {
+                    try lowerFunctionCall(builder, &stmt.ExpressionStmt.FunctionCall);
+                    std.debug.print("Lowering function call expression: {s}\n", .{stmt.ExpressionStmt.FunctionCall.name});
+                },
+                else => {
+                    std.debug.print("Lowering unhandled expression type: {any}\n", .{stmt.ExpressionStmt});
+                },
+            }
         },
         .ReturnStatement => {
             std.debug.print("Lowering return statement\n", .{});
+        },
+        .FunctionCallStatement => {
+            std.debug.print("Lowering function call statement: {s}\n", .{stmt.FunctionCallStatement.name});
+            try lowerFunctionCall(builder, stmt.FunctionCallStatement);
         },
         else => {
             std.debug.print("Lowering unhandled statement type: {any}\n", .{stmt});
