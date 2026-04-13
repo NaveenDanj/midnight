@@ -73,4 +73,7 @@ pub const Instruction = union(enum) { BinaryOp: struct {
     array: Value,
     index: Value,
     value: Value,
+}, JumpWhileTrue: struct {
+    condition: Value,
+    label: u32,
 } };
