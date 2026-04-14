@@ -1,4 +1,6 @@
 const std = @import("std");
+const Type = @import("../semantic/types.zig").Type;
+const Param = @import("../parser/lib//parseFunctionDecl.zig").Param;
 
 pub const Value = union(enum) {
     temp: u32,
@@ -7,6 +9,7 @@ pub const Value = union(enum) {
     constantBool: bool,
     string: []const u8,
     variable: []const u8,
+    paramIndex: u32,
 };
 
 pub const BinaryOp = enum {
@@ -95,8 +98,9 @@ pub const Instruction = union(enum) {
     },
     FunctionIR: struct {
         name: []const u8,
-        params: []const u8,
+        params: []*Param,
         body: []Instruction,
+        returnType: Type,
     },
     FunctionCall: struct {
         name: []const u8,
