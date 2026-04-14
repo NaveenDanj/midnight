@@ -2,6 +2,7 @@ var int x = 100;
 var int y = (x * 3) + 100;
 x = x + y + 100;
 const int[] array = [1,2,3,4,5];
+const string[] name = ["N" , "a" , "v" , "e" , "e" , "n"];
 
 func print(string message) string {
     return message;
@@ -29,3 +30,4 @@ add(500 , 600);
 var int total = add( add(100 , 200) , 300);
 
 array[10] = 102;
+name[6] = "!";
