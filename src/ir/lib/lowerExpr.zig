@@ -38,6 +38,21 @@ pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
             return .{ .temp = t };
         },
 
+        .ArrayLiteral => {
+            const tempId = builder.newTemp();
+
+            for (expr.ArrayLiteral.elements, 0..) |element, index| {
+                const elemValue = try lowerExpression(builder, element);
+                try builder.emit(.{ .StoreIndex = .{
+                    .array = .{ .temp = tempId },
+                    .index = .{ .arrayIndex = @intCast(index) },
+                    .value = elemValue,
+                } });
+            }
+
+            return .{ .temp = tempId };
+        },
+
         .Binary => {
             const leftValue = try lowerExpression(builder, expr.Binary.left);
             const rightValue = try lowerExpression(builder, expr.Binary.right);
