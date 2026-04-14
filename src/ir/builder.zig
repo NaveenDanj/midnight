@@ -7,6 +7,7 @@ pub const InstructionBuilder = struct {
     instructions: std.ArrayList(Instruction),
     tempCounter: u32,
     labelCounter: u32,
+    var_map: std.StringHashMap(Value),
 
     pub fn init(allocator: std.mem.Allocator) InstructionBuilder {
         return InstructionBuilder{
@@ -14,6 +15,7 @@ pub const InstructionBuilder = struct {
             .instructions = std.ArrayList(Instruction).empty,
             .tempCounter = 0,
             .labelCounter = 0,
+            .var_map = std.StringHashMap(Value).init(allocator),
         };
     }
 
@@ -33,8 +35,17 @@ pub const InstructionBuilder = struct {
         return labelId;
     }
 
+    pub fn declareVariable(self: *InstructionBuilder, name: []const u8, value: Value) !void {
+        try self.var_map.put(name, value);
+    }
+
+    pub fn getVariable(self: *InstructionBuilder, name: []const u8) ?Value {
+        return self.var_map.get(name);
+    }
+
     pub fn free(self: *InstructionBuilder) void {
         self.instructions.deinit(self.allocator);
+        self.var_map.deinit();
     }
 
     pub fn printIR(self: *InstructionBuilder) void {

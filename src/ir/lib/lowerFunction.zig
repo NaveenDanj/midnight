@@ -2,26 +2,45 @@ const std = @import("std");
 const InstructionBuilder = @import("../builder.zig").InstructionBuilder;
 const FunctionDecl = @import("../../parser//lib/parseFunctionDecl.zig").FunctionDecl;
 const FunctionCallStmt = @import("../../parser/lib/parseFunctionDecl.zig").FunctionCallStmt;
-const Value = @import("../ir.zig").Value;
-
+const Statement = @import("../../parser/lib/parseStatement.zig").Statement;
+const lowerStatement = @import("../lower.zig").lowerStatement;
 const lowerExpression = @import("./lowerExpr.zig").lowerExpression;
+const Value = @import("../ir.zig").Value;
+const Instruction = @import("../ir.zig").Instruction;
 
-pub fn lowerFunctionDecl(builder: *InstructionBuilder, funcDecl: FunctionDecl) anyerror!void {
+pub fn lowerFunctionDecl(
+    builder: *InstructionBuilder,
+    funcDecl: *FunctionDecl,
+) anyerror!Instruction {
+    var newBuilder = InstructionBuilder.init(builder.allocator);
+
     for (funcDecl.params, 0..) |param, index| {
-        try builder.emit(.{
+        try newBuilder.emit(.{
             .ParamBind = .{
                 .name = param.name,
                 .index = @intCast(index),
             },
         });
+
+        try newBuilder.declareVariable(param.name, .{
+            .paramIndex = @intCast(index),
+        });
     }
+
+    try lowerBlock(&newBuilder, funcDecl.body.statements);
+
+    return .{ .FunctionIR = .{
+        .name = funcDecl.name,
+        .params = funcDecl.params,
+        .body = newBuilder.instructions.items,
+        .returnType = funcDecl.returnType,
+    } };
 }
 
 pub fn lowerFunctionCall(builder: *InstructionBuilder, funcCall: *FunctionCallStmt) anyerror!void {
     var args = try std.ArrayList(Value).initCapacity(builder.allocator, funcCall.args.len);
 
     for (funcCall.args) |arg| {
-        // Lower each argument and add it to the args list
         const v = try lowerExpression(builder, arg);
         try args.append(builder.allocator, v);
     }
@@ -29,4 +48,10 @@ pub fn lowerFunctionCall(builder: *InstructionBuilder, funcCall: *FunctionCallSt
     try builder.emit(.{
         .FunctionCall = .{ .name = funcCall.name, .args = args.items, .dest = undefined },
     });
+}
+
+pub fn lowerBlock(builder: *InstructionBuilder, statements: []*Statement) anyerror!void {
+    for (statements) |stmt| {
+        try lowerStatement(builder, stmt);
+    }
 }

@@ -8,6 +8,7 @@ const lowerExpression = @import("./lib/lowerExpr.zig").lowerExpression;
 const lowerIfStatement = @import("./lib/lowerFlowControl.zig").lowerIfStatement;
 const lowerWhileStatement = @import("./lib/lowerFlowControl.zig").lowerWhileStatement;
 const lowerFunctionCall = @import("./lib/lowerFunction.zig").lowerFunctionCall;
+const lowerFunctionDecl = @import("./lib/lowerFunction.zig").lowerFunctionDecl;
 
 pub fn generateIR(builder: *InstructionBuilder, statements: []*Statement) anyerror!void {
     for (statements) |stmt| {
@@ -21,25 +22,23 @@ pub fn lowerStatement(builder: *InstructionBuilder, stmt: *Statement) anyerror!v
             try lowerVarAssignment(builder, stmt.VarAssignment);
         },
         .FunctionDecl => {
+            const funcDecl = try lowerFunctionDecl(builder, stmt.FunctionDecl);
+            try builder.emit(funcDecl);
             std.debug.print("Lowering function declaration: {s}\n", .{stmt.FunctionDecl.name});
         },
         .VariableDecl => {
             try lowerVarDeclaration(builder, stmt.VariableDecl);
-            std.debug.print("Lowering variable declaration: {s}\n", .{stmt.VariableDecl.name});
         },
         .WhileStatement => {
             try lowerWhileStatement(builder, stmt.WhileStatement);
-            std.debug.print("Lowering while statement\n", .{});
         },
         .IfStatement => {
             try lowerIfStatement(builder, stmt.IfStatement);
         },
         .ExpressionStmt => {
-            std.debug.print("Lowering expression statement\n", .{});
             switch (stmt.ExpressionStmt.*) {
                 .FunctionCall => {
                     try lowerFunctionCall(builder, &stmt.ExpressionStmt.FunctionCall);
-                    std.debug.print("Lowering function call expression: {s}\n", .{stmt.ExpressionStmt.FunctionCall.name});
                 },
                 else => {
                     std.debug.print("Lowering unhandled expression type: {any}\n", .{stmt.ExpressionStmt});
@@ -50,7 +49,6 @@ pub fn lowerStatement(builder: *InstructionBuilder, stmt: *Statement) anyerror!v
             std.debug.print("Lowering return statement\n", .{});
         },
         .FunctionCallStatement => {
-            std.debug.print("Lowering function call statement: {s}\n", .{stmt.FunctionCallStatement.name});
             try lowerFunctionCall(builder, stmt.FunctionCallStatement);
         },
         else => {
