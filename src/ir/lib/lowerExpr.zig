@@ -67,6 +67,26 @@ pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
             return .{ .temp = t };
         },
 
+        .StructInit => {
+            const tempId = builder.newTemp();
+
+            try builder.emit(.{ .AllocStruct = .{
+                .structType = expr.StructInit.structName,
+                .dest = tempId,
+            } });
+
+            for (expr.StructInit.fields) |field| {
+                const value = try lowerExpression(builder, field.value);
+                try builder.emit(.{ .StoreField = .{
+                    .object = .{ .temp = tempId },
+                    .fieldName = field.name,
+                    .value = value,
+                } });
+            }
+
+            return .{ .temp = tempId };
+        },
+
         .MemberAccess => {
             const obj = try lowerExpression(builder, expr.MemberAccess.object.?);
             const t = builder.newTemp();
