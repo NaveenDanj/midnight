@@ -4,6 +4,22 @@ x = x + y + 100;
 const int[] array = [1,2,3,4,5];
 const string[] name = ["N" , "a" , "v" , "e" , "e" , "n"];
 
+struct Person {
+    var string first_name;
+    var string last_name;
+
+    func full_name() string {
+        return first_name + " " + last_name;
+    }
+}
+
+
+var Person person = Person{
+    first_name = "Naveen",
+    last_name = "hettiwaththa"
+};
+
+
 func print(string message) string {
     return message;
 }
@@ -12,7 +28,7 @@ func add(int a , int b) int {
     return a + b;
 }
 
-if (x > 100) {
+if ( !(x > 100)) {
     print("grate than 100");
 }
 
@@ -22,9 +38,13 @@ if (x > 100) {
     print("less than 100");
 }
 
-while( 10 > 1) {
+
+var int n = 0;
+while( n < 100) {
     print("Infinite loop");
+    n = n + 1;
 }
+
 
 add(500 , 600);
 var int total = add( add(100 , 200) , 300);
