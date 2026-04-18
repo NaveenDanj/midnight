@@ -18,7 +18,11 @@ var Person person = Person{
     first_name = "Naveen",
     last_name = "hettiwaththa"
 };
+person.first_name = person.first_name + "updated"; 
 
+var Person[] persons = [];
+
+persons[8].first_name = "hello";
 
 func print(string message) string {
     return message;

@@ -9,6 +9,7 @@ const lowerIfStatement = @import("./lib/lowerFlowControl.zig").lowerIfStatement;
 const lowerWhileStatement = @import("./lib/lowerFlowControl.zig").lowerWhileStatement;
 const lowerFunctionCall = @import("./lib/lowerFunction.zig").lowerFunctionCall;
 const lowerFunctionDecl = @import("./lib/lowerFunction.zig").lowerFunctionDecl;
+const lowerReturnStatement = @import("./lib/lowerFunction.zig").lowerReturnStatement;
 
 pub fn generateIR(builder: *InstructionBuilder, statements: []*Statement) anyerror!void {
     for (statements) |stmt| {
@@ -46,7 +47,7 @@ pub fn lowerStatement(builder: *InstructionBuilder, stmt: *Statement) anyerror!v
             }
         },
         .ReturnStatement => {
-            std.debug.print("Lowering return statement\n", .{});
+            try lowerReturnStatement(builder, stmt.ReturnStatement);
         },
         .FunctionCallStatement => {
             try lowerFunctionCall(builder, stmt.FunctionCallStatement);
