@@ -3,6 +3,7 @@ const InstructionBuilder = @import("../builder.zig").InstructionBuilder;
 const FunctionDecl = @import("../../parser//lib/parseFunctionDecl.zig").FunctionDecl;
 const FunctionCallStmt = @import("../../parser/lib/parseFunctionDecl.zig").FunctionCallStmt;
 const Statement = @import("../../parser/lib/parseStatement.zig").Statement;
+const ReturnStatement = @import("../../parser/lib/parseFunctionDecl.zig").ReturnStatement;
 const lowerStatement = @import("../lower.zig").lowerStatement;
 const lowerExpression = @import("./lowerExpr.zig").lowerExpression;
 const Value = @import("../ir.zig").Value;
@@ -38,6 +39,7 @@ pub fn lowerFunctionDecl(
 }
 
 pub fn lowerFunctionCall(builder: *InstructionBuilder, funcCall: *FunctionCallStmt) anyerror!void {
+    const temp = builder.newTemp();
     var args = try std.ArrayList(Value).initCapacity(builder.allocator, funcCall.args.len);
 
     for (funcCall.args) |arg| {
@@ -46,7 +48,7 @@ pub fn lowerFunctionCall(builder: *InstructionBuilder, funcCall: *FunctionCallSt
     }
 
     try builder.emit(.{
-        .FunctionCall = .{ .name = funcCall.name, .args = args.items, .dest = undefined },
+        .FunctionCall = .{ .name = funcCall.name, .args = args.items, .dest = temp },
     });
 }
 
@@ -54,4 +56,9 @@ pub fn lowerBlock(builder: *InstructionBuilder, statements: []*Statement) anyerr
     for (statements) |stmt| {
         try lowerStatement(builder, stmt);
     }
+}
+
+pub fn lowerReturnStatement(builder: *InstructionBuilder, stmt: *ReturnStatement) anyerror!void {
+    const value = try lowerExpression(builder, stmt.expression);
+    try builder.emit(.{ .Return = .{ .value = value } });
 }
