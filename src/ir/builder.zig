@@ -8,6 +8,7 @@ pub const InstructionBuilder = struct {
     tempCounter: u32,
     labelCounter: u32,
     var_map: std.StringHashMap(Value),
+    version_map: std.StringHashMap(u32),
 
     pub fn init(allocator: std.mem.Allocator) InstructionBuilder {
         return InstructionBuilder{
@@ -16,6 +17,7 @@ pub const InstructionBuilder = struct {
             .tempCounter = 0,
             .labelCounter = 0,
             .var_map = std.StringHashMap(Value).init(allocator),
+            .version_map = std.StringHashMap(u32).init(allocator),
         };
     }
 
@@ -36,6 +38,10 @@ pub const InstructionBuilder = struct {
     }
 
     pub fn declareVariable(self: *InstructionBuilder, name: []const u8, value: Value) !void {
+        const current = self.version_map.get(name) orelse 0;
+        const newVersion = current + 1;
+
+        try self.version_map.put(name, newVersion);
         try self.var_map.put(name, value);
     }
 
