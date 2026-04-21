@@ -4,10 +4,11 @@ const FunctionDecl = @import("../../parser//lib/parseFunctionDecl.zig").Function
 const FunctionCallStmt = @import("../../parser/lib/parseFunctionDecl.zig").FunctionCallStmt;
 const Statement = @import("../../parser/lib/parseStatement.zig").Statement;
 const ReturnStatement = @import("../../parser/lib/parseFunctionDecl.zig").ReturnStatement;
+const Value = @import("../ir.zig").Value;
+
+const Instruction = @import("../ir.zig").Instruction;
 const lowerStatement = @import("../lower.zig").lowerStatement;
 const lowerExpression = @import("./lowerExpr.zig").lowerExpression;
-const Value = @import("../ir.zig").Value;
-const Instruction = @import("../ir.zig").Instruction;
 
 pub fn lowerFunctionDecl(
     builder: *InstructionBuilder,
