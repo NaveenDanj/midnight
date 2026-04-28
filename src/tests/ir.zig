@@ -643,7 +643,7 @@ test "IR generateIR lowers function declaration with params and body" {
     try expect(builder.instructions.items[0] == .FunctionIR);
     try expect(std.mem.eql(u8, builder.instructions.items[0].FunctionIR.name, "sum"));
     try expectEqual(@as(usize, 2), builder.instructions.items[0].FunctionIR.params.len);
-    try expectEqual(@as(usize, 8), builder.instructions.items[0].FunctionIR.body.len);
+    try expectEqual(@as(usize, 10), builder.instructions.items[0].FunctionIR.body.len);
 
     const body = builder.instructions.items[0].FunctionIR.body;
     try expect(body[0] == .ParamBind);
