@@ -23,12 +23,12 @@ pub fn lowerIfStatement(builder: *InstructionBuilder, ifStmt: *IfStatement) anye
 }
 
 pub fn lowerWhileStatement(builder: *InstructionBuilder, whileStmt: *WhileStatement) anyerror!void {
-    const condition = try lowerExpression(builder, whileStmt.expression);
     const startLabel = builder.newLabel();
     const endLabel = builder.newLabel();
 
-    try builder.emit(.{ .JumpWhileTrue = .{ .condition = condition, .label = startLabel } });
     try builder.emit(.{ .Label = .{ .id = startLabel } });
+    const condition = try lowerExpression(builder, whileStmt.expression);
+    try builder.emit(.{ .JumpIfFalse = .{ .condition = condition, .label = endLabel } });
     try lowerStatements(builder, whileStmt.body.statements);
     try builder.emit(.{ .Jump = .{ .label = startLabel } });
     try builder.emit(.{ .Label = .{ .id = endLabel } });

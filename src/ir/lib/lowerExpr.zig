@@ -125,10 +125,7 @@ pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
             return .{ .temp = t };
         },
 
-        // Handle other expression types (literals, variable references, function calls, etc.)
         else => {
-            // For now, we just return a temporary value for any expression type
-            // In a real implementation, you would generate the correct IR based on the expression kind
             return .{ .temp = builder.newTemp() };
         },
     }
@@ -159,7 +156,6 @@ pub fn lowerLValue(builder: *InstructionBuilder, expr: *Expr, value: Value) !voi
             } });
         },
 
-        // Handle other lvalue types (array indexing, struct field access, etc.)
         else => {
             @panic("Unsupported lvalue expression");
         },

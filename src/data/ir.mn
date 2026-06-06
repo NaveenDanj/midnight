@@ -19,10 +19,14 @@ var Person person = Person{
     last_name = "hettiwaththa"
 };
 person.first_name = person.first_name + "updated"; 
+person.full_name();
+
 
 var Person[] persons = [];
 
 persons[8].first_name = "hello";
+persons[9] = person;
+
 
 func print(string message) string {
     return message;
@@ -55,3 +59,12 @@ var int total = add( add(100 , 200) , 300);
 
 array[10] = 102;
 name[6] = "!";
+
+
+var int x_item = 100;
+
+if(x_item > 150) {
+    while(true) {
+        var int a = 10;
+    }
+}
