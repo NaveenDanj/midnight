@@ -1,0 +1,5 @@
+var int x = 100;
+var int y = 200;
+var int total = x + y;
+total = total * total;
+var float PI = 3.14;
