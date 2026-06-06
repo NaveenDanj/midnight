@@ -6,6 +6,7 @@ const Token = @import("lexer/tokens.zig").Token;
 const SemanticAnalyzer = @import("semantic/anaylzer.zig").SemanticAnalyzer;
 const generateIR = @import("ir/lower.zig").generateIR;
 const InstructionBuilder = @import("ir/builder.zig").InstructionBuilder;
+const Executor = @import("runtime/executor.zig").Executor;
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
@@ -15,8 +16,6 @@ pub fn main() !void {
 
     const content = try file.readToEndAlloc(allocator, 1024 * 1024);
     defer allocator.free(content);
-
-    // std.debug.print("Source code:\n{s}\n", .{content});
 
     var lexer = Lexer.init(content);
     var token_list = try lexer.lexAll(allocator);
@@ -48,9 +47,17 @@ pub fn main() !void {
     var irBuilder = InstructionBuilder.init(allocator);
     try generateIR(&irBuilder, statements);
 
+    std.debug.print("=== Generated IR ===\n", .{});
     for (irBuilder.instructions.items) |instrunction| {
-        std.debug.print("Generated IR instruction: {any}\n", .{instrunction});
+        std.debug.print("{any}\n", .{instrunction});
     }
+
+    std.debug.print("\n=== Executing ===\n", .{});
+    var executor = Executor.init(allocator);
+    defer executor.deinit();
+
+    try executor.run(irBuilder.instructions.items);
+    executor.printResult();
 
     defer token_list.deinit(allocator);
 }
