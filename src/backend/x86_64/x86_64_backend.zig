@@ -67,6 +67,7 @@ pub const X86_64Backend = struct {
         try asmBuilder.LoadInstructions(instructions);
         defer asmBuilder.deinit();
 
+        try asmBuilder.emit("default rel", .{});
         try asmBuilder.emit("global main", .{});
         try asmBuilder.emit("section .text", .{});
         try asmBuilder.emit("", .{});
@@ -188,11 +189,6 @@ pub const X86_64Backend = struct {
             try std.fs.cwd().makePath(dir);
         }
 
-        // delete existing file if it exists
-        if (std.fs.cwd().openFile(path, .{ .read = true }).isOk()) {
-            try std.fs.cwd().deleteFile(path);
-        }
-
         const file = try std.fs.cwd().createFile(path, .{});
         defer file.close();
         try file.writeAll(asm_string);
@@ -209,7 +205,7 @@ pub const X86_64Backend = struct {
         }
     }
 
-    pub fn buildAndRun(self: *X86_64Backend, path: []const u8, asm_string: []const u8) !void {
+    pub fn build(self: *X86_64Backend, path: []const u8, asm_string: []const u8) !void {
         self.writeAsm(asm_string, path) catch |err| {
             std.debug.print("Error writing assembly file: {any}\n", .{err});
             return err;
@@ -218,21 +214,21 @@ pub const X86_64Backend = struct {
         try runCommand(self.allocator, &.{
             "nasm",
             "-f",
-            "elf64",
-            path,
+            "win64",
+            "./build/output.asm",
             "-o",
-            "out.o",
+            "./build/out.o",
         });
 
         try runCommand(self.allocator, &.{
             "gcc",
-
+            "./build/out.o",
             "-o",
-            "out",
+            "./build/out",
         });
 
-        try runCommand(self.allocator, &.{
-            "./out",
-        });
+        // Cleanup intermediate files
+        try std.fs.cwd().deleteFile("./build/out.o");
+        // try std.fs.cwd().deleteFile("./build/output.asm");
     }
 };

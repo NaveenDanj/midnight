@@ -27,24 +27,6 @@ pub fn main() !void {
     var semanticAnalyzer = try SemanticAnalyzer.init(allocator);
     try semanticAnalyzer.analyzeProgram(statements);
 
-    // for (token_list.items) |token| {
-    //     std.debug.print("Token: {s} (line {d}, column {d})\n", .{ token.lexeme, token.line + 1, token.column });
-    // }
-
-    // for (statements) |stmt| {
-    //     std.debug.print("Parsed statement: {any}\n", .{stmt});
-
-    //     if (stmt.* == .FunctionDecl) {
-    //         for (stmt.FunctionDecl.params) |param| {
-    //             std.debug.print("  Param: {s} of type {any}\n", .{ param.name, param.dataType });
-    //         }
-
-    //         for (stmt.FunctionDecl.body.statements) |bodyStmt| {
-    //             std.debug.print("  Body statement: {any}\n", .{bodyStmt});
-    //         }
-    //     }
-    // }
-
     var irBuilder = InstructionBuilder.init(allocator);
     try generateIR(&irBuilder, statements);
 
@@ -53,18 +35,9 @@ pub fn main() !void {
         std.debug.print("{any}\n", .{instrunction});
     }
 
-    std.debug.print("\n=== Executing ===\n", .{});
-    // var executor = Executor.init(allocator);
-    // defer executor.deinit();
-
-    // try executor.run(irBuilder.instructions.items);
-    // executor.printResult();
-
     var backend = X86_64Backend.init(allocator);
     const asm_str = try backend.generate(irBuilder.instructions.items);
-    std.debug.print("\n=== Generated Assembly ===\n{s}\n", .{asm_str});
-
-    try backend.writeAsm(asm_str, "./build/output.asm");
+    try backend.build("./build/output.asm", asm_str);
 
     defer token_list.deinit(allocator);
 }
