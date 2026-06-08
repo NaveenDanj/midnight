@@ -9,7 +9,9 @@ const IfStatement = @import("parseIf.zig").IfStatement;
 const WhileStatement = @import("parseWhile.zig").WhileStatement;
 const StructStmt = @import("./parseStruct.zig").StructStmt;
 const VarAssign = @import("./parseVarDec.zig").VarAssign;
+const PrintStatement = @import("./parsePrint.zig").PrintStatement;
 const FunctionCallStmt = @import("./parseFunctionDecl.zig").FunctionCallStmt;
+const Expr = @import("./parseExpr.zig").Expr;
 
 const parseVarDecl = @import("./parseVarDec.zig").parseVarDecl;
 const parseReturnStatement = @import("./parseFunctionDecl.zig").parseReturnStatement;
@@ -20,9 +22,9 @@ const parseStructStatement = @import("./parseStruct.zig").parseStructStatement;
 const parseVarAssignment = @import("./parseVarDec.zig").parseVarAssignment;
 const parseFunctionCall = @import("parseFunctionDecl.zig").parseFunctionCall;
 const parseExpr = @import("./parseExpr.zig").parseExpr;
-const Expr = @import("./parseExpr.zig").Expr;
+const parsePrintStatement = @import("./parsePrint.zig").parsePrintStatement;
 
-pub const Statement = union(enum) { FunctionDecl: *FunctionDecl, Block: *BlockStmt, VariableDecl: *VariableDecl, ReturnStatement: *ReturnStatement, IfStatement: *IfStatement, WhileStatement: *WhileStatement, StructDecl: *StructStmt, VarAssignment: *VarAssign, FunctionCallStatement: *FunctionCallStmt , ExpressionStmt: *Expr };
+pub const Statement = union(enum) { PrintStatement: *PrintStatement, FunctionDecl: *FunctionDecl, Block: *BlockStmt, VariableDecl: *VariableDecl, ReturnStatement: *ReturnStatement, IfStatement: *IfStatement, WhileStatement: *WhileStatement, StructDecl: *StructStmt, VarAssignment: *VarAssign, FunctionCallStatement: *FunctionCallStmt, ExpressionStmt: *Expr };
 
 pub fn parseStatement(self: *Parser) ParserError!*Statement {
     if (self.check(.KwVar) or self.check(.KwConst)) {
@@ -54,7 +56,12 @@ pub fn parseStatement(self: *Parser) ParserError!*Statement {
         const structDecl = try parseStructStatement(self);
         const statement = try self.allocator.create(Statement);
         statement.* = .{ .StructDecl = structDecl };
-        return statement;  
+        return statement;
+    } else if (self.check(.KwPrint)) {
+        const printStatement = try parsePrintStatement(self);
+        const statement = try self.allocator.create(Statement);
+        statement.* = .{ .PrintStatement = printStatement };
+        return statement;
     } else {
         return try parseExpressionStatement(self);
     }
@@ -72,8 +79,7 @@ fn parseExpressionStatement(self: *Parser) ParserError!*Statement {
         const statement = try self.allocator.create(Statement);
         statement.* = .{ .ExpressionStmt = expr };
         return statement;
-    } 
-    
-    return ParserError.UnExpectedToken;
+    }
 
+    return ParserError.UnExpectedToken;
 }

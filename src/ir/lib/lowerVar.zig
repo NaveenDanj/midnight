@@ -14,5 +14,5 @@ pub fn lowerVarAssignment(builder: *InstructionBuilder, varAssign: *VarAssign) !
 pub fn lowerVarDeclaration(builder: *InstructionBuilder, varDecl: *VarDecl) !void {
     const rhs = try lowerExpression(builder, varDecl.initializer);
     try builder.declareVariable(varDecl.name, rhs);
-    try builder.emit(.{ .StoreVar = .{ .name = varDecl.name, .value = rhs } });
+    try builder.emit(.{ .StoreVar = .{ .name = varDecl.name, .value = rhs, .resolvedType = varDecl.varType } });
 }

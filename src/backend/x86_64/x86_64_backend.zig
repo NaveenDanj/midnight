@@ -137,33 +137,29 @@ pub const X86_64Backend = struct {
             },
 
             .BinaryOp => |inst| {
-                const left_slot = try self.getTempSlot(inst.left.temp);
-                const right_slot = try self.getTempSlot(inst.right.temp);
-                const dest_slot = try self.getTempSlot(inst.dest);
-
-                try asmBuilder.emit("    mov rax, qword [rbp-{d}]", .{left_slot});
-                try asmBuilder.emit("    mov rbx, qword [rbp-{d}]", .{right_slot});
-
-                switch (inst.op) {
-                    .Add => {
-                        try asmBuilder.emit("    add rax, rbx", .{});
-                    },
-                    .Subtract => {
-                        try asmBuilder.emit("    sub rax, rbx", .{});
-                    },
-                    .Multiply => {
-                        try asmBuilder.emit("    imul rax, rbx", .{});
-                    },
-                    .Divide => {
-                        try asmBuilder.emit("    cqo", .{});
-                        try asmBuilder.emit("    idiv rbx", .{});
-                    },
-                    else => {
-                        @panic("Unsupported binary operation");
-                    },
+                switch (inst.resolvedType.?.kind) {
+                    .INT => try self.lowerIntBinaryOp(asmBuilder, instruction),
+                    .FLOAT => try self.lowerFloatBinaryOp(asmBuilder, instruction),
+                    // TODO: Handle string concatenation, proper boolean operations, and other types
+                    .BOOL => try self.lowerIntBinaryOp(asmBuilder, instruction),
+                    .STRING => try self.lowerStringBinaryOp(asmBuilder, instruction),
+                    else => @panic("Unsupported binary operation type"),
                 }
+            },
 
-                try asmBuilder.emit("    mov qword [rbp-{d}], rax", .{dest_slot});
+            .JumpIfFalse => |inst| {
+                const condition_slot = try self.getTempSlot(inst.condition.temp);
+                try asmBuilder.emit("    mov rax, qword [rbp-{d}]", .{condition_slot});
+                try asmBuilder.emit("    cmp rax, 0", .{});
+                try asmBuilder.emit("    je label_{d}", .{inst.label});
+            },
+
+            .Jump => |inst| {
+                try asmBuilder.emit("    jmp label_{d}", .{inst.label});
+            },
+
+            .Label => |inst| {
+                try asmBuilder.emit("label_{d}:", .{inst.id});
             },
 
             else => {
@@ -230,5 +226,82 @@ pub const X86_64Backend = struct {
         // Cleanup intermediate files
         try std.fs.cwd().deleteFile("./build/out.o");
         // try std.fs.cwd().deleteFile("./build/output.asm");
+    }
+
+    fn lowerIntBinaryOp(self: *X86_64Backend, asmBuilder: *AsmBuilder, inst: *const Instruction) !void {
+        // Implementation for lowering integer binary operations
+        const left_slot = try self.getTempSlot(inst.BinaryOp.left.temp);
+        const right_slot = try self.getTempSlot(inst.BinaryOp.right.temp);
+        const dest_slot = try self.getTempSlot(inst.BinaryOp.dest);
+
+        try asmBuilder.emit("    mov rax, qword [rbp-{d}]", .{left_slot});
+        try asmBuilder.emit("    mov rbx, qword [rbp-{d}]", .{right_slot});
+
+        switch (inst.BinaryOp.op) {
+            .Add => {
+                try asmBuilder.emit("    add rax, rbx", .{});
+            },
+            .Subtract => {
+                try asmBuilder.emit("    sub rax, rbx", .{});
+            },
+            .Multiply => {
+                try asmBuilder.emit("    imul rax, rbx", .{});
+            },
+            .Divide => {
+                try asmBuilder.emit("    cqto", .{});
+                try asmBuilder.emit("    idiv rbx", .{});
+            },
+
+            else => {
+                @panic("Unsupported integer binary operation");
+            },
+        }
+
+        try asmBuilder.emit("    mov qword [rbp-{d}], rax", .{dest_slot});
+    }
+
+    fn lowerFloatBinaryOp(self: *X86_64Backend, asmBuilder: *AsmBuilder, inst: *const Instruction) !void {
+        const left_slot = try self.getTempSlot(inst.BinaryOp.left.temp);
+        const right_slot = try self.getTempSlot(inst.BinaryOp.right.temp);
+        const dest_slot = try self.getTempSlot(inst.BinaryOp.dest);
+
+        try asmBuilder.emit("    movsd xmm0, qword [rbp-{d}]", .{left_slot});
+        try asmBuilder.emit("    movsd xmm1, qword [rbp-{d}]", .{right_slot});
+
+        switch (inst.BinaryOp.op) {
+            .Add => {
+                try asmBuilder.emit("    addsd xmm0, xmm1", .{});
+            },
+            .Subtract => {
+                try asmBuilder.emit("    subsd xmm0, xmm1", .{});
+            },
+            .Multiply => {
+                try asmBuilder.emit("    mulsd xmm0, xmm1", .{});
+            },
+            .Divide => {
+                try asmBuilder.emit("    divsd xmm0, xmm1", .{});
+            },
+
+            else => {
+                @panic("Unsupported float binary operation");
+            },
+        }
+
+        try asmBuilder.emit("    movsd qword [rbp-{d}], xmm0", .{dest_slot});
+    }
+
+    fn lowerStringBinaryOp(self: *X86_64Backend, asmBuilder: *AsmBuilder, inst: *const Instruction) !void {
+        // Implementation for lowering string binary operations
+        // For simplicity, we will only handle string concatenation (ADD)
+        if (inst.BinaryOp.op != .Add) {
+            @panic("Unsupported string binary operation");
+        }
+
+        const dest_slot = try self.getTempSlot(inst.BinaryOp.dest);
+
+        // Here we would need to implement string concatenation logic, which is non-trivial.
+        // For demonstration purposes, we will just emit a placeholder.
+        try asmBuilder.emit("    ; String concatenation not implemented, this is a placeholder", .{});
+        try asmBuilder.emit("    mov qword [rbp-{d}], 0", .{dest_slot});
     }
 };

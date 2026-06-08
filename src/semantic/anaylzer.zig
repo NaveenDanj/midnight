@@ -237,18 +237,29 @@ pub const SemanticAnalyzer = struct {
                     return SemanticError.TypeMismatch;
                 }
 
+                if (leftType.kind == .FLOAT and rightType.kind == .INT) {
+                    expr.Binary.resolvedType = leftType;
+                } else if (leftType.kind == .INT and rightType.kind == .FLOAT) {
+                    expr.Binary.resolvedType = rightType;
+                } else if (leftType.kind == .STRING and rightType.kind == .STRING and std.mem.eql(u8, binary.operator, "+")) {
+                    expr.Binary.resolvedType = leftType;
+                } else {
+                    expr.Binary.resolvedType = leftType;
+                }
+
                 if (std.mem.eql(u8, binary.operator, "+") or std.mem.eql(u8, binary.operator, "-") or std.mem.eql(u8, binary.operator, "*") or std.mem.eql(u8, binary.operator, "/")) {
                     if (leftType.isNumeric()) {
                         return leftType;
                     } else if (leftType.kind == .STRING and std.mem.eql(u8, binary.operator, "+")) {
+                        expr.Binary.resolvedType = types.STRING;
                         return types.STRING;
                     }
                 }
 
                 if (std.mem.eql(u8, binary.operator, "==") or std.mem.eql(u8, binary.operator, "!=") or std.mem.eql(u8, binary.operator, "<") or std.mem.eql(u8, binary.operator, ">") or std.mem.eql(u8, binary.operator, "<=") or std.mem.eql(u8, binary.operator, ">=")) {
+                    expr.Binary.resolvedType = types.BOOL;
                     return types.Type{ .kind = .BOOL };
                 }
-
                 return SemanticError.TypeMismatch;
             },
             .IntLiteral => {
@@ -270,6 +281,7 @@ pub const SemanticAnalyzer = struct {
             .Identifier => {
                 const idExpr = expr.Identifier;
                 const symbol = self.scopeStack.lookupSymbol(idExpr.name) orelse return SemanticError.UndefinedVariable;
+                expr.Identifier.resolvedType = symbol.symbolType;
                 return symbol.symbolType;
             },
             .FunctionCall => {
@@ -410,6 +422,8 @@ pub const SemanticAnalyzer = struct {
                 if (!self.areTypesCompatible(symbolType, exprKind)) {
                     return SemanticError.TypeMismatch;
                 }
+
+                varAssign.resolvedType = exprKind;
             },
 
             .MemberAccess => {
@@ -437,6 +451,7 @@ pub const SemanticAnalyzer = struct {
                                     return SemanticError.TypeMismatch;
                                 }
                                 found = true;
+                                varAssign.resolvedType = exprType;
                                 break;
                             }
                         },
