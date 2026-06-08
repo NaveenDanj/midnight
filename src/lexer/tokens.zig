@@ -48,6 +48,7 @@ pub const TokenType = enum {
     KwConst,
     KwStruct,
     KwEmpty,
+    KwPrint,
 
     // keywords with types
     KwInt,

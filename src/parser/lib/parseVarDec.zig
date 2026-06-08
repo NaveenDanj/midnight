@@ -19,6 +19,7 @@ pub const VarDecl = struct {
 pub const VarAssign = struct {
     target: *Expr,
     value: *Expr,
+    resolvedType: ?Type,
 };
 
 pub const varTypeList = [_]TokenType{ .KwInt, .KwFloat, .KwBool, .KwVoid, .KwString };
@@ -73,6 +74,7 @@ pub fn parseVarAssignment(self: *Parser, target: *Expr) ParserError!*VarAssign {
     varAssign.* = .{
         .target = target,
         .value = value,
+        .resolvedType = null,
     };
 
     return varAssign;

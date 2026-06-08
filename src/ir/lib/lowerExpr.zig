@@ -5,36 +5,53 @@ const InstructionBuilder = @import("../builder.zig").InstructionBuilder;
 const Expr = @import("../../parser/lib/parseExpr.zig").Expr;
 const BinaryOp = @import("../ir.zig").BinaryOp;
 const Statement = @import("../../parser/lib/parseStatement.zig").Statement;
+const Type = @import("../../semantic/types.zig").Type;
 
 pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
     switch (expr.*) {
         .IntLiteral => {
             const t = builder.newTemp();
-            try builder.emit(.{ .LoadConstInt = .{ .dest = t, .value = expr.IntLiteral.value } });
+            try builder.emit(.{ .LoadConstInt = .{
+                .dest = t,
+                .value = expr.IntLiteral.value,
+                .resolvedType = expr.IntLiteral.resolvedType,
+            } });
             return .{ .temp = t };
         },
 
         .FloatLiteral => {
             const t = builder.newTemp();
-            try builder.emit(.{ .LoadConstFloat = .{ .dest = t, .value = expr.FloatLiteral.value } });
+            try builder.emit(.{ .LoadConstFloat = .{
+                .dest = t,
+                .value = expr.FloatLiteral.value,
+                .resolvedType = expr.FloatLiteral.resolvedType,
+            } });
             return .{ .temp = t };
         },
 
         .BoolLiteral => {
             const t = builder.newTemp();
-            try builder.emit(.{ .LoadConstBool = .{ .dest = t, .value = expr.BoolLiteral.value } });
+            try builder.emit(.{ .LoadConstBool = .{
+                .dest = t,
+                .value = expr.BoolLiteral.value,
+                .resolvedType = expr.BoolLiteral.resolvedType,
+            } });
             return .{ .temp = t };
         },
 
         .StringLiteral => {
             const t = builder.newTemp();
-            try builder.emit(.{ .LoadConstString = .{ .dest = t, .value = expr.StringLiteral.value } });
+            try builder.emit(.{ .LoadConstString = .{
+                .dest = t,
+                .value = expr.StringLiteral.value,
+                .resolvedType = expr.StringLiteral.resolvedType,
+            } });
             return .{ .temp = t };
         },
 
         .Identifier => {
             const t = builder.newTemp();
-            try builder.emit(.{ .LoadVar = .{ .dest = t, .name = expr.Identifier.name } });
+            try builder.emit(.{ .LoadVar = .{ .dest = t, .name = expr.Identifier.name, .resolvedType = expr.Identifier.resolvedType } });
             return .{ .temp = t };
         },
 
@@ -63,6 +80,7 @@ pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
                 .left = leftValue,
                 .right = rightValue,
                 .dest = t,
+                .resolvedType = expr.Binary.resolvedType,
             } });
             return .{ .temp = t };
         },
@@ -134,7 +152,7 @@ pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
 pub fn lowerLValue(builder: *InstructionBuilder, expr: *Expr, value: Value) !void {
     switch (expr.*) {
         .Identifier => {
-            try builder.emit(.{ .StoreVar = .{ .name = expr.Identifier.name, .value = value } });
+            try builder.emit(.{ .StoreVar = .{ .name = expr.Identifier.name, .value = value, .resolvedType = expr.Identifier.resolvedType } });
         },
 
         .MemberAccess => {

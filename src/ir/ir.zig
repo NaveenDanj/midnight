@@ -25,24 +25,31 @@ pub const Instruction = union(enum) { BinaryOp: struct {
     left: Value,
     right: Value,
     dest: u32,
+    resolvedType: ?Type,
 }, LoadConstInt: struct {
     value: i64,
     dest: u32,
+    resolvedType: ?Type,
 }, LoadConstFloat: struct {
     value: f64,
     dest: u32,
+    resolvedType: ?Type,
 }, LoadConstBool: struct {
     value: bool,
     dest: u32,
+    resolvedType: ?Type,
 }, LoadConstString: struct {
     value: []const u8,
     dest: u32,
+    resolvedType: ?Type,
 }, LoadVar: struct {
     name: []const u8,
     dest: u32,
+    resolvedType: ?Type,
 }, StoreVar: struct {
     name: []const u8,
     value: Value,
+    resolvedType: ?Type,
 }, JumpIfFalse: struct {
     condition: Value,
     label: u32,
@@ -86,4 +93,7 @@ pub const Instruction = union(enum) { BinaryOp: struct {
 }, AllocStruct: struct {
     structType: []const u8,
     dest: u32,
+}, print: struct {
+    value: Value,
+    resolvedType: ?Type,
 } };
