@@ -7,11 +7,13 @@ pub const X86_64Backend = struct {
     temp_slots: std.AutoHashMap(u32, i32),
     variable_slots: std.StringHashMap(i32),
     float_constants: std.AutoHashMap(u64, []const u8),
+    string_constants: std.StringHashMap([]const u8),
+    next_string_id: u32,
     next_offset: i32,
     next_float_id: u32,
 
     pub fn init(allocator: std.mem.Allocator) X86_64Backend {
-        return .{ .allocator = allocator, .temp_slots = std.AutoHashMap(u32, i32).init(allocator), .variable_slots = std.StringHashMap(i32).init(allocator), .float_constants = std.AutoHashMap(u64, []const u8).init(allocator), .next_offset = 8, .next_float_id = 0 };
+        return .{ .allocator = allocator, .temp_slots = std.AutoHashMap(u32, i32).init(allocator), .variable_slots = std.StringHashMap(i32).init(allocator), .float_constants = std.AutoHashMap(u64, []const u8).init(allocator), .string_constants = std.StringHashMap([]const u8).init(allocator), .next_string_id = 0, .next_offset = 8, .next_float_id = 0 };
     }
 
     pub fn deinit(self: *X86_64Backend) void {
@@ -71,6 +73,7 @@ pub const X86_64Backend = struct {
         try asmBuilder.emit("global main", .{});
         try asmBuilder.emit("section .text", .{});
         try asmBuilder.emit("extern printf", .{});
+        try asmBuilder.emit("extern puts", .{});
         try asmBuilder.emit("", .{});
         try asmBuilder.emit("main:", .{});
 
@@ -101,6 +104,15 @@ pub const X86_64Backend = struct {
             try asmBuilder.emit("   dq {d}", .{bits});
         }
 
+        var str_it = self.string_constants.iterator();
+        while (str_it.next()) |entry| {
+            const str = entry.key_ptr.*;
+            const label = entry.value_ptr.*;
+
+            try asmBuilder.emit("{s}:", .{label});
+            try asmBuilder.emit("   db {s}, 0", .{str});
+        }
+
         return try asmBuilder.toOwnedSlice();
     }
 
@@ -128,9 +140,8 @@ pub const X86_64Backend = struct {
 
             .LoadConstString => |inst| {
                 const slot = try self.getTempSlot(inst.dest);
-                const strLabel = try std.fmt.allocPrint(self.allocator, "LCStr{d}", .{slot});
-                try asmBuilder.emit("{s}: db {s}, 0", .{ strLabel, inst.value });
-                try asmBuilder.emit("    mov rax, {s}", .{strLabel});
+                const label = try self.getStringConstantLabel(inst.value);
+                try asmBuilder.emit("    mov rax, {s}", .{label});
                 try asmBuilder.emit("    mov qword [rbp-{d}], rax", .{slot});
             },
 
@@ -259,9 +270,15 @@ pub const X86_64Backend = struct {
             "./build/out",
         });
 
+        // run the output binary to verify it works
+        std.debug.print("Running the output binary to verify it works ==============================\n", .{});
+        try runCommand(self.allocator, &.{
+            "./build/out",
+        });
+
         // Cleanup intermediate files
         try std.fs.cwd().deleteFile("./build/out.o");
-        // try std.fs.cwd().deleteFile("./build/output.asm");
+        try std.fs.cwd().deleteFile("./build/output.asm");
     }
 
     fn lowerIntBinaryOp(self: *X86_64Backend, asmBuilder: *AsmBuilder, inst: *const Instruction) !void {
@@ -339,5 +356,26 @@ pub const X86_64Backend = struct {
         // For demonstration purposes, we will just emit a placeholder.
         try asmBuilder.emit("    ; String concatenation not implemented, this is a placeholder", .{});
         try asmBuilder.emit("    mov qword [rbp-{d}], 0", .{dest_slot});
+    }
+
+    fn getStringConstantLabel(
+        self: *X86_64Backend,
+        value: []const u8,
+    ) ![]const u8 {
+        if (self.string_constants.get(value)) |label| {
+            return label;
+        }
+
+        const label = try std.fmt.allocPrint(
+            self.allocator,
+            "LCS{d}",
+            .{self.next_string_id},
+        );
+
+        self.next_string_id += 1;
+
+        try self.string_constants.put(value, label);
+
+        return label;
     }
 };

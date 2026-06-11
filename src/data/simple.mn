@@ -6,7 +6,12 @@ var float PI = 3.14;
 var bool is_true = true;
 
 if (is_true) {
-    print(total);
+    print(total + 120 - 6579);
+    print("\n");
 } else {
     print(x);
+    print("\n");
 }
+
+print("hello world");
+print(is_true);
