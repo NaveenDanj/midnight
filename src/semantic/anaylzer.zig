@@ -16,6 +16,7 @@ const FunctionCallStmt = @import("../parser/lib/parseFunctionDecl.zig").Function
 const IfStatement = @import("../parser/lib/parseIf.zig").IfStatement;
 const StructStmt = @import("../parser/lib/parseStruct.zig").StructStmt;
 const StructInitExpr = @import("../parser/lib/parseStruct.zig").StructInitExpr;
+const PrintStatement = @import("../parser/lib/parsePrint.zig").PrintStatement;
 
 pub const SemanticAnalyzer = struct {
     allocator: std.mem.Allocator,
@@ -56,6 +57,9 @@ pub const SemanticAnalyzer = struct {
                 },
                 .StructDecl => {
                     try self.analyzeStructStatement(stmt.StructDecl);
+                },
+                .PrintStatement => {
+                    try self.analyzePrintStatement(stmt.PrintStatement);
                 },
                 else => {
                     // Handle other statement types.
@@ -137,6 +141,9 @@ pub const SemanticAnalyzer = struct {
                     const retStmt = stmt.ReturnStatement;
                     const actualType = try self.evaluateExprType(retStmt.expression);
                     retStmt.resolvedType = actualType;
+                },
+                .PrintStatement => {
+                    try self.analyzePrintStatement(stmt.PrintStatement);
                 },
                 else => {
                     // Handle other statement types.
@@ -281,6 +288,7 @@ pub const SemanticAnalyzer = struct {
             .Identifier => {
                 const idExpr = expr.Identifier;
                 const symbol = self.scopeStack.lookupSymbol(idExpr.name) orelse return SemanticError.UndefinedVariable;
+                std.debug.print("Identifier {s} resolved to symbol with type {any}\n", .{ idExpr.name, symbol.symbolType });
                 expr.Identifier.resolvedType = symbol.symbolType;
                 return symbol.symbolType;
             },
@@ -564,6 +572,15 @@ pub const SemanticAnalyzer = struct {
                 },
                 else => {},
             }
+        }
+    }
+
+    pub fn analyzePrintStatement(self: *SemanticAnalyzer, printStmt: *PrintStatement) SemanticError!void {
+        const printValueType = try self.evaluateExprType(printStmt.value);
+        printStmt.resolvedType = printValueType;
+
+        if (printValueType.kind == .STRUCT) {
+            return SemanticError.TypeMismatch;
         }
     }
 };

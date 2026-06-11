@@ -70,6 +70,7 @@ pub const X86_64Backend = struct {
         try asmBuilder.emit("default rel", .{});
         try asmBuilder.emit("global main", .{});
         try asmBuilder.emit("section .text", .{});
+        try asmBuilder.emit("extern printf", .{});
         try asmBuilder.emit("", .{});
         try asmBuilder.emit("main:", .{});
 
@@ -87,6 +88,9 @@ pub const X86_64Backend = struct {
 
         try asmBuilder.emit("", .{});
         try asmBuilder.emit("section .data", .{});
+        try asmBuilder.emit("fmt_int: db \"%lld\", 0", .{});
+        try asmBuilder.emit("fmt_float: db \"%lf\", 0", .{});
+        try asmBuilder.emit("fmt_string: db \"%s\", 0", .{});
 
         var it = self.float_constants.iterator();
         while (it.next()) |entry| {
@@ -120,6 +124,14 @@ pub const X86_64Backend = struct {
                 try asmBuilder.emit("    movsd xmm0, qword [{s}]", .{label});
                 try asmBuilder.emit("    movsd qword [rbp-{d}], xmm0", .{slot});
                 _ = bits;
+            },
+
+            .LoadConstString => |inst| {
+                const slot = try self.getTempSlot(inst.dest);
+                const strLabel = try std.fmt.allocPrint(self.allocator, "LCStr{d}", .{slot});
+                try asmBuilder.emit("{s}: db {s}, 0", .{ strLabel, inst.value });
+                try asmBuilder.emit("    mov rax, {s}", .{strLabel});
+                try asmBuilder.emit("    mov qword [rbp-{d}], rax", .{slot});
             },
 
             .StoreVar => |inst| {
@@ -162,6 +174,30 @@ pub const X86_64Backend = struct {
                 try asmBuilder.emit("label_{d}:", .{inst.id});
             },
 
+            .PrintCall => |inst| {
+                const slot = try self.getTempSlot(inst.value.temp);
+                std.debug.print("Lowering print call for temp {d} with type {any}\n", .{ inst.value.temp, inst.resolvedType });
+                switch (inst.resolvedType.?.kind) {
+                    .INT, .BOOL => {
+                        try asmBuilder.emit("    mov rdi, fmt_int", .{});
+                        try asmBuilder.emit("    mov rsi, qword [rbp-{d}]", .{slot});
+                        try asmBuilder.emit("    xor rax, rax", .{});
+                        try asmBuilder.emit("    call printf", .{});
+                    },
+                    .FLOAT => {
+                        try asmBuilder.emit("    mov rdi, fmt_float", .{});
+                        try asmBuilder.emit("    movsd xmm0, qword [rbp-{d}]", .{slot});
+                        try asmBuilder.emit("    xor rax, rax", .{});
+                        try asmBuilder.emit("    call printf", .{});
+                    },
+                    .STRING => {
+                        try asmBuilder.emit("    mov rdi, qword [rbp-{d}]", .{slot});
+                        try asmBuilder.emit("    xor rax, rax", .{});
+                        try asmBuilder.emit("    call puts", .{});
+                    },
+                    else => @panic("Unsupported print type"),
+                }
+            },
             else => {
                 @panic("Unsupported instruction");
             },
@@ -210,7 +246,7 @@ pub const X86_64Backend = struct {
         try runCommand(self.allocator, &.{
             "nasm",
             "-f",
-            "win64",
+            "elf64",
             "./build/output.asm",
             "-o",
             "./build/out.o",

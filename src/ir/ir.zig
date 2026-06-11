@@ -93,7 +93,7 @@ pub const Instruction = union(enum) { BinaryOp: struct {
 }, AllocStruct: struct {
     structType: []const u8,
     dest: u32,
-}, print: struct {
+}, PrintCall: struct {
     value: Value,
     resolvedType: ?Type,
 } };

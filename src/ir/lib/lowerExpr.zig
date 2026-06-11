@@ -14,7 +14,7 @@ pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
             try builder.emit(.{ .LoadConstInt = .{
                 .dest = t,
                 .value = expr.IntLiteral.value,
-                .resolvedType = expr.IntLiteral.resolvedType,
+                .resolvedType = .{ .isArray = false, .kind = .INT, .struct_name = null },
             } });
             return .{ .temp = t };
         },
@@ -24,7 +24,7 @@ pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
             try builder.emit(.{ .LoadConstFloat = .{
                 .dest = t,
                 .value = expr.FloatLiteral.value,
-                .resolvedType = expr.FloatLiteral.resolvedType,
+                .resolvedType = .{ .isArray = false, .kind = .FLOAT, .struct_name = null },
             } });
             return .{ .temp = t };
         },
@@ -34,7 +34,7 @@ pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
             try builder.emit(.{ .LoadConstBool = .{
                 .dest = t,
                 .value = expr.BoolLiteral.value,
-                .resolvedType = expr.BoolLiteral.resolvedType,
+                .resolvedType = .{ .isArray = false, .kind = .BOOL, .struct_name = null },
             } });
             return .{ .temp = t };
         },
@@ -44,7 +44,7 @@ pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
             try builder.emit(.{ .LoadConstString = .{
                 .dest = t,
                 .value = expr.StringLiteral.value,
-                .resolvedType = expr.StringLiteral.resolvedType,
+                .resolvedType = .{ .isArray = false, .kind = .STRING, .struct_name = null },
             } });
             return .{ .temp = t };
         },
