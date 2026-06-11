@@ -272,7 +272,7 @@ test "IR lowerVarAssignment lowers RHS before storing into array index" {
     value.* = .{ .IntLiteral = .{ .value = 99, .resolvedType = null } };
 
     const var_assign = try allocator.create(@import("../parser/lib/parseVarDec.zig").VarAssign);
-    var_assign.* = .{ .target = target, .value = value };
+    var_assign.* = .{ .target = target, .value = value, .resolvedType = null };
 
     try lowerVarAssignment(&builder, var_assign);
     try expectEqual(@as(usize, 4), builder.instructions.items.len);
