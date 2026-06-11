@@ -4,10 +4,9 @@ var int total = x + y;
 total = total * total;
 var float PI = 3.14;
 var bool is_true = true;
-PI = 9 + 3;
 
 if (is_true) {
-    print("true");
+    print(total);
 } else {
-    print("false");
+    print(x);
 }

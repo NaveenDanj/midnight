@@ -52,6 +52,10 @@ pub fn lowerStatement(builder: *InstructionBuilder, stmt: *Statement) anyerror!v
         .FunctionCallStatement => {
             try lowerFunctionCall(builder, stmt.FunctionCallStatement);
         },
+        .PrintStatement => {
+            const printValue = try lowerExpression(builder, stmt.PrintStatement.value);
+            try builder.emit(.{ .PrintCall = .{ .value = printValue, .resolvedType = stmt.PrintStatement.resolvedType } });
+        },
         else => {
             std.debug.print("Lowering unhandled statement type: {any}\n", .{stmt});
         },
