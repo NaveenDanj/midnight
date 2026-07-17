@@ -5,9 +5,11 @@ const stmt_ast = @import("../ast/stmt.zig");
 const ExprTypeChecker = @import("expr_type_checker.zig").ExprTypeChecker;
 const SemanticContext = @import("context.zig").SemanticContext;
 const SemanticError = @import("semantic_error.zig").SemanticError;
+const SemanticResult = @import("result.zig").SemanticResult;
 const ScopeStack = @import("scope.zig").ScopeStack;
 const types = @import("types.zig");
 const typeCompatibility = @import("type_compatibility.zig");
+const typeResolver = @import("type_resolver.zig");
 
 const StructInitExpr = expr_ast.StructInitExpr;
 const StructStmt = stmt_ast.StructStmt;
@@ -16,13 +18,14 @@ pub const StructChecker = struct {
     allocator: std.mem.Allocator,
     context: *SemanticContext,
     scopeStack: *ScopeStack,
+    result: *SemanticResult,
 
-    pub fn init(allocator: std.mem.Allocator, context: *SemanticContext, scopeStack: *ScopeStack) StructChecker {
-        return .{ .allocator = allocator, .context = context, .scopeStack = scopeStack };
+    pub fn init(allocator: std.mem.Allocator, context: *SemanticContext, scopeStack: *ScopeStack, result: *SemanticResult) StructChecker {
+        return .{ .allocator = allocator, .context = context, .scopeStack = scopeStack, .result = result };
     }
 
     pub fn analyzeStructStatement(self: *StructChecker, structStmt: *StructStmt) SemanticError!void {
-        try self.scopeStack.declareSymbol(structStmt.name, .structure, types.STRUCT, true, &[_]types.Type{});
+        try self.scopeStack.declareSymbol(structStmt.name, .structure, types.Type{ .kind = .STRUCT, .struct_name = structStmt.name }, true, &[_]types.Type{});
         try self.context.addStruct(structStmt);
     }
 
@@ -34,13 +37,18 @@ pub const StructChecker = struct {
             switch (field) {
                 .StructProperty => {
                     const property = field.StructProperty;
-                    _ = try hashMap.put(property.name, property.fieldType);
+                    const fieldType = try typeResolver.resolveTypeRef(self.context, property.fieldType);
+                    try self.result.struct_property_types.put(property, fieldType);
+                    _ = try hashMap.put(property.name, fieldType);
                 },
-                .StructMethod => {},
+                .StructMethod => |method| {
+                    const returnType = try typeResolver.resolveTypeRef(self.context, method.returnType);
+                    try self.result.struct_method_return_types.put(method, returnType);
+                },
             }
         }
 
-        var exprChecker = ExprTypeChecker.init(self.context, self.scopeStack);
+        var exprChecker = ExprTypeChecker.init(self.context, self.scopeStack, self.result);
         for (structInitStmt.fields) |field| {
             const expectedType = hashMap.get(field.name) orelse return SemanticError.StructFieldMismatch;
             const actualType = try exprChecker.evaluate(field.value);

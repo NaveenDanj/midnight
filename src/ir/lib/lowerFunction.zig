@@ -8,12 +8,22 @@ const ReturnStatement = stmt_ast.ReturnStatement;
 const Value = @import("../ir.zig").Value;
 
 const Instruction = @import("../ir.zig").Instruction;
-const lowerStatement = @import("../lower.zig").lowerStatement;
-const lowerExpression = @import("./lowerExpr.zig").lowerExpression;
+const lowerStatementWithSemantics = @import("../lower.zig").lowerStatementWithSemantics;
+const lowerExpressionWithSemantics = @import("./lowerExpr.zig").lowerExpressionWithSemantics;
+const SemanticResult = @import("../../semantic/result.zig").SemanticResult;
+const typeResolver = @import("../../semantic/type_resolver.zig");
 
 pub fn lowerFunctionDecl(
     builder: *InstructionBuilder,
     funcDecl: *FunctionDecl,
+) anyerror!Instruction {
+    return lowerFunctionDeclWithSemantics(builder, funcDecl, null);
+}
+
+pub fn lowerFunctionDeclWithSemantics(
+    builder: *InstructionBuilder,
+    funcDecl: *FunctionDecl,
+    semantic: ?*const SemanticResult,
 ) anyerror!Instruction {
     var newBuilder = InstructionBuilder.init(builder.allocator);
 
@@ -30,22 +40,31 @@ pub fn lowerFunctionDecl(
         });
     }
 
-    try lowerBlock(&newBuilder, funcDecl.body.statements);
+    try lowerBlockWithSemantics(&newBuilder, funcDecl.body.statements, semantic);
+
+    const returnType = if (semantic) |result|
+        result.function_return_types.get(funcDecl) orelse typeResolver.resolveTypeRefUnchecked(funcDecl.returnType)
+    else
+        typeResolver.resolveTypeRefUnchecked(funcDecl.returnType);
 
     return .{ .FunctionIR = .{
         .name = funcDecl.name,
         .params = funcDecl.params,
         .body = newBuilder.instructions.items,
-        .returnType = funcDecl.returnType,
+        .returnType = returnType,
     } };
 }
 
 pub fn lowerFunctionCall(builder: *InstructionBuilder, funcCall: *FunctionCallStmt) anyerror!void {
+    try lowerFunctionCallWithSemantics(builder, funcCall, null);
+}
+
+pub fn lowerFunctionCallWithSemantics(builder: *InstructionBuilder, funcCall: *FunctionCallStmt, semantic: ?*const SemanticResult) anyerror!void {
     const temp = builder.newTemp();
     var args = try std.ArrayList(Value).initCapacity(builder.allocator, funcCall.args.len);
 
     for (funcCall.args) |arg| {
-        const v = try lowerExpression(builder, arg);
+        const v = try lowerExpressionWithSemantics(builder, arg, semantic);
         try args.append(builder.allocator, v);
     }
 
@@ -55,12 +74,20 @@ pub fn lowerFunctionCall(builder: *InstructionBuilder, funcCall: *FunctionCallSt
 }
 
 pub fn lowerBlock(builder: *InstructionBuilder, statements: []*Statement) anyerror!void {
+    try lowerBlockWithSemantics(builder, statements, null);
+}
+
+pub fn lowerBlockWithSemantics(builder: *InstructionBuilder, statements: []*Statement, semantic: ?*const SemanticResult) anyerror!void {
     for (statements) |stmt| {
-        try lowerStatement(builder, stmt);
+        try lowerStatementWithSemantics(builder, stmt, semantic);
     }
 }
 
 pub fn lowerReturnStatement(builder: *InstructionBuilder, stmt: *ReturnStatement) anyerror!void {
-    const value = try lowerExpression(builder, stmt.expression);
+    try lowerReturnStatementWithSemantics(builder, stmt, null);
+}
+
+pub fn lowerReturnStatementWithSemantics(builder: *InstructionBuilder, stmt: *ReturnStatement, semantic: ?*const SemanticResult) anyerror!void {
+    const value = try lowerExpressionWithSemantics(builder, stmt.expression, semantic);
     try builder.emit(.{ .Return = .{ .value = value } });
 }

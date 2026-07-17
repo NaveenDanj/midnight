@@ -62,7 +62,7 @@ pub fn parseReturnStatement(self: *Parser) !*ReturnStatement {
     _ = try self.expect(.KwReturn);
     const expr = try parseExpr(self);
     const ret = try self.allocator.create(ReturnStatement);
-    ret.* = .{ .expression = expr, .resolvedType = null };
+    ret.* = .{ .expression = expr };
     _ = try self.expect(.Semicolon);
     return ret;
 }
@@ -73,6 +73,6 @@ pub fn parseFunctionCall(self: *Parser) !*FunctionCallStmt {
     _ = try self.expect(.Semicolon);
 
     const varAssignment = try self.allocator.create(FunctionCallStmt);
-    varAssignment.* = .{ .args = args, .name = funcName.lexeme, .resolvedType = null, .callee = null };
+    varAssignment.* = .{ .args = args, .name = funcName.lexeme, .callee = null };
     return varAssignment;
 }

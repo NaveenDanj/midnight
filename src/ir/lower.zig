@@ -2,46 +2,50 @@ const std = @import("std");
 const InstructionBuilder = @import("./builder.zig").InstructionBuilder;
 const stmt_ast = @import("../ast/stmt.zig");
 const Statement = stmt_ast.Statement;
-const IfStatement = stmt_ast.IfStatement;
-const lowerVarAssignment = @import("./lib/lowerVar.zig").lowerVarAssignment;
-const lowerVarDeclaration = @import("./lib/lowerVar.zig").lowerVarDeclaration;
-const lowerExpression = @import("./lib/lowerExpr.zig").lowerExpression;
-const lowerIfStatement = @import("./lib/lowerFlowControl.zig").lowerIfStatement;
-const lowerWhileStatement = @import("./lib/lowerFlowControl.zig").lowerWhileStatement;
-const lowerFunctionCall = @import("./lib/lowerFunction.zig").lowerFunctionCall;
-const lowerFunctionDecl = @import("./lib/lowerFunction.zig").lowerFunctionDecl;
-const lowerReturnStatement = @import("./lib/lowerFunction.zig").lowerReturnStatement;
+const lower_var = @import("./lib/lowerVar.zig");
+const lower_expr = @import("./lib/lowerExpr.zig");
+const lower_flow = @import("./lib/lowerFlowControl.zig");
+const lower_function = @import("./lib/lowerFunction.zig");
 const LowerError = @import("./lower_error.zig").LowerError;
+const SemanticResult = @import("../semantic/result.zig").SemanticResult;
 
 pub fn generateIR(builder: *InstructionBuilder, statements: []*Statement) anyerror!void {
+    try generateIRWithSemantics(builder, statements, null);
+}
+
+pub fn generateIRWithSemantics(builder: *InstructionBuilder, statements: []*Statement, semantic: ?*const SemanticResult) anyerror!void {
     for (statements) |stmt| {
-        try lowerStatement(builder, stmt);
+        try lowerStatementWithSemantics(builder, stmt, semantic);
     }
 }
 
 pub fn lowerStatement(builder: *InstructionBuilder, stmt: *Statement) anyerror!void {
+    try lowerStatementWithSemantics(builder, stmt, null);
+}
+
+pub fn lowerStatementWithSemantics(builder: *InstructionBuilder, stmt: *Statement, semantic: ?*const SemanticResult) anyerror!void {
     switch (stmt.*) {
         .VarAssignment => {
-            try lowerVarAssignment(builder, stmt.VarAssignment);
+            try lower_var.lowerVarAssignmentWithSemantics(builder, stmt.VarAssignment, semantic);
         },
         .FunctionDecl => {
-            const funcDecl = try lowerFunctionDecl(builder, stmt.FunctionDecl);
+            const funcDecl = try lower_function.lowerFunctionDeclWithSemantics(builder, stmt.FunctionDecl, semantic);
             try builder.emit(funcDecl);
             std.debug.print("Lowering function declaration: {s}\n", .{stmt.FunctionDecl.name});
         },
         .VariableDecl => {
-            try lowerVarDeclaration(builder, stmt.VariableDecl);
+            try lower_var.lowerVarDeclarationWithSemantics(builder, stmt.VariableDecl, semantic);
         },
         .WhileStatement => {
-            try lowerWhileStatement(builder, stmt.WhileStatement);
+            try lower_flow.lowerWhileStatementWithSemantics(builder, stmt.WhileStatement, semantic);
         },
         .IfStatement => {
-            try lowerIfStatement(builder, stmt.IfStatement);
+            try lower_flow.lowerIfStatementWithSemantics(builder, stmt.IfStatement, semantic);
         },
         .ExpressionStmt => {
             switch (stmt.ExpressionStmt.*) {
                 .FunctionCall => {
-                    try lowerFunctionCall(builder, &stmt.ExpressionStmt.FunctionCall);
+                    try lower_function.lowerFunctionCallWithSemantics(builder, &stmt.ExpressionStmt.FunctionCall, semantic);
                 },
                 else => {
                     return LowerError.UnsupportedExpression;
@@ -49,14 +53,15 @@ pub fn lowerStatement(builder: *InstructionBuilder, stmt: *Statement) anyerror!v
             }
         },
         .ReturnStatement => {
-            try lowerReturnStatement(builder, stmt.ReturnStatement);
+            try lower_function.lowerReturnStatementWithSemantics(builder, stmt.ReturnStatement, semantic);
         },
         .FunctionCallStatement => {
-            try lowerFunctionCall(builder, stmt.FunctionCallStatement);
+            try lower_function.lowerFunctionCallWithSemantics(builder, stmt.FunctionCallStatement, semantic);
         },
         .PrintStatement => {
-            const printValue = try lowerExpression(builder, stmt.PrintStatement.value);
-            try builder.emit(.{ .PrintCall = .{ .value = printValue, .resolvedType = stmt.PrintStatement.resolvedType } });
+            const printValue = try lower_expr.lowerExpressionWithSemantics(builder, stmt.PrintStatement.value, semantic);
+            const resolvedType = if (semantic) |result| result.print_types.get(stmt.PrintStatement) else null;
+            try builder.emit(.{ .PrintCall = .{ .value = printValue, .resolvedType = resolvedType } });
         },
         .StructDecl => {},
         else => {
@@ -66,7 +71,11 @@ pub fn lowerStatement(builder: *InstructionBuilder, stmt: *Statement) anyerror!v
 }
 
 pub fn lowerStatements(builder: *InstructionBuilder, statements: []*Statement) anyerror!void {
+    try lowerStatementsWithSemantics(builder, statements, null);
+}
+
+pub fn lowerStatementsWithSemantics(builder: *InstructionBuilder, statements: []*Statement, semantic: ?*const SemanticResult) anyerror!void {
     for (statements) |stmt| {
-        try lowerStatement(builder, stmt);
+        try lowerStatementWithSemantics(builder, stmt, semantic);
     }
 }

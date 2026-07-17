@@ -58,7 +58,6 @@ pub fn parseVarAssignment(self: *Parser, target: *Expr) ParserError!*VarAssign {
     varAssign.* = .{
         .target = target,
         .value = value,
-        .resolvedType = null,
     };
 
     return varAssign;
@@ -77,7 +76,6 @@ pub fn parseLSide(self: *Parser) ParserError!*Expr {
             fieldAccess.* = .{
                 .object = expr,
                 .memberName = fieldNameToken.lexeme,
-                .resolvedType = null,
             };
 
             expr = try self.allocator.create(Expr);
@@ -92,7 +90,6 @@ pub fn parseLSide(self: *Parser) ParserError!*Expr {
                 .ArrayAccess = .{
                     .array = expr,
                     .index = indexExpr,
-                    .resolvedType = null,
                 },
             };
 

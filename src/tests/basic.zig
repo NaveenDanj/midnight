@@ -23,7 +23,7 @@ test "Test variable declaration parsing" {
     try expect(stmt.* == .VariableDecl);
     const varDecl = stmt.VariableDecl;
     try expect(std.mem.eql(u8, varDecl.name, "x"));
-    try expect(varDecl.varType.kind == .INT);
+    try expect(std.mem.eql(u8, varDecl.varType.name, "int"));
     try expect(varDecl.initializer.* == .IntLiteral);
     try expect(varDecl.initializer.IntLiteral.value == 5);
     try expect(varDecl.immutable == false);
@@ -89,20 +89,19 @@ test "parse shared type syntax for arrays and user types" {
     try expect(statements[1].* == .FunctionDecl);
 
     const func = statements[1].FunctionDecl;
-    try expect(func.returnType.kind == .INT);
-    try expect(func.returnType.isArray);
+    try expect(std.mem.eql(u8, func.returnType.name, "int"));
+    try expect(func.returnType.is_array);
 
     try expect(func.params.len == 2);
-    try expect(func.params[0].dataType.kind == .INT);
-    try expect(func.params[0].dataType.isArray);
-    try expect(func.params[1].dataType.kind == .STRUCT);
-    try expect(std.mem.eql(u8, func.params[1].dataType.struct_name.?, "Bag"));
+    try expect(std.mem.eql(u8, func.params[0].dataType.name, "int"));
+    try expect(func.params[0].dataType.is_array);
+    try expect(std.mem.eql(u8, func.params[1].dataType.name, "Bag"));
 
     const body = func.body.statements;
     try expect(body.len == 2);
     try expect(body[0].* == .VariableDecl);
-    try expect(body[0].VariableDecl.varType.kind == .INT);
-    try expect(body[0].VariableDecl.varType.isArray);
+    try expect(std.mem.eql(u8, body[0].VariableDecl.varType.name, "int"));
+    try expect(body[0].VariableDecl.varType.is_array);
 }
 
 test "parse function call statement using shared argument list" {
