@@ -35,15 +35,7 @@ pub const Type = struct {
     }
 
     pub fn equals(a: Type, b: Type) bool {
-        if (a.kind != b.kind) {
-            return false;
-        }
-
-        if (a.kind == .STRUCT) {
-            return a.struct_name == b.struct_name;
-        }
-
-        return a.kind == b.kind;
+        return @import("type_compatibility.zig").equals(a, b);
     }
 };
 
