@@ -209,6 +209,9 @@ pub const X86_64Backend = struct {
                     else => @panic("Unsupported print type"),
                 }
             },
+
+            .FunctionIR => {},
+
             else => {
                 @panic("Unsupported instruction");
             },
@@ -254,31 +257,37 @@ pub const X86_64Backend = struct {
             return err;
         };
 
+        const output_dir = std.fs.path.dirname(path) orelse ".";
+        const object_path = try std.fmt.allocPrint(self.allocator, "{s}/out.o", .{output_dir});
+        defer self.allocator.free(object_path);
+        const executable_path = try std.fmt.allocPrint(self.allocator, "{s}/out", .{output_dir});
+        defer self.allocator.free(executable_path);
+
         try runCommand(self.allocator, &.{
             "nasm",
             "-f",
             "elf64",
-            "./build/output.asm",
+            path,
             "-o",
-            "./build/out.o",
+            object_path,
         });
 
         try runCommand(self.allocator, &.{
             "gcc",
-            "./build/out.o",
+            object_path,
             "-o",
-            "./build/out",
+            executable_path,
         });
 
         // run the output binary to verify it works
         std.debug.print("Running the output binary to verify it works ==============================\n", .{});
         try runCommand(self.allocator, &.{
-            "./build/out",
+            executable_path,
         });
 
         // Cleanup intermediate files
-        try std.fs.cwd().deleteFile("./build/out.o");
-        try std.fs.cwd().deleteFile("./build/output.asm");
+        try std.fs.cwd().deleteFile(object_path);
+        try std.fs.cwd().deleteFile(path);
     }
 
     fn lowerIntBinaryOp(self: *X86_64Backend, asmBuilder: *AsmBuilder, inst: *const Instruction) !void {

@@ -5,13 +5,28 @@ total = total * total;
 var float PI = 3.14;
 var bool is_true = true;
 
+struct Vector {
+    var int x;
+    var int y;
+}
+
+var Vector position = Vector{
+    x = 10,
+    y = 20,
+};
+
 if (is_true) {
     print(total + 120 - 6579);
-    print("\n");
+    print("");
 } else {
     print(x);
-    print("\n");
+    print("");
 }
 
 print("hello world");
 print(is_true);
+print("");
+
+func sum (int a , int b) int {
+    return a + b;
+}

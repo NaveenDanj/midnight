@@ -538,7 +538,7 @@ pub const SemanticAnalyzer = struct {
                     _ = try hashMap.put(property.name, property.fieldType);
                 },
                 .StructMethod => {
-                    // For now, we won't analyze method bodies during struct initialization.
+                    // TODO: For now, we won't analyze method bodies during struct initialization.
                 },
             }
         }
