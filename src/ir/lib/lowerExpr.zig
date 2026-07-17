@@ -2,9 +2,8 @@ const std = @import("std");
 const Instruction = @import("../ir.zig").Instruction;
 const Value = @import("../ir.zig").Value;
 const InstructionBuilder = @import("../builder.zig").InstructionBuilder;
-const Expr = @import("../../parser/lib/parseExpr.zig").Expr;
+const Expr = @import("../../ast/expr.zig").Expr;
 const BinaryOp = @import("../ir.zig").BinaryOp;
-const Statement = @import("../../parser/lib/parseStatement.zig").Statement;
 const Type = @import("../../semantic/types.zig").Type;
 
 pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {

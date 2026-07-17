@@ -2,24 +2,12 @@ const std = @import("std");
 const Parser = @import("../parser.zig").Parser;
 const parseExpr = @import("./parseExpr.zig").parseExpr;
 const ParserError = @import("../error.zig").ParserError;
-const Expr = @import("./parseExpr.zig").Expr;
-const Type = @import("../../semantic/types.zig").Type;
-const MemberAccessExpr = @import("./parseStruct.zig").MemberAccessExpr;
-const ArrayAccess = @import("./parseArray.zig").ArrayAccess;
+const Expr = @import("../../ast/expr.zig").Expr;
+const MemberAccessExpr = @import("../../ast/expr.zig").MemberAccessExpr;
+const ast_stmt = @import("../../ast/stmt.zig");
+const VarDecl = ast_stmt.VarDecl;
+const VarAssign = ast_stmt.VarAssign;
 const parseType = @import("./parseTypeRef.zig").parseType;
-
-pub const VarDecl = struct {
-    immutable: bool,
-    name: []const u8,
-    varType: Type,
-    initializer: *Expr,
-};
-
-pub const VarAssign = struct {
-    target: *Expr,
-    value: *Expr,
-    resolvedType: ?Type,
-};
 
 pub fn parseVarDecl(self: *Parser) !*VarDecl {
     var isImmutable: bool = false;

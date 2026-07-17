@@ -1,6 +1,6 @@
 const std = @import("std");
 const Type = @import("../semantic/types.zig").Type;
-const Param = @import("../parser/lib//parseFunctionDecl.zig").Param;
+const Param = @import("../ast/stmt.zig").Param;
 
 pub const Value = union(enum) { temp: u32, constantInt: i64, constantFloat: f64, constantBool: bool, string: []const u8, variable: []const u8, paramIndex: i64, arrayIndex: u32 };
 

@@ -1,9 +1,10 @@
 const std = @import("std");
 const InstructionBuilder = @import("../builder.zig").InstructionBuilder;
-const FunctionDecl = @import("../../parser//lib/parseFunctionDecl.zig").FunctionDecl;
-const FunctionCallStmt = @import("../../parser/lib/parseFunctionDecl.zig").FunctionCallStmt;
-const Statement = @import("../../parser/lib/parseStatement.zig").Statement;
-const ReturnStatement = @import("../../parser/lib/parseFunctionDecl.zig").ReturnStatement;
+const stmt_ast = @import("../../ast/stmt.zig");
+const FunctionDecl = stmt_ast.FunctionDecl;
+const FunctionCallStmt = stmt_ast.FunctionCallStmt;
+const Statement = stmt_ast.Statement;
+const ReturnStatement = stmt_ast.ReturnStatement;
 const Value = @import("../ir.zig").Value;
 
 const Instruction = @import("../ir.zig").Instruction;

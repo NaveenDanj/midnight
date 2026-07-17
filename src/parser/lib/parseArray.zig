@@ -1,21 +1,10 @@
 const std = @import("std");
 const Parser = @import("../parser.zig").Parser;
 const ParserError = @import("../error.zig").ParserError;
-const Type = @import("../../semantic/types.zig").Type;
-const TokenType = @import("../../lexer/tokens.zig").TokenType;
-const Expr = @import("./parseExpr.zig").Expr;
+const ast = @import("../../ast/expr.zig");
+const Expr = ast.Expr;
+const ArrayExpression = ast.ArrayExpression;
 const parseExpr = @import("./parseExpr.zig").parseExpr;
-
-pub const ArrayExpression = struct {
-    elements: []*Expr,
-    resolvedType: ?Type = null,
-};
-
-pub const ArrayAccess = struct {
-    array: *Expr,
-    index: *Expr,
-    resolvedType: ?Type = null,
-};
 
 pub fn parseArrayExpression(self: *Parser) ParserError!*Expr {
     _ = try self.expect(.LBracket);

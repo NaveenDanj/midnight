@@ -1,52 +1,21 @@
 const std = @import("std");
 const Parser = @import("../parser.zig").Parser;
-const Type = @import("../../semantic/types.zig").Type;
 const Types = @import("../../semantic/types.zig");
 const ParserError = @import("../error.zig").ParserError;
 const Precedence = @import("./operator.zig").Precedence;
 const mapOperatorToPrecedence = @import("./operator.zig").mapOperatorToPrecedence;
 const Token = @import("../../lexer/tokens.zig").Token;
-const FunctionCallStmt = @import("./parseFunctionDecl.zig").FunctionCallStmt;
-const MemberAccessExpr = @import("./parseStruct.zig").MemberAccessExpr;
-const StructInitExpr = @import("./parseStruct.zig").StructInitExpr;
-const StructInitField = @import("./parseStruct.zig").StructInitField;
-const ArrayExpression = @import("./parseArray.zig").ArrayExpression;
+const ast = @import("../../ast/expr.zig");
+const Expr = ast.Expr;
+const BinaryExpr = ast.BinaryExpr;
+const IdentifierExpr = ast.IdentifierExpr;
+const UnaryExpr = ast.UnaryExpr;
+const FunctionCallStmt = ast.FunctionCallStmt;
+const MemberAccessExpr = ast.MemberAccessExpr;
+const StructInitExpr = ast.StructInitExpr;
+const StructInitField = ast.StructInitField;
+const ArrayAccess = ast.ArrayAccess;
 const parseArrayExpression = @import("./parseArray.zig").parseArrayExpression;
-const ArrayAccess = @import("./parseArray.zig").ArrayAccess;
-
-pub const Expr = union(enum) {
-    Binary: BinaryExpr,
-    IntLiteral: Types.IntLiteral,
-    FloatLiteral: Types.FloatLiteral,
-    BoolLiteral: Types.BooleanLiteral,
-    StringLiteral: Types.StringLiteral,
-    Identifier: IdentifierExpr,
-    ArrayLiteral: ArrayExpression,
-    ArrayAccess: ArrayAccess,
-    FunctionCall: FunctionCallStmt,
-    MemberAccess: MemberAccessExpr,
-    StructInit: StructInitExpr,
-    ExpressionStmt: *Expr, // For expressions used as statements (e.g. function calls without assignment)
-    Unary: UnaryExpr,
-};
-
-pub const BinaryExpr = struct {
-    left: *Expr,
-    operator: []const u8,
-    right: *Expr,
-    resolvedType: ?Type = null,
-};
-
-pub const IdentifierExpr = struct {
-    name: []const u8,
-    resolvedType: ?Type = null,
-};
-
-pub const UnaryExpr = struct {
-    operator: []const u8,
-    operand: *Expr,
-    resolvedType: ?Type = null,
-};
 
 pub fn parseExpr(self: *Parser) ParserError!*Expr {
     return try parsePrecedence(self, .lowest);

@@ -4,10 +4,10 @@ const expectEqual = std.testing.expectEqual;
 
 const Lexer = @import("../lexer/lexer.zig").Lexer;
 const Parser = @import("../parser/parser.zig").Parser;
-const Expr = @import("../parser/lib/parseExpr.zig").Expr;
-const Statement = @import("../parser/lib/parseStatement.zig").Statement;
-const VarDecl = @import("../parser/lib/parseVarDec.zig").VarDecl;
-const FunctionCallStmt = @import("../parser/lib/parseFunctionDecl.zig").FunctionCallStmt;
+const Expr = @import("../ast/expr.zig").Expr;
+const Statement = @import("../ast/stmt.zig").Statement;
+const VarDecl = @import("../ast/stmt.zig").VarDecl;
+const FunctionCallStmt = @import("../ast/stmt.zig").FunctionCallStmt;
 const Instruction = @import("../ir/ir.zig").Instruction;
 const BinaryOp = @import("../ir/ir.zig").BinaryOp;
 const Value = @import("../ir/ir.zig").Value;
@@ -271,7 +271,7 @@ test "IR lowerVarAssignment lowers RHS before storing into array index" {
     const value = try allocator.create(Expr);
     value.* = .{ .IntLiteral = .{ .value = 99, .resolvedType = null } };
 
-    const var_assign = try allocator.create(@import("../parser/lib/parseVarDec.zig").VarAssign);
+    const var_assign = try allocator.create(@import("../ast/stmt.zig").VarAssign);
     var_assign.* = .{ .target = target, .value = value, .resolvedType = null };
 
     try lowerVarAssignment(&builder, var_assign);

@@ -3,7 +3,6 @@ const Symbol = @import("./symbol.zig").Symbol;
 const SymbolKind = @import("./symbol.zig").SymbolKind;
 const Type = @import("./types.zig").Type;
 const SemanticError = @import("./semantic_error.zig").SemanticError;
-const Statement = @import("../parser/lib/parseStatement.zig").Statement;
 
 pub const Scope = struct {
     symbols: std.StringHashMap(Symbol),

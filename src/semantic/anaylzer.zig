@@ -2,21 +2,23 @@ const std = @import("std");
 const ScopeStack = @import("scope.zig").ScopeStack;
 const SemanticContext = @import("./context.zig").SemanticContext;
 
-const FunctionDecl = @import("../parser/lib/parseFunctionDecl.zig").FunctionDecl;
-const VarDecl = @import("../parser/lib/parseVarDec.zig").VarDecl;
-const WhileStatement = @import("../parser/lib/parseWhile.zig").WhileStatement;
+const expr_ast = @import("../ast/expr.zig");
+const stmt_ast = @import("../ast/stmt.zig");
+const FunctionDecl = stmt_ast.FunctionDecl;
+const VarDecl = stmt_ast.VarDecl;
+const WhileStatement = stmt_ast.WhileStatement;
 const SemanticError = @import("./semantic_error.zig").SemanticError;
 const types = @import("./types.zig");
-const BlockStmt = @import("../parser/lib/parseBlock.zig").BlockStmt;
-const BinaryExpr = @import("../parser/lib/parseExpr.zig").BinaryExpr;
-const Expr = @import("../parser/lib/parseExpr.zig").Expr;
-const Statement = @import("../parser/lib/parseStatement.zig").Statement;
-const VarAssign = @import("../parser/lib/parseVarDec.zig").VarAssign;
-const FunctionCallStmt = @import("../parser/lib/parseFunctionDecl.zig").FunctionCallStmt;
-const IfStatement = @import("../parser/lib/parseIf.zig").IfStatement;
-const StructStmt = @import("../parser/lib/parseStruct.zig").StructStmt;
-const StructInitExpr = @import("../parser/lib/parseStruct.zig").StructInitExpr;
-const PrintStatement = @import("../parser/lib/parsePrint.zig").PrintStatement;
+const BlockStmt = stmt_ast.BlockStmt;
+const BinaryExpr = expr_ast.BinaryExpr;
+const Expr = expr_ast.Expr;
+const Statement = stmt_ast.Statement;
+const VarAssign = stmt_ast.VarAssign;
+const FunctionCallStmt = stmt_ast.FunctionCallStmt;
+const IfStatement = stmt_ast.IfStatement;
+const StructStmt = stmt_ast.StructStmt;
+const StructInitExpr = expr_ast.StructInitExpr;
+const PrintStatement = stmt_ast.PrintStatement;
 
 pub const SemanticAnalyzer = struct {
     allocator: std.mem.Allocator,

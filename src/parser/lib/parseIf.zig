@@ -1,16 +1,12 @@
 const std = @import("std");
-const Expr = @import("parseExpr.zig").Expr;
-const BlockStmt = @import("parseBlock.zig").BlockStmt;
+const Expr = @import("../../ast/expr.zig").Expr;
+const ast_stmt = @import("../../ast/stmt.zig");
+const BlockStmt = ast_stmt.BlockStmt;
+const IfStatement = ast_stmt.IfStatement;
 const parseBlock = @import("parseBlock.zig").parseBlock;
 const Parser = @import("../parser.zig").Parser;
 const parseExpr = @import("./parseExpr.zig").parseExpr;
 const ParserError = @import("../error.zig").ParserError;
-
-pub const IfStatement = struct {
-    expression: *Expr,
-    thenBlock: *BlockStmt,
-    elseBlock: ?*BlockStmt = null,
-};
 
 pub fn parseIfStatement(self: *Parser) ParserError!*IfStatement {
     _ = try self.expect(.KwIf);

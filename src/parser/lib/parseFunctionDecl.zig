@@ -1,33 +1,15 @@
 const Parser = @import("../parser.zig").Parser;
 const std = @import("std");
 const parseBlock = @import("./parseBlock.zig").parseBlock;
-const BlockStmt = @import("./parseBlock.zig").BlockStmt;
-const Type = @import("../../semantic/types.zig").Type;
-const Expr = @import("./parseExpr.zig").Expr;
+const ast_stmt = @import("../../ast/stmt.zig");
+const FunctionDecl = ast_stmt.FunctionDecl;
+const FunctionCallStmt = ast_stmt.FunctionCallStmt;
+const ReturnStatement = ast_stmt.ReturnStatement;
+const Param = ast_stmt.Param;
+const Expr = @import("../../ast/expr.zig").Expr;
 const parseType = @import("./parseTypeRef.zig").parseType;
 const parseExpr = @import("parseExpr.zig").parseExpr;
 const parseArgumentList = @import("parseExpr.zig").parseArgumentList;
-
-pub const FunctionDecl = struct {
-    name: []const u8,
-    params: []*Param,
-    body: *BlockStmt,
-    returnType: Type,
-};
-
-pub const FunctionCallStmt = struct {
-    callee: ?*Expr = null,
-    name: []const u8,
-    args: []*Expr,
-    resolvedType: ?Type = null,
-};
-
-pub const ReturnStatement = struct {
-    expression: *Expr,
-    resolvedType: ?Type = null,
-};
-
-pub const Param = struct { dataType: Type, name: []const u8 };
 
 pub fn parseFunctionDecl(self: *Parser) !*FunctionDecl {
     _ = try self.expect(.KwFunc);
