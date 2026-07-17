@@ -9,6 +9,7 @@ const VarDecl = stmt_ast.VarDecl;
 const WhileStatement = stmt_ast.WhileStatement;
 const SemanticError = @import("./semantic_error.zig").SemanticError;
 const types = @import("./types.zig");
+const typeCompatibility = @import("./type_compatibility.zig");
 const BlockStmt = stmt_ast.BlockStmt;
 const BinaryExpr = expr_ast.BinaryExpr;
 const Expr = expr_ast.Expr;
@@ -103,7 +104,7 @@ pub const SemanticAnalyzer = struct {
             for (funcDecl.body.statements) |stmt| {
                 if (stmt.* == .ReturnStatement) {
                     const retStmt = stmt.ReturnStatement;
-                    if (!self.areTypesCompatible(expectedRetType, retStmt.resolvedType orelse return SemanticError.TypeMismatch)) {
+                    if (!typeCompatibility.isAssignable(expectedRetType, retStmt.resolvedType orelse return SemanticError.TypeMismatch)) {
                         return SemanticError.TypeMismatch;
                     }
                     hasReturnWithValue = true;
@@ -166,7 +167,7 @@ pub const SemanticAnalyzer = struct {
             // Allow empty arrays to be assigned to any array type
             return;
         } else {
-            if (!self.areTypesCompatible(varType, initType)) {
+            if (!typeCompatibility.isAssignable(varType, initType)) {
                 return SemanticError.TypeMismatch;
             }
         }
@@ -200,41 +201,6 @@ pub const SemanticAnalyzer = struct {
         }
     }
 
-    pub fn areTypesCompatible(_: *SemanticAnalyzer, expected: types.Type, actual: types.Type) bool {
-        // const structDef = self.context.structs.get(expected.name) orelse return SemanticError.StructAlreadyDeclared
-
-        if (expected.kind == .STRUCT) {
-            if (actual.kind != .STRUCT) {
-                return false;
-            }
-
-            if (expected.struct_name) |expected_name| {
-                if (actual.struct_name) |actual_name| {
-                    return std.mem.eql(u8, expected_name, actual_name);
-                } else {
-                    std.debug.print("Expected struct name {s}, but actual has no struct name\n", .{expected_name});
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        }
-
-        if (expected.kind == .VOID) {
-            return false;
-        }
-
-        if (expected.kind == .STRING) {
-            return actual.kind == .STRING;
-        }
-
-        if (expected.isNumeric()) {
-            return actual.isNumeric();
-        }
-
-        return expected.kind == actual.kind;
-    }
-
     pub fn evaluateExprType(self: *SemanticAnalyzer, expr: *Expr) SemanticError!types.Type {
         switch (expr.*) {
             .Binary => {
@@ -242,7 +208,7 @@ pub const SemanticAnalyzer = struct {
                 const leftType = try self.evaluateExprType(binary.left);
                 const rightType = try self.evaluateExprType(binary.right);
 
-                if (!self.areTypesCompatible(leftType, rightType)) {
+                if (!typeCompatibility.isAssignable(leftType, rightType)) {
                     return SemanticError.TypeMismatch;
                 }
 
@@ -386,7 +352,7 @@ pub const SemanticAnalyzer = struct {
 
                 for (arrayExpr.elements) |elem| {
                     const elemType = try self.evaluateExprType(elem);
-                    if (!self.areTypesCompatible(firstElemType, elemType)) {
+                    if (!typeCompatibility.isAssignable(firstElemType, elemType)) {
                         return SemanticError.TypeMismatch;
                     }
                 }
@@ -406,7 +372,7 @@ pub const SemanticAnalyzer = struct {
                     return SemanticError.TypeMismatch;
                 }
 
-                return types.Type{ .kind = arrayType.kind, .isArray = true, .struct_name = arrayType.struct_name };
+                return types.Type{ .kind = arrayType.kind, .isArray = false, .struct_name = arrayType.struct_name };
             },
         }
 
@@ -429,7 +395,7 @@ pub const SemanticAnalyzer = struct {
                 const symbolType = symbol.symbolType;
                 const exprKind = try self.evaluateExprType(varAssign.value);
 
-                if (!self.areTypesCompatible(symbolType, exprKind)) {
+                if (!typeCompatibility.isAssignable(symbolType, exprKind)) {
                     return SemanticError.TypeMismatch;
                 }
 
@@ -457,7 +423,7 @@ pub const SemanticAnalyzer = struct {
                                     return SemanticError.SymbolImmutable;
                                 }
                                 const exprType = try self.evaluateExprType(varAssign.value);
-                                if (!self.areTypesCompatible(property.fieldType, exprType)) {
+                                if (!typeCompatibility.isAssignable(property.fieldType, exprType)) {
                                     return SemanticError.TypeMismatch;
                                 }
                                 found = true;
@@ -493,7 +459,7 @@ pub const SemanticAnalyzer = struct {
                 }
 
                 const exprType = try self.evaluateExprType(varAssign.value);
-                if (!self.areTypesCompatible(types.Type{ .kind = arrayType.kind, .isArray = false, .struct_name = arrayType.struct_name }, exprType)) {
+                if (!typeCompatibility.isAssignable(types.Type{ .kind = arrayType.kind, .isArray = false, .struct_name = arrayType.struct_name }, exprType)) {
                     return SemanticError.TypeMismatch;
                 }
             },
@@ -518,7 +484,7 @@ pub const SemanticAnalyzer = struct {
 
         for (params, 0..) |expectedParam, i| {
             const argType = try self.evaluateExprType(funcCall.args[i]);
-            if (!self.areTypesCompatible(expectedParam, argType)) {
+            if (!typeCompatibility.isAssignable(expectedParam, argType)) {
                 return SemanticError.TypeMismatch;
             }
         }
@@ -549,7 +515,7 @@ pub const SemanticAnalyzer = struct {
             const expectedType = hashMap.get(field.name) orelse return SemanticError.StructFieldMismatch;
             const actualType = try self.evaluateExprType(field.value);
 
-            if (!self.areTypesCompatible(expectedType, actualType)) {
+            if (!typeCompatibility.isAssignable(expectedType, actualType)) {
                 return SemanticError.StructFieldMismatch;
             }
         }
