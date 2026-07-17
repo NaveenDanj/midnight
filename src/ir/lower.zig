@@ -11,6 +11,7 @@ const lowerWhileStatement = @import("./lib/lowerFlowControl.zig").lowerWhileStat
 const lowerFunctionCall = @import("./lib/lowerFunction.zig").lowerFunctionCall;
 const lowerFunctionDecl = @import("./lib/lowerFunction.zig").lowerFunctionDecl;
 const lowerReturnStatement = @import("./lib/lowerFunction.zig").lowerReturnStatement;
+const LowerError = @import("./lower_error.zig").LowerError;
 
 pub fn generateIR(builder: *InstructionBuilder, statements: []*Statement) anyerror!void {
     for (statements) |stmt| {
@@ -43,7 +44,7 @@ pub fn lowerStatement(builder: *InstructionBuilder, stmt: *Statement) anyerror!v
                     try lowerFunctionCall(builder, &stmt.ExpressionStmt.FunctionCall);
                 },
                 else => {
-                    std.debug.print("Lowering unhandled expression type: {any}\n", .{stmt.ExpressionStmt});
+                    return LowerError.UnsupportedExpression;
                 },
             }
         },
@@ -59,7 +60,7 @@ pub fn lowerStatement(builder: *InstructionBuilder, stmt: *Statement) anyerror!v
         },
         .StructDecl => {},
         else => {
-            std.debug.print("Lowering unhandled statement type: {any}\n", .{stmt});
+            return LowerError.UnsupportedStatement;
         },
     }
 }

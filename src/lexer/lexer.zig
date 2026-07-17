@@ -3,6 +3,11 @@ const Token = @import("tokens.zig").Token;
 const TokenType = @import("tokens.zig").TokenType;
 const lookupKeyword = @import("keywords.zig").lookupKeyword;
 
+pub const LexerError = error{
+    UnknownCharacter,
+    UnterminatedString,
+};
+
 pub const Lexer = struct {
     source: []const u8,
     start: usize,
@@ -26,7 +31,7 @@ pub const Lexer = struct {
         while (!self.isAtEnd()) {
             self.skipWhitespace();
             self.start = self.current;
-            try tokens.append(allocator, self.scanToken());
+            try tokens.append(allocator, try self.scanToken());
         }
 
         try tokens.append(allocator, Token{
@@ -56,7 +61,7 @@ pub const Lexer = struct {
         }
     }
 
-    pub fn scanToken(self: *Lexer) Token {
+    pub fn scanToken(self: *Lexer) LexerError!Token {
         if (self.isAtEnd()) {
             return self.makeToken(TokenType.EOF);
         }
@@ -78,7 +83,7 @@ pub const Lexer = struct {
             '-' => return self.makeToken(TokenType.Minus),
             '*' => return self.makeToken(TokenType.Star),
             '/' => return self.makeToken(TokenType.Slash),
-            '"' => return self.scanString(),
+            '"' => return try self.scanString(),
 
             '!' => return if (self.isMatch('='))
                 self.makeToken(TokenType.NotEqual)
@@ -138,7 +143,7 @@ pub const Lexer = struct {
             // return self.makeToken(.Digit);
         }
 
-        return self.makeToken(TokenType.EOF);
+        return LexerError.UnknownCharacter;
     }
 
     pub fn makeToken(self: *Lexer, kind: TokenType) Token {
@@ -179,7 +184,7 @@ pub const Lexer = struct {
         return true;
     }
 
-    pub fn scanString(self: *Lexer) Token {
+    pub fn scanString(self: *Lexer) LexerError!Token {
         while (!self.isAtEnd() and self.peek() != '"') {
             if (self.peek() == '\n') {
                 self.line += 1;
@@ -189,7 +194,7 @@ pub const Lexer = struct {
         }
 
         if (self.isAtEnd()) {
-            return self.makeToken(TokenType.EOF);
+            return LexerError.UnterminatedString;
         }
 
         _ = self.advance();
