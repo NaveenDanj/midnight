@@ -37,7 +37,7 @@ pub fn main() !void {
 
     var backend = X86_64Backend.init(allocator);
     const asm_str = try backend.generate(irBuilder.instructions.items);
-    try backend.build("./build/output.asm", asm_str);
+    try backend.build("/tmp/midnight-build/output.asm", asm_str);
 
     defer token_list.deinit(allocator);
 }

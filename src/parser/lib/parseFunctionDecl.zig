@@ -4,7 +4,7 @@ const parseBlock = @import("./parseBlock.zig").parseBlock;
 const BlockStmt = @import("./parseBlock.zig").BlockStmt;
 const Type = @import("../../semantic/types.zig").Type;
 const Expr = @import("./parseExpr.zig").Expr;
-const checkForType = @import("parseVarDec.zig").checkForType;
+const parseType = @import("./parseTypeRef.zig").parseType;
 const parseExpr = @import("parseExpr.zig").parseExpr;
 
 pub const FunctionDecl = struct {
@@ -34,7 +34,7 @@ pub fn parseFunctionDecl(self: *Parser) !*FunctionDecl {
     _ = try self.expect(.LParen);
     const params = try parseParameters(self);
 
-    const returnType = try checkForType(self);
+    const returnType = try parseType(self);
 
     const body = try parseBlock(self);
     const func = try self.allocator.create(FunctionDecl);
@@ -54,7 +54,7 @@ pub fn parseParameters(self: *Parser) ![]*Param {
     var params = try ArrayList(*Param).initCapacity(self.allocator, 0);
 
     while (!self.check(.RParen)) {
-        const dataType = try checkForType(self);
+        const dataType = try parseType(self);
         const paramName = try self.expect(.Identifier);
 
         const param = try self.allocator.create(Param);

@@ -14,7 +14,7 @@ pub const RuntimeValue = union(enum) {
 
 pub const Executor = struct {
     allocator: std.mem.Allocator,
-    registers: std.AutoHashMap(u32, RuntimeValue), // temp registers
+    registers: std.AutoHashMap(u32, RuntimeValue),
     variables: std.StringHashMap(RuntimeValue), // named variables
     labels: std.AutoHashMap(u32, usize), // label -> instruction index
     return_value: ?RuntimeValue = null,

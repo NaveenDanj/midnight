@@ -6,7 +6,7 @@ const Param = @import("parseFunctionDecl.zig").Param;
 const Expr = @import("./parseExpr.zig").Expr;
 const parseExpr = @import("./parseExpr.zig").parseExpr;
 const parseParameters = @import("parseFunctionDecl.zig").parseParameters;
-const checkForType = @import("parseVarDec.zig").checkForType;
+const parseType = @import("./parseTypeRef.zig").parseType;
 const parseBlock = @import("./parseBlock.zig").parseBlock;
 const BlockStmt = @import("./parseBlock.zig").BlockStmt;
 
@@ -91,7 +91,7 @@ pub fn parseStructFunc(self: *Parser) ParserError!*StructMethodField {
     _ = try self.expect(.LParen);
     const paramList = try parseParameters(self);
 
-    const returnType = try checkForType(self);
+    const returnType = try parseType(self);
 
     const body = try parseBlock(self);
     const func = try self.allocator.create(StructMethodField);
@@ -119,8 +119,7 @@ pub fn parseStructVariableDecl(self: *Parser) ParserError!*StructPropertyField {
         return ParserError.UnExpectedToken;
     }
 
-    var propType = try checkForType(self);
-    propType = try checkForArrayType(self, propType);
+    const propType = try parseType(self);
 
     const fieldNameToken = try self.expect(.Identifier);
     _ = try self.expect(.Semicolon);
@@ -134,14 +133,4 @@ pub fn parseStructVariableDecl(self: *Parser) ParserError!*StructPropertyField {
     };
 
     return propertyField;
-}
-
-pub fn checkForArrayType(self: *Parser, baseType: Type) ParserError!Type {
-    if (self.check(.LBracket)) {
-        _ = try self.expect(.LBracket);
-        _ = try self.expect(.RBracket);
-        return Type{ .kind = baseType.kind, .struct_name = baseType.struct_name, .isArray = true };
-    }
-
-    return baseType;
 }

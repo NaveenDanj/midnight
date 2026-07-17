@@ -62,6 +62,49 @@ test "parse expression statement inside function body" {
     try expect(body_stmts[2].* == .ReturnStatement);
 }
 
+test "parse shared type syntax for arrays and user types" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const source =
+        \\struct Bag {
+        \\    var int[] values;
+        \\}
+        \\func first(int[] values, Bag bag) int[] {
+        \\    var int[] local = [1, 2];
+        \\    return values;
+        \\}
+    ;
+
+    var lexer = Lexer.init(source);
+    var token_list = try lexer.lexAll(std.testing.allocator);
+    defer token_list.deinit(std.testing.allocator);
+
+    var parser = Parser.init(allocator, token_list.items);
+    const statements = try parser.parseProgram();
+
+    try expect(statements.len == 2);
+    try expect(statements[0].* == .StructDecl);
+    try expect(statements[1].* == .FunctionDecl);
+
+    const func = statements[1].FunctionDecl;
+    try expect(func.returnType.kind == .INT);
+    try expect(func.returnType.isArray);
+
+    try expect(func.params.len == 2);
+    try expect(func.params[0].dataType.kind == .INT);
+    try expect(func.params[0].dataType.isArray);
+    try expect(func.params[1].dataType.kind == .STRUCT);
+    try expect(std.mem.eql(u8, func.params[1].dataType.struct_name.?, "Bag"));
+
+    const body = func.body.statements;
+    try expect(body.len == 2);
+    try expect(body[0].* == .VariableDecl);
+    try expect(body[0].VariableDecl.varType.kind == .INT);
+    try expect(body[0].VariableDecl.varType.isArray);
+}
+
 test "parse member access assignment target" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();

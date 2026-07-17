@@ -4,10 +4,9 @@ const parseExpr = @import("./parseExpr.zig").parseExpr;
 const ParserError = @import("../error.zig").ParserError;
 const Expr = @import("./parseExpr.zig").Expr;
 const Type = @import("../../semantic/types.zig").Type;
-const TypeKind = @import("../../semantic/types.zig").TypeKind;
-const TokenType = @import("../../lexer/tokens.zig").TokenType;
 const MemberAccessExpr = @import("./parseStruct.zig").MemberAccessExpr;
 const ArrayAccess = @import("./parseArray.zig").ArrayAccess;
+const parseType = @import("./parseTypeRef.zig").parseType;
 
 pub const VarDecl = struct {
     immutable: bool,
@@ -21,8 +20,6 @@ pub const VarAssign = struct {
     value: *Expr,
     resolvedType: ?Type,
 };
-
-pub const varTypeList = [_]TokenType{ .KwInt, .KwFloat, .KwBool, .KwVoid, .KwString };
 
 pub fn parseVarDecl(self: *Parser) !*VarDecl {
     var isImmutable: bool = false;
@@ -39,8 +36,7 @@ pub fn parseVarDecl(self: *Parser) !*VarDecl {
         isImmutable = false;
     }
 
-    var dataType = try checkForType(self);
-    dataType = try checkForArrayType(self, dataType);
+    const dataType = try parseType(self);
 
     const name = try self.expect(.Identifier);
     _ = try self.expect(.Equal);
@@ -78,35 +74,6 @@ pub fn parseVarAssignment(self: *Parser, target: *Expr) ParserError!*VarAssign {
     };
 
     return varAssign;
-}
-
-pub fn checkForType(self: *Parser) ParserError!Type {
-
-    // check for primitive types
-    for (varTypeList) |dataType| {
-        if (self.check(dataType)) {
-            _ = try self.expect(dataType);
-            return mapType(dataType);
-        }
-    }
-
-    // check for user defined struct types
-    if (self.check(.Identifier)) {
-        const structNameToken = try self.expect(.Identifier);
-        return Type{ .kind = .STRUCT, .struct_name = structNameToken.lexeme };
-    }
-
-    return ParserError.UnExpectedToken;
-}
-
-pub fn checkForArrayType(self: *Parser, baseType: Type) ParserError!Type {
-    if (self.check(.LBracket)) {
-        _ = try self.expect(.LBracket);
-        _ = try self.expect(.RBracket);
-        return Type{ .kind = baseType.kind, .struct_name = baseType.struct_name, .isArray = true };
-    }
-
-    return baseType;
 }
 
 pub fn parseLSide(self: *Parser) ParserError!*Expr {
@@ -148,15 +115,4 @@ pub fn parseLSide(self: *Parser) ParserError!*Expr {
     }
 
     return expr;
-}
-
-pub fn mapType(tokenTypeKind: TokenType) Type {
-    return switch (tokenTypeKind) {
-        .KwInt => Type{ .kind = .INT },
-        .KwFloat => Type{ .kind = .FLOAT },
-        .KwBool => Type{ .kind = .BOOL },
-        .KwVoid => Type{ .kind = .VOID },
-        .KwString => Type{ .kind = .STRING },
-        else => Type{ .kind = .VOID },
-    };
 }
