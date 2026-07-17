@@ -3,4 +3,6 @@ test {
     _ = @import("tests/arrays.zig");
     _ = @import("tests/ir.zig");
     _ = @import("tests/type_compatibility.zig");
+    _ = @import("tests/expr_type_checker.zig");
+    _ = @import("tests/semantic_checkers.zig");
 }
