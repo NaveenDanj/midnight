@@ -1,5 +1,4 @@
 const Type = @import("./types.zig").Type;
-const Statement = @import("../parser/lib/parseStatement.zig").Statement;
 
 pub const SymbolKind = enum {
     variable,

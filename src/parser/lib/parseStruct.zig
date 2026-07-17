@@ -2,53 +2,20 @@ const std = @import("std");
 const Type = @import("../../semantic/types.zig").Type;
 const Parser = @import("../parser.zig").Parser;
 const ParserError = @import("../error.zig").ParserError;
-const Param = @import("parseFunctionDecl.zig").Param;
-const Expr = @import("./parseExpr.zig").Expr;
+const ast_stmt = @import("../../ast/stmt.zig");
+const Param = ast_stmt.Param;
+const StructField = ast_stmt.StructField;
+const StructStmt = ast_stmt.StructStmt;
+const StructPropertyField = ast_stmt.StructPropertyField;
+const StructMethodField = ast_stmt.StructMethodField;
+const Expr = @import("../../ast/expr.zig").Expr;
+const MemberAccessExpr = @import("../../ast/expr.zig").MemberAccessExpr;
+const StructInitExpr = @import("../../ast/expr.zig").StructInitExpr;
+const StructInitField = @import("../../ast/expr.zig").StructInitField;
 const parseExpr = @import("./parseExpr.zig").parseExpr;
 const parseParameters = @import("parseFunctionDecl.zig").parseParameters;
 const parseType = @import("./parseTypeRef.zig").parseType;
 const parseBlock = @import("./parseBlock.zig").parseBlock;
-const BlockStmt = @import("./parseBlock.zig").BlockStmt;
-
-const StructField = union(enum) {
-    StructProperty: *StructPropertyField,
-    StructMethod: *StructMethodField,
-};
-
-pub const StructStmt = struct {
-    name: []const u8,
-    fields: []StructField,
-};
-
-const StructPropertyField = struct {
-    name: []const u8,
-    fieldType: Type,
-    isImmutable: bool,
-};
-
-const StructMethodParameter = struct {
-    name: []const u8,
-    paramType: Type,
-};
-
-pub const MemberAccessExpr = struct {
-    object: ?*Expr = null,
-    memberName: []const u8,
-    resolvedType: ?Type = null,
-};
-
-pub const StructInitExpr = struct {
-    structName: []const u8,
-    fields: []StructInitField,
-    resolvedType: ?Type = null,
-};
-
-pub const StructInitField = struct {
-    name: []const u8,
-    value: *Expr,
-};
-
-const StructMethodField = struct { name: []const u8, parameters: []*Param, body: *BlockStmt, returnType: Type };
 
 pub fn parseStructStatement(self: *Parser) ParserError!*StructStmt {
     _ = try self.expect(.KwStruct);

@@ -1,14 +1,11 @@
-const Expr = @import("parseExpr.zig").Expr;
-const BlockStmt = @import("parseBlock.zig").BlockStmt;
+const Expr = @import("../../ast/expr.zig").Expr;
+const ast_stmt = @import("../../ast/stmt.zig");
+const BlockStmt = ast_stmt.BlockStmt;
+const WhileStatement = ast_stmt.WhileStatement;
 const parseBlock = @import("parseBlock.zig").parseBlock;
 const Parser = @import("../parser.zig").Parser;
 const parseExpr = @import("./parseExpr.zig").parseExpr;
 const ParserError = @import("../error.zig").ParserError;
-
-pub const WhileStatement = struct {
-    expression: *Expr,
-    body: *BlockStmt,
-};
 
 pub fn parseWhileStatement(self: *Parser) ParserError!*WhileStatement {
     _ = try self.expect(.KwWhile);

@@ -1,9 +1,10 @@
 const std = @import("std");
 const InstructionBuilder = @import("../builder.zig").InstructionBuilder;
-const IfStatement = @import("../../parser/lib/parseIf.zig").IfStatement;
+const stmt_ast = @import("../../ast/stmt.zig");
+const IfStatement = stmt_ast.IfStatement;
 const lowerExpression = @import("./lowerExpr.zig").lowerExpression;
 const lowerStatements = @import("../lower.zig").lowerStatements;
-const WhileStatement = @import("../../parser/lib/parseWhile.zig").WhileStatement;
+const WhileStatement = stmt_ast.WhileStatement;
 
 pub fn lowerIfStatement(builder: *InstructionBuilder, ifStmt: *IfStatement) anyerror!void {
     const condition = try lowerExpression(builder, ifStmt.expression);

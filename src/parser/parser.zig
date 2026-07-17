@@ -1,8 +1,8 @@
 const std = @import("std");
 const tokens = @import("../lexer//tokens.zig");
 const errors = @import("./error.zig").ParserError;
-const FunctionDecl = @import("./lib/parseFunctionDecl.zig").FunctionDecl;
-const Statement = @import("./lib/parseStatement.zig").Statement;
+const FunctionDecl = @import("../ast/stmt.zig").FunctionDecl;
+const Statement = @import("../ast/stmt.zig").Statement;
 
 const parseFunctionDecl = @import("./lib/parseFunctionDecl.zig").parseFunctionDecl;
 const parseStatement = @import("./lib/parseStatement.zig").parseStatement;

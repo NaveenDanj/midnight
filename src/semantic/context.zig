@@ -1,6 +1,6 @@
 const std = @import("std");
-const StructStmt = @import("../parser/lib/parseStruct.zig").StructStmt;
-const FunctionDecl = @import("../parser/lib/parseFunctionDecl.zig").FunctionDecl;
+const StructStmt = @import("../ast/stmt.zig").StructStmt;
+const FunctionDecl = @import("../ast/stmt.zig").FunctionDecl;
 const SemanticError = @import("./semantic_error.zig").SemanticError;
 
 pub const SemanticContext = struct {

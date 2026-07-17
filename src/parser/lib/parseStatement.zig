@@ -1,17 +1,19 @@
 const std = @import("std");
 const Parser = @import("../parser.zig").Parser;
 const ParserError = @import("../error.zig").ParserError;
-const FunctionDecl = @import("./parseFunctionDecl.zig").FunctionDecl;
-const BlockStmt = @import("./parseBlock.zig").BlockStmt;
-const VariableDecl = @import("./parseVarDec.zig").VarDecl;
-const ReturnStatement = @import("./parseFunctionDecl.zig").ReturnStatement;
-const IfStatement = @import("parseIf.zig").IfStatement;
-const WhileStatement = @import("parseWhile.zig").WhileStatement;
-const StructStmt = @import("./parseStruct.zig").StructStmt;
-const VarAssign = @import("./parseVarDec.zig").VarAssign;
-const PrintStatement = @import("./parsePrint.zig").PrintStatement;
-const FunctionCallStmt = @import("./parseFunctionDecl.zig").FunctionCallStmt;
-const Expr = @import("./parseExpr.zig").Expr;
+const ast_stmt = @import("../../ast/stmt.zig");
+const Statement = ast_stmt.Statement;
+const FunctionDecl = ast_stmt.FunctionDecl;
+const BlockStmt = ast_stmt.BlockStmt;
+const VariableDecl = ast_stmt.VarDecl;
+const ReturnStatement = ast_stmt.ReturnStatement;
+const IfStatement = ast_stmt.IfStatement;
+const WhileStatement = ast_stmt.WhileStatement;
+const StructStmt = ast_stmt.StructStmt;
+const VarAssign = ast_stmt.VarAssign;
+const PrintStatement = ast_stmt.PrintStatement;
+const FunctionCallStmt = ast_stmt.FunctionCallStmt;
+const Expr = @import("../../ast/expr.zig").Expr;
 
 const parseVarDecl = @import("./parseVarDec.zig").parseVarDecl;
 const parseReturnStatement = @import("./parseFunctionDecl.zig").parseReturnStatement;
@@ -22,8 +24,6 @@ const parseStructStatement = @import("./parseStruct.zig").parseStructStatement;
 const parseVarAssignment = @import("./parseVarDec.zig").parseVarAssignment;
 const parseExpr = @import("./parseExpr.zig").parseExpr;
 const parsePrintStatement = @import("./parsePrint.zig").parsePrintStatement;
-
-pub const Statement = union(enum) { PrintStatement: *PrintStatement, FunctionDecl: *FunctionDecl, Block: *BlockStmt, VariableDecl: *VariableDecl, ReturnStatement: *ReturnStatement, IfStatement: *IfStatement, WhileStatement: *WhileStatement, StructDecl: *StructStmt, VarAssignment: *VarAssign, FunctionCallStatement: *FunctionCallStmt, ExpressionStmt: *Expr };
 
 pub fn parseStatement(self: *Parser) ParserError!*Statement {
     if (self.check(.KwVar) or self.check(.KwConst)) {
