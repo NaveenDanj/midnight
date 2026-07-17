@@ -2,6 +2,16 @@ const std = @import("std");
 const AsmBuilder = @import("../asm_builder.zig").AsmBuilder;
 const Instruction = @import("../../ir/ir.zig").Instruction;
 
+pub const BackendError = error{
+    MissingResolvedType,
+    UnsupportedBinaryOperationType,
+    UnsupportedInstruction,
+    UnsupportedIntegerBinaryOperation,
+    UnsupportedFloatBinaryOperation,
+    UnsupportedStringBinaryOperation,
+    UnsupportedPrintType,
+};
+
 pub const X86_64Backend = struct {
     allocator: std.mem.Allocator,
     temp_slots: std.AutoHashMap(u32, i32),
@@ -160,13 +170,14 @@ pub const X86_64Backend = struct {
             },
 
             .BinaryOp => |inst| {
-                switch (inst.resolvedType.?.kind) {
+                const resolvedType = inst.resolvedType orelse return BackendError.MissingResolvedType;
+                switch (resolvedType.kind) {
                     .INT => try self.lowerIntBinaryOp(asmBuilder, instruction),
                     .FLOAT => try self.lowerFloatBinaryOp(asmBuilder, instruction),
                     // TODO: Handle string concatenation, proper boolean operations, and other types
                     .BOOL => try self.lowerIntBinaryOp(asmBuilder, instruction),
                     .STRING => try self.lowerStringBinaryOp(asmBuilder, instruction),
-                    else => @panic("Unsupported binary operation type"),
+                    else => return BackendError.UnsupportedBinaryOperationType,
                 }
             },
 
@@ -188,7 +199,8 @@ pub const X86_64Backend = struct {
             .PrintCall => |inst| {
                 const slot = try self.getTempSlot(inst.value.temp);
                 std.debug.print("Lowering print call for temp {d} with type {any}\n", .{ inst.value.temp, inst.resolvedType });
-                switch (inst.resolvedType.?.kind) {
+                const resolvedType = inst.resolvedType orelse return BackendError.MissingResolvedType;
+                switch (resolvedType.kind) {
                     .INT, .BOOL => {
                         try asmBuilder.emit("    mov rdi, fmt_int", .{});
                         try asmBuilder.emit("    mov rsi, qword [rbp-{d}]", .{slot});
@@ -206,14 +218,14 @@ pub const X86_64Backend = struct {
                         try asmBuilder.emit("    xor rax, rax", .{});
                         try asmBuilder.emit("    call puts", .{});
                     },
-                    else => @panic("Unsupported print type"),
+                    else => return BackendError.UnsupportedPrintType,
                 }
             },
 
             .FunctionIR => {},
 
             else => {
-                @panic("Unsupported instruction");
+                return BackendError.UnsupportedInstruction;
             },
         }
     }
@@ -332,7 +344,7 @@ pub const X86_64Backend = struct {
             },
 
             else => {
-                @panic("Unsupported integer binary operation");
+                return BackendError.UnsupportedIntegerBinaryOperation;
             },
         }
 
@@ -362,7 +374,7 @@ pub const X86_64Backend = struct {
             },
 
             else => {
-                @panic("Unsupported float binary operation");
+                return BackendError.UnsupportedFloatBinaryOperation;
             },
         }
 
@@ -373,7 +385,7 @@ pub const X86_64Backend = struct {
         // Implementation for lowering string binary operations
         // For simplicity, we will only handle string concatenation (ADD)
         if (inst.BinaryOp.op != .Add) {
-            @panic("Unsupported string binary operation");
+            return BackendError.UnsupportedStringBinaryOperation;
         }
 
         const dest_slot = try self.getTempSlot(inst.BinaryOp.dest);

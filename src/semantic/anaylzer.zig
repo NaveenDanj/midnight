@@ -134,7 +134,7 @@ pub const SemanticAnalyzer = struct {
             .PrintStatement => {
                 try self.analyzePrintStatement(stmt.PrintStatement);
             },
-            else => {},
+            else => return SemanticError.UnsupportedStatement,
         }
     }
 

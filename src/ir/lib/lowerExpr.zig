@@ -4,7 +4,7 @@ const Value = @import("../ir.zig").Value;
 const InstructionBuilder = @import("../builder.zig").InstructionBuilder;
 const Expr = @import("../../ast/expr.zig").Expr;
 const BinaryOp = @import("../ir.zig").BinaryOp;
-const Type = @import("../../semantic/types.zig").Type;
+const LowerError = @import("../lower_error.zig").LowerError;
 
 pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
     switch (expr.*) {
@@ -75,7 +75,7 @@ pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
             const t = builder.newTemp();
 
             try builder.emit(.{ .BinaryOp = .{
-                .op = mapOperatorToBinaryOp(expr.Binary.operator),
+                .op = try mapOperatorToBinaryOp(expr.Binary.operator),
                 .left = leftValue,
                 .right = rightValue,
                 .dest = t,
@@ -143,7 +143,7 @@ pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
         },
 
         else => {
-            return .{ .temp = builder.newTemp() };
+            return LowerError.UnsupportedExpression;
         },
     }
 }
@@ -174,12 +174,12 @@ pub fn lowerLValue(builder: *InstructionBuilder, expr: *Expr, value: Value) !voi
         },
 
         else => {
-            @panic("Unsupported lvalue expression");
+            return LowerError.UnsupportedLValue;
         },
     }
 }
 
-fn mapOperatorToBinaryOp(operator: []const u8) BinaryOp {
+fn mapOperatorToBinaryOp(operator: []const u8) LowerError!BinaryOp {
     if (std.mem.eql(u8, operator, "+")) return .Add;
     if (std.mem.eql(u8, operator, "-")) return .Subtract;
     if (std.mem.eql(u8, operator, "*")) return .Multiply;
@@ -193,5 +193,5 @@ fn mapOperatorToBinaryOp(operator: []const u8) BinaryOp {
     if (std.mem.eql(u8, operator, ">=")) return .GreaterThanOrEqual;
     if (std.mem.eql(u8, operator, "&&")) return .And;
     if (std.mem.eql(u8, operator, "||")) return .Or;
-    @panic("Unknown operator");
+    return LowerError.UnknownOperator;
 }

@@ -1,6 +1,7 @@
 const std = @import("std");
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
+const expectError = std.testing.expectError;
 
 const Lexer = @import("../lexer/lexer.zig").Lexer;
 const Parser = @import("../parser/parser.zig").Parser;
@@ -12,6 +13,7 @@ const Instruction = @import("../ir/ir.zig").Instruction;
 const BinaryOp = @import("../ir/ir.zig").BinaryOp;
 const Value = @import("../ir/ir.zig").Value;
 const InstructionBuilder = @import("../ir/builder.zig").InstructionBuilder;
+const LowerError = @import("../ir/lower_error.zig").LowerError;
 const lowerExpression = @import("../ir/lib/lowerExpr.zig").lowerExpression;
 const lowerLValue = @import("../ir/lib/lowerExpr.zig").lowerLValue;
 const lowerVarAssignment = @import("../ir/lib/lowerVar.zig").lowerVarAssignment;
@@ -148,7 +150,7 @@ test "IR lowerExpression lowers array index access" {
     try expectEqual(@as(u32, 2), builder.instructions.items[2].LoadIndex.dest);
 }
 
-test "IR lowerExpression falls back for unsupported expression kind" {
+test "IR lowerExpression returns error for unsupported expression kind" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
@@ -161,9 +163,32 @@ test "IR lowerExpression falls back for unsupported expression kind" {
     const unsupported = try allocator.create(Expr);
     unsupported.* = .{ .ExpressionStmt = inner };
 
-    const result = try lowerExpression(&builder, unsupported);
-    try assertTemp(result, 0);
+    try expectError(LowerError.UnsupportedExpression, lowerExpression(&builder, unsupported));
     try expectEqual(@as(usize, 0), builder.instructions.items.len);
+}
+
+test "IR lowerExpression returns error for unknown binary operator" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var builder = InstructionBuilder.init(allocator);
+
+    const left = try allocator.create(Expr);
+    left.* = .{ .IntLiteral = .{ .value = 1, .resolvedType = null } };
+
+    const right = try allocator.create(Expr);
+    right.* = .{ .IntLiteral = .{ .value = 2, .resolvedType = null } };
+
+    const binary = try allocator.create(Expr);
+    binary.* = .{ .Binary = .{
+        .left = left,
+        .operator = "???",
+        .right = right,
+        .resolvedType = null,
+    } };
+
+    try expectError(LowerError.UnknownOperator, lowerExpression(&builder, binary));
 }
 
 test "IR lowerLValue stores into identifier" {
@@ -246,6 +271,19 @@ test "IR lowerLValue stores into array index" {
         .temp => |t| try expectEqual(@as(u32, 5), t),
         else => try expect(false),
     }
+}
+
+test "IR lowerLValue returns error for unsupported lvalue" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var builder = InstructionBuilder.init(allocator);
+
+    const target = try allocator.create(Expr);
+    target.* = .{ .IntLiteral = .{ .value = 1, .resolvedType = null } };
+
+    try expectError(LowerError.UnsupportedLValue, lowerLValue(&builder, target, .{ .temp = 5 }));
 }
 
 test "IR lowerVarAssignment lowers RHS before storing into array index" {
@@ -671,7 +709,7 @@ test "IR lowerStatement handles expression statement and direct function call st
     const expr_stmt = try allocator.create(Statement);
     expr_stmt.* = .{ .ExpressionStmt = int_expr };
 
-    try lowerStatement(&builder, expr_stmt);
+    try expectError(LowerError.UnsupportedExpression, lowerStatement(&builder, expr_stmt));
     try expectEqual(@as(usize, 0), builder.instructions.items.len);
 
     const call_args = try allocator.alloc(*Expr, 1);

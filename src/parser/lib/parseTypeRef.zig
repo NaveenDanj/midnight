@@ -15,7 +15,7 @@ pub fn parseBaseType(self: *Parser) ParserError!Type {
     for (primitive_type_tokens) |token_type| {
         if (self.check(token_type)) {
             _ = try self.expect(token_type);
-            return mapPrimitiveType(token_type);
+            return try mapPrimitiveType(token_type);
         }
     }
 
@@ -41,13 +41,13 @@ pub fn parseArraySuffix(self: *Parser, base_type: Type) ParserError!Type {
     return base_type;
 }
 
-pub fn mapPrimitiveType(token_type: TokenType) Type {
+pub fn mapPrimitiveType(token_type: TokenType) ParserError!Type {
     return switch (token_type) {
         .KwInt => Type{ .kind = .INT },
         .KwFloat => Type{ .kind = .FLOAT },
         .KwBool => Type{ .kind = .BOOL },
         .KwVoid => Type{ .kind = .VOID },
         .KwString => Type{ .kind = .STRING },
-        else => Type{ .kind = .VOID },
+        else => ParserError.UnExpectedToken,
     };
 }
