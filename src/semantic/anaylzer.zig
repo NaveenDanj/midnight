@@ -5,6 +5,7 @@ const stmt_ast = @import("../ast/stmt.zig");
 const AssignmentChecker = @import("./assignment_checker.zig").AssignmentChecker;
 const ExprTypeChecker = @import("./expr_type_checker.zig").ExprTypeChecker;
 const FunctionChecker = @import("./function_checker.zig").FunctionChecker;
+const SemanticResult = @import("./result.zig").SemanticResult;
 const ScopeStack = @import("scope.zig").ScopeStack;
 const SemanticContext = @import("./context.zig").SemanticContext;
 const SemanticError = @import("./semantic_error.zig").SemanticError;
@@ -23,11 +24,18 @@ pub const SemanticAnalyzer = struct {
     allocator: std.mem.Allocator,
     scopeStack: ScopeStack,
     context: SemanticContext,
+    result: SemanticResult,
 
     pub fn init(allocator: std.mem.Allocator) !SemanticAnalyzer {
         const scopeStack = try ScopeStack.init(allocator);
         const context = try SemanticContext.init(allocator);
-        return .{ .allocator = allocator, .scopeStack = scopeStack, .context = context };
+        const result = SemanticResult.init(allocator);
+        return .{ .allocator = allocator, .scopeStack = scopeStack, .context = context, .result = result };
+    }
+
+    pub fn deinit(self: *SemanticAnalyzer) void {
+        self.result.deinit();
+        self.context.deinit();
     }
 
     pub fn analyzeProgram(self: *SemanticAnalyzer, statements: []*Statement) SemanticError!void {
@@ -84,13 +92,13 @@ pub const SemanticAnalyzer = struct {
     }
 
     pub fn evaluateExprType(self: *SemanticAnalyzer, expr: *Expr) SemanticError!types.Type {
-        var checker = ExprTypeChecker.init(&self.context, &self.scopeStack);
+        var checker = ExprTypeChecker.init(&self.context, &self.scopeStack, &self.result);
         return checker.evaluate(expr);
     }
 
     pub fn analyzePrintStatement(self: *SemanticAnalyzer, printStmt: *PrintStatement) SemanticError!void {
         const printValueType = try self.evaluateExprType(printStmt.value);
-        printStmt.resolvedType = printValueType;
+        try self.result.print_types.put(printStmt, printValueType);
 
         if (printValueType.kind == .STRUCT) {
             return SemanticError.TypeMismatch;
@@ -139,14 +147,14 @@ pub const SemanticAnalyzer = struct {
     }
 
     fn assignmentChecker(self: *SemanticAnalyzer) AssignmentChecker {
-        return AssignmentChecker.init(self.allocator, &self.context, &self.scopeStack);
+        return AssignmentChecker.init(self.allocator, &self.context, &self.scopeStack, &self.result);
     }
 
     fn functionChecker(self: *SemanticAnalyzer) FunctionChecker {
-        return FunctionChecker.init(self.allocator, &self.context, &self.scopeStack);
+        return FunctionChecker.init(self.allocator, &self.context, &self.scopeStack, &self.result);
     }
 
     fn structChecker(self: *SemanticAnalyzer) StructChecker {
-        return StructChecker.init(self.allocator, &self.context, &self.scopeStack);
+        return StructChecker.init(self.allocator, &self.context, &self.scopeStack, &self.result);
     }
 };

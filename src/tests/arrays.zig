@@ -32,7 +32,7 @@ test "parse array literal expression" {
     const body = statements[0].FunctionDecl.body.statements;
     try expect(body.len == 2);
     try expect(body[0].* == .VariableDecl);
-    try expect(body[0].VariableDecl.varType.isArray);
+    try expect(body[0].VariableDecl.varType.is_array);
     try expect(body[0].VariableDecl.initializer.* == .ArrayLiteral);
     try expect(body[0].VariableDecl.initializer.ArrayLiteral.elements.len == 3);
     try expect(body[0].VariableDecl.initializer.ArrayLiteral.elements[0].* == .IntLiteral);

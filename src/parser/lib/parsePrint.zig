@@ -12,7 +12,6 @@ pub fn parsePrintStatement(self: *Parser) !*PrintStatement {
     const stmt = try self.allocator.create(PrintStatement);
     stmt.* = .{
         .value = value,
-        .resolvedType = null,
     };
 
     return stmt;

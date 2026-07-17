@@ -4,7 +4,7 @@ const toolchain = @import("../backend/toolchain.zig");
 const emitAssembly = @import("../backend/x86_64/x86_64_backend.zig").emitAssembly;
 const Instruction = @import("../ir/ir.zig").Instruction;
 const InstructionBuilder = @import("../ir/builder.zig").InstructionBuilder;
-const generateIR = @import("../ir/lower.zig").generateIR;
+const generateIRWithSemantics = @import("../ir/lower.zig").generateIRWithSemantics;
 const Lexer = @import("../lexer/lexer.zig").Lexer;
 const Parser = @import("../parser/parser.zig").Parser;
 const SemanticAnalyzer = @import("../semantic/anaylzer.zig").SemanticAnalyzer;
@@ -67,6 +67,7 @@ pub fn compileSource(allocator: std.mem.Allocator, source: []const u8, options: 
     const statements = try parser.parseProgram();
 
     var semanticAnalyzer = try SemanticAnalyzer.init(allocator);
+    defer semanticAnalyzer.deinit();
     try semanticAnalyzer.analyzeProgram(statements);
 
     var irBuilder = InstructionBuilder.init(allocator);
@@ -74,7 +75,7 @@ pub fn compileSource(allocator: std.mem.Allocator, source: []const u8, options: 
         irBuilder.var_map.deinit();
         irBuilder.version_map.deinit();
     }
-    try generateIR(&irBuilder, statements);
+    try generateIRWithSemantics(&irBuilder, statements, &semanticAnalyzer.result);
 
     const instructions = try irBuilder.instructions.toOwnedSlice(allocator);
     errdefer allocator.free(instructions);

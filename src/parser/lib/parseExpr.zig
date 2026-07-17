@@ -1,6 +1,5 @@
 const std = @import("std");
 const Parser = @import("../parser.zig").Parser;
-const Types = @import("../../semantic/types.zig");
 const ParserError = @import("../error.zig").ParserError;
 const Precedence = @import("./operator.zig").Precedence;
 const mapOperatorToPrecedence = @import("./operator.zig").mapOperatorToPrecedence;
@@ -46,7 +45,6 @@ pub fn parseInfix(self: *Parser, left: *Expr, op: Token) ParserError!*Expr {
         .left = left,
         .operator = op.lexeme,
         .right = right,
-        .resolvedType = null,
     };
 
     const expr = try self.allocator.create(Expr);
@@ -63,7 +61,6 @@ pub fn parsePrefix(self: *Parser) ParserError!*Expr {
         const unary = UnaryExpr{
             .operator = op.lexeme,
             .operand = right,
-            .resolvedType = null,
         };
 
         const expr = try self.allocator.create(Expr);
@@ -85,7 +82,6 @@ pub fn parsePostFix(self: *Parser) ParserError!*Expr {
             const memberAccess = MemberAccessExpr{
                 .object = expr,
                 .memberName = memberNameToken.lexeme,
-                .resolvedType = null,
             };
 
             const newExpr = try self.allocator.create(Expr);
@@ -100,7 +96,6 @@ pub fn parsePostFix(self: *Parser) ParserError!*Expr {
                     else => return ParserError.UnExpectedToken,
                 },
                 .args = args,
-                .resolvedType = null,
                 .callee = expr,
             };
 
@@ -114,7 +109,6 @@ pub fn parsePostFix(self: *Parser) ParserError!*Expr {
             const arrayAccess = ArrayAccess{
                 .array = expr,
                 .index = indexExpr,
-                .resolvedType = null,
             };
 
             const newExpr = try self.allocator.create(Expr);
@@ -183,9 +177,8 @@ pub fn parsePrimary(self: *Parser) ParserError!*Expr {
 
 pub fn parseInteger(self: *Parser) ParserError!*Expr {
     const token = try self.expect(.IntegerLiteral);
-    const intLiteral = Types.IntLiteral{
+    const intLiteral = ast.IntLiteral{
         .value = std.fmt.parseInt(i64, token.lexeme, 10) catch 0,
-        .resolvedType = null,
     };
     const expr = try self.allocator.create(Expr);
     expr.* = .{ .IntLiteral = intLiteral };
@@ -194,9 +187,8 @@ pub fn parseInteger(self: *Parser) ParserError!*Expr {
 
 pub fn parseFloat(self: *Parser) ParserError!*Expr {
     const token = try self.expect(.FloatLiteral);
-    const floatLiteral = Types.FloatLiteral{
+    const floatLiteral = ast.FloatLiteral{
         .value = std.fmt.parseFloat(f64, token.lexeme) catch 0,
-        .resolvedType = null,
     };
     const expr = try self.allocator.create(Expr);
     expr.* = .{ .FloatLiteral = floatLiteral };
@@ -208,9 +200,8 @@ pub fn parseBoolean(self: *Parser) ParserError!*Expr {
 
     if (boolCheckToken) {
         _ = try self.expect(.KwTrue);
-        const boolLiteral = Types.BooleanLiteral{
+        const boolLiteral = ast.BooleanLiteral{
             .value = true,
-            .resolvedType = null,
         };
 
         const expr = try self.allocator.create(Expr);
@@ -218,9 +209,8 @@ pub fn parseBoolean(self: *Parser) ParserError!*Expr {
         return expr;
     } else {
         _ = try self.expect(.KwFalse);
-        const boolLiteral = Types.BooleanLiteral{
+        const boolLiteral = ast.BooleanLiteral{
             .value = false,
-            .resolvedType = null,
         };
 
         const expr = try self.allocator.create(Expr);
@@ -231,9 +221,8 @@ pub fn parseBoolean(self: *Parser) ParserError!*Expr {
 
 pub fn parseString(self: *Parser) ParserError!*Expr {
     const token = try self.expect(.StringLiteral);
-    const stringLiteral = Types.StringLiteral{
+    const stringLiteral = ast.StringLiteral{
         .value = token.lexeme,
-        .resolvedType = null,
     };
     const expr = try self.allocator.create(Expr);
     expr.* = .{ .StringLiteral = stringLiteral };
@@ -245,7 +234,6 @@ pub fn parseIdentifier(self: *Parser) ParserError!*Expr {
 
     const ident = IdentifierExpr{
         .name = token.lexeme,
-        .resolvedType = null,
     };
 
     const expr = try self.allocator.create(Expr);
@@ -261,7 +249,6 @@ pub fn parseFuncCallExpr(self: *Parser) ParserError!*Expr {
     const funcCall = FunctionCallStmt{
         .name = funcName.lexeme,
         .args = args,
-        .resolvedType = null,
     };
 
     const expr = try self.allocator.create(Expr);
@@ -297,7 +284,6 @@ pub fn parseStructInitExpr(self: *Parser) ParserError!*Expr {
     const structInit = StructInitExpr{
         .structName = structNameToken.lexeme,
         .fields = fieldList.items,
-        .resolvedType = null,
     };
 
     const expr = try self.allocator.create(Expr);

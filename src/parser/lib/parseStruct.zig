@@ -1,5 +1,4 @@
 const std = @import("std");
-const Type = @import("../../semantic/types.zig").Type;
 const Parser = @import("../parser.zig").Parser;
 const ParserError = @import("../error.zig").ParserError;
 const ast_stmt = @import("../../ast/stmt.zig");

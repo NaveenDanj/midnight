@@ -36,7 +36,7 @@ test "IR lowerExpression lowers int literal" {
     var builder = InstructionBuilder.init(allocator);
 
     const expr = try allocator.create(Expr);
-    expr.* = .{ .IntLiteral = .{ .value = 42, .resolvedType = null } };
+    expr.* = .{ .IntLiteral = .{ .value = 42 } };
 
     const result = try lowerExpression(&builder, expr);
     try assertTemp(result, 0);
@@ -54,17 +54,16 @@ test "IR lowerExpression lowers binary expression in evaluation order" {
     var builder = InstructionBuilder.init(allocator);
 
     const left = try allocator.create(Expr);
-    left.* = .{ .IntLiteral = .{ .value = 1, .resolvedType = null } };
+    left.* = .{ .IntLiteral = .{ .value = 1 } };
 
     const right = try allocator.create(Expr);
-    right.* = .{ .IntLiteral = .{ .value = 2, .resolvedType = null } };
+    right.* = .{ .IntLiteral = .{ .value = 2 } };
 
     const binary = try allocator.create(Expr);
     binary.* = .{ .Binary = .{
         .left = left,
         .operator = "+",
         .right = right,
-        .resolvedType = null,
     } };
 
     const result = try lowerExpression(&builder, binary);
@@ -92,13 +91,12 @@ test "IR lowerExpression lowers member access" {
     var builder = InstructionBuilder.init(allocator);
 
     const obj = try allocator.create(Expr);
-    obj.* = .{ .Identifier = .{ .name = "person", .resolvedType = null } };
+    obj.* = .{ .Identifier = .{ .name = "person" } };
 
     const access = try allocator.create(Expr);
     access.* = .{ .MemberAccess = .{
         .object = obj,
         .memberName = "age",
-        .resolvedType = null,
     } };
 
     const result = try lowerExpression(&builder, access);
@@ -122,16 +120,15 @@ test "IR lowerExpression lowers array index access" {
     var builder = InstructionBuilder.init(allocator);
 
     const arr = try allocator.create(Expr);
-    arr.* = .{ .Identifier = .{ .name = "values", .resolvedType = null } };
+    arr.* = .{ .Identifier = .{ .name = "values" } };
 
     const index = try allocator.create(Expr);
-    index.* = .{ .IntLiteral = .{ .value = 3, .resolvedType = null } };
+    index.* = .{ .IntLiteral = .{ .value = 3 } };
 
     const access = try allocator.create(Expr);
     access.* = .{ .ArrayAccess = .{
         .array = arr,
         .index = index,
-        .resolvedType = null,
     } };
 
     const result = try lowerExpression(&builder, access);
@@ -158,7 +155,7 @@ test "IR lowerExpression returns error for unsupported expression kind" {
     var builder = InstructionBuilder.init(allocator);
 
     const inner = try allocator.create(Expr);
-    inner.* = .{ .IntLiteral = .{ .value = 9, .resolvedType = null } };
+    inner.* = .{ .IntLiteral = .{ .value = 9 } };
 
     const unsupported = try allocator.create(Expr);
     unsupported.* = .{ .ExpressionStmt = inner };
@@ -175,17 +172,16 @@ test "IR lowerExpression returns error for unknown binary operator" {
     var builder = InstructionBuilder.init(allocator);
 
     const left = try allocator.create(Expr);
-    left.* = .{ .IntLiteral = .{ .value = 1, .resolvedType = null } };
+    left.* = .{ .IntLiteral = .{ .value = 1 } };
 
     const right = try allocator.create(Expr);
-    right.* = .{ .IntLiteral = .{ .value = 2, .resolvedType = null } };
+    right.* = .{ .IntLiteral = .{ .value = 2 } };
 
     const binary = try allocator.create(Expr);
     binary.* = .{ .Binary = .{
         .left = left,
         .operator = "???",
         .right = right,
-        .resolvedType = null,
     } };
 
     try expectError(LowerError.UnknownOperator, lowerExpression(&builder, binary));
@@ -199,7 +195,7 @@ test "IR lowerLValue stores into identifier" {
     var builder = InstructionBuilder.init(allocator);
 
     const target = try allocator.create(Expr);
-    target.* = .{ .Identifier = .{ .name = "x", .resolvedType = null } };
+    target.* = .{ .Identifier = .{ .name = "x" } };
 
     try lowerLValue(&builder, target, .{ .temp = 99 });
     try expectEqual(@as(usize, 1), builder.instructions.items.len);
@@ -220,13 +216,12 @@ test "IR lowerLValue stores into member access" {
     var builder = InstructionBuilder.init(allocator);
 
     const obj = try allocator.create(Expr);
-    obj.* = .{ .Identifier = .{ .name = "person", .resolvedType = null } };
+    obj.* = .{ .Identifier = .{ .name = "person" } };
 
     const target = try allocator.create(Expr);
     target.* = .{ .MemberAccess = .{
         .object = obj,
         .memberName = "age",
-        .resolvedType = null,
     } };
 
     try lowerLValue(&builder, target, .{ .temp = 7 });
@@ -249,16 +244,15 @@ test "IR lowerLValue stores into array index" {
     var builder = InstructionBuilder.init(allocator);
 
     const arr = try allocator.create(Expr);
-    arr.* = .{ .Identifier = .{ .name = "values", .resolvedType = null } };
+    arr.* = .{ .Identifier = .{ .name = "values" } };
 
     const index = try allocator.create(Expr);
-    index.* = .{ .IntLiteral = .{ .value = 1, .resolvedType = null } };
+    index.* = .{ .IntLiteral = .{ .value = 1 } };
 
     const target = try allocator.create(Expr);
     target.* = .{ .ArrayAccess = .{
         .array = arr,
         .index = index,
-        .resolvedType = null,
     } };
 
     try lowerLValue(&builder, target, .{ .temp = 5 });
@@ -281,7 +275,7 @@ test "IR lowerLValue returns error for unsupported lvalue" {
     var builder = InstructionBuilder.init(allocator);
 
     const target = try allocator.create(Expr);
-    target.* = .{ .IntLiteral = .{ .value = 1, .resolvedType = null } };
+    target.* = .{ .IntLiteral = .{ .value = 1 } };
 
     try expectError(LowerError.UnsupportedLValue, lowerLValue(&builder, target, .{ .temp = 5 }));
 }
@@ -294,23 +288,22 @@ test "IR lowerVarAssignment lowers RHS before storing into array index" {
     var builder = InstructionBuilder.init(allocator);
 
     const arr = try allocator.create(Expr);
-    arr.* = .{ .Identifier = .{ .name = "arr", .resolvedType = null } };
+    arr.* = .{ .Identifier = .{ .name = "arr" } };
 
     const index = try allocator.create(Expr);
-    index.* = .{ .IntLiteral = .{ .value = 2, .resolvedType = null } };
+    index.* = .{ .IntLiteral = .{ .value = 2 } };
 
     const target = try allocator.create(Expr);
     target.* = .{ .ArrayAccess = .{
         .array = arr,
         .index = index,
-        .resolvedType = null,
     } };
 
     const value = try allocator.create(Expr);
-    value.* = .{ .IntLiteral = .{ .value = 99, .resolvedType = null } };
+    value.* = .{ .IntLiteral = .{ .value = 99 } };
 
     const var_assign = try allocator.create(@import("../ast/stmt.zig").VarAssign);
-    var_assign.* = .{ .target = target, .value = value, .resolvedType = null };
+    var_assign.* = .{ .target = target, .value = value };
 
     try lowerVarAssignment(&builder, var_assign);
     try expectEqual(@as(usize, 4), builder.instructions.items.len);
@@ -400,13 +393,13 @@ test "IR lowerExpression lowers float bool and string literals" {
     var builder = InstructionBuilder.init(allocator);
 
     const float_expr = try allocator.create(Expr);
-    float_expr.* = .{ .FloatLiteral = .{ .value = 3.5, .resolvedType = null } };
+    float_expr.* = .{ .FloatLiteral = .{ .value = 3.5 } };
 
     const bool_expr = try allocator.create(Expr);
-    bool_expr.* = .{ .BoolLiteral = .{ .value = false, .resolvedType = null } };
+    bool_expr.* = .{ .BoolLiteral = .{ .value = false } };
 
     const string_expr = try allocator.create(Expr);
-    string_expr.* = .{ .StringLiteral = .{ .value = "hello", .resolvedType = null } };
+    string_expr.* = .{ .StringLiteral = .{ .value = "hello" } };
 
     try assertTemp(try lowerExpression(&builder, float_expr), 0);
     try assertTemp(try lowerExpression(&builder, bool_expr), 1);
@@ -429,17 +422,17 @@ test "IR lowerExpression lowers array literal including empty array" {
     var builder_non_empty = InstructionBuilder.init(allocator);
 
     const e1 = try allocator.create(Expr);
-    e1.* = .{ .IntLiteral = .{ .value = 7, .resolvedType = null } };
+    e1.* = .{ .IntLiteral = .{ .value = 7 } };
 
     const e2 = try allocator.create(Expr);
-    e2.* = .{ .IntLiteral = .{ .value = 9, .resolvedType = null } };
+    e2.* = .{ .IntLiteral = .{ .value = 9 } };
 
     const elements = try allocator.alloc(*Expr, 2);
     elements[0] = e1;
     elements[1] = e2;
 
     const arr_expr = try allocator.create(Expr);
-    arr_expr.* = .{ .ArrayLiteral = .{ .elements = elements, .resolvedType = null } };
+    arr_expr.* = .{ .ArrayLiteral = .{ .elements = elements } };
 
     const arr_result = try lowerExpression(&builder_non_empty, arr_expr);
     try assertTemp(arr_result, 0);
@@ -462,7 +455,7 @@ test "IR lowerExpression lowers array literal including empty array" {
     var builder_empty = InstructionBuilder.init(allocator);
     const empty_elements = try allocator.alloc(*Expr, 0);
     const empty_arr_expr = try allocator.create(Expr);
-    empty_arr_expr.* = .{ .ArrayLiteral = .{ .elements = empty_elements, .resolvedType = null } };
+    empty_arr_expr.* = .{ .ArrayLiteral = .{ .elements = empty_elements } };
 
     const empty_result = try lowerExpression(&builder_empty, empty_arr_expr);
     try assertTemp(empty_result, 0);
@@ -497,17 +490,16 @@ test "IR lowerExpression maps every supported binary operator" {
         var builder = InstructionBuilder.init(allocator);
 
         const left = try allocator.create(Expr);
-        left.* = .{ .IntLiteral = .{ .value = 10, .resolvedType = null } };
+        left.* = .{ .IntLiteral = .{ .value = 10 } };
 
         const right = try allocator.create(Expr);
-        right.* = .{ .IntLiteral = .{ .value = 3, .resolvedType = null } };
+        right.* = .{ .IntLiteral = .{ .value = 3 } };
 
         const binary = try allocator.create(Expr);
         binary.* = .{ .Binary = .{
             .left = left,
             .operator = case.operator,
             .right = right,
-            .resolvedType = null,
         } };
 
         _ = try lowerExpression(&builder, binary);
@@ -525,10 +517,10 @@ test "IR lowerExpression lowers function call with argument order and empty args
     var builder_with_args = InstructionBuilder.init(allocator);
 
     const arg1 = try allocator.create(Expr);
-    arg1.* = .{ .IntLiteral = .{ .value = 1, .resolvedType = null } };
+    arg1.* = .{ .IntLiteral = .{ .value = 1 } };
 
     const arg2 = try allocator.create(Expr);
-    arg2.* = .{ .IntLiteral = .{ .value = 2, .resolvedType = null } };
+    arg2.* = .{ .IntLiteral = .{ .value = 2 } };
 
     const args = try allocator.alloc(*Expr, 2);
     args[0] = arg1;
@@ -539,7 +531,6 @@ test "IR lowerExpression lowers function call with argument order and empty args
         .callee = null,
         .name = "sum",
         .args = args,
-        .resolvedType = null,
     } };
 
     const result_with_args = try lowerExpression(&builder_with_args, call_with_args);
@@ -568,7 +559,6 @@ test "IR lowerExpression lowers function call with argument order and empty args
         .callee = null,
         .name = "noop",
         .args = empty_args,
-        .resolvedType = null,
     } };
 
     const result_no_args = try lowerExpression(&builder_no_args, call_no_args);
@@ -586,13 +576,13 @@ test "IR lowerVarDeclaration stores and updates var map" {
     var builder = InstructionBuilder.init(allocator);
 
     const init_expr = try allocator.create(Expr);
-    init_expr.* = .{ .IntLiteral = .{ .value = 55, .resolvedType = null } };
+    init_expr.* = .{ .IntLiteral = .{ .value = 55 } };
 
     const var_decl = try allocator.create(VarDecl);
     var_decl.* = .{
         .immutable = false,
         .name = "y",
-        .varType = .{ .kind = .INT },
+        .varType = .{ .name = "int" },
         .initializer = init_expr,
     };
 
@@ -704,7 +694,7 @@ test "IR lowerStatement handles expression statement and direct function call st
     var builder = InstructionBuilder.init(allocator);
 
     const int_expr = try allocator.create(Expr);
-    int_expr.* = .{ .IntLiteral = .{ .value = 12, .resolvedType = null } };
+    int_expr.* = .{ .IntLiteral = .{ .value = 12 } };
 
     const expr_stmt = try allocator.create(Statement);
     expr_stmt.* = .{ .ExpressionStmt = int_expr };
@@ -714,11 +704,11 @@ test "IR lowerStatement handles expression statement and direct function call st
 
     const call_args = try allocator.alloc(*Expr, 1);
     const call_arg = try allocator.create(Expr);
-    call_arg.* = .{ .IntLiteral = .{ .value = 5, .resolvedType = null } };
+    call_arg.* = .{ .IntLiteral = .{ .value = 5 } };
     call_args[0] = call_arg;
 
     const call_stmt = try allocator.create(FunctionCallStmt);
-    call_stmt.* = .{ .callee = null, .name = "print", .args = call_args, .resolvedType = null };
+    call_stmt.* = .{ .callee = null, .name = "print", .args = call_args };
 
     const function_stmt = try allocator.create(Statement);
     function_stmt.* = .{ .FunctionCallStatement = call_stmt };

@@ -38,23 +38,3 @@ pub const Type = struct {
         return @import("type_compatibility.zig").equals(a, b);
     }
 };
-
-pub const IntLiteral = struct {
-    value: i64,
-    resolvedType: ?Type = null,
-};
-
-pub const FloatLiteral = struct {
-    value: f64,
-    resolvedType: ?Type = null,
-};
-
-pub const BooleanLiteral = struct {
-    value: bool,
-    resolvedType: ?Type = null,
-};
-
-pub const StringLiteral = struct {
-    value: []const u8,
-    resolvedType: ?Type = null,
-};

@@ -7,6 +7,7 @@ const Expr = @import("../ast/expr.zig").Expr;
 const ExprTypeChecker = @import("../semantic/expr_type_checker.zig").ExprTypeChecker;
 const SemanticContext = @import("../semantic/context.zig").SemanticContext;
 const SemanticError = @import("../semantic/semantic_error.zig").SemanticError;
+const SemanticResult = @import("../semantic/result.zig").SemanticResult;
 const ScopeStack = @import("../semantic/scope.zig").ScopeStack;
 const Type = @import("../semantic/types.zig").Type;
 
@@ -23,17 +24,18 @@ test "expression type checker resolves binary numeric operators" {
 
     var context = try SemanticContext.init(allocator);
     var scopeStack = try ScopeStack.init(allocator);
+    var semantic_result = SemanticResult.init(allocator);
     try scopeStack.pushScope();
 
     const left = try makeExpr(allocator, .{ .IntLiteral = .{ .value = 1 } });
     const right = try makeExpr(allocator, .{ .FloatLiteral = .{ .value = 2.5 } });
     const binary = try makeExpr(allocator, .{ .Binary = .{ .left = left, .operator = "+", .right = right } });
 
-    var checker = ExprTypeChecker.init(&context, &scopeStack);
+    var checker = ExprTypeChecker.init(&context, &scopeStack, &semantic_result);
     const result = try checker.evaluate(binary);
 
     try expectEqual(Type{ .kind = .FLOAT }, result);
-    try expectEqual(Type{ .kind = .FLOAT }, binary.Binary.resolvedType.?);
+    try expectEqual(Type{ .kind = .FLOAT }, semantic_result.expr_types.get(binary).?);
 }
 
 test "expression type checker reads identifiers from scope and returns array element type" {
@@ -43,6 +45,7 @@ test "expression type checker reads identifiers from scope and returns array ele
 
     var context = try SemanticContext.init(allocator);
     var scopeStack = try ScopeStack.init(allocator);
+    var semantic_result = SemanticResult.init(allocator);
     try scopeStack.pushScope();
     try scopeStack.declareSymbol("values", .variable, .{ .kind = .INT, .isArray = true }, false, &[_]Type{});
 
@@ -50,11 +53,11 @@ test "expression type checker reads identifiers from scope and returns array ele
     const index = try makeExpr(allocator, .{ .IntLiteral = .{ .value = 0 } });
     const access = try makeExpr(allocator, .{ .ArrayAccess = .{ .array = array, .index = index } });
 
-    var checker = ExprTypeChecker.init(&context, &scopeStack);
+    var checker = ExprTypeChecker.init(&context, &scopeStack, &semantic_result);
     const result = try checker.evaluate(access);
 
     try expectEqual(Type{ .kind = .INT }, result);
-    try expect(array.Identifier.resolvedType.?.isArray);
+    try expect(semantic_result.expr_types.get(array).?.isArray);
 }
 
 test "expression type checker rejects unsupported binary operations" {
@@ -64,12 +67,13 @@ test "expression type checker rejects unsupported binary operations" {
 
     var context = try SemanticContext.init(allocator);
     var scopeStack = try ScopeStack.init(allocator);
+    var semantic_result = SemanticResult.init(allocator);
     try scopeStack.pushScope();
 
     const left = try makeExpr(allocator, .{ .StringLiteral = .{ .value = "a" } });
     const right = try makeExpr(allocator, .{ .StringLiteral = .{ .value = "b" } });
     const binary = try makeExpr(allocator, .{ .Binary = .{ .left = left, .operator = "-", .right = right } });
 
-    var checker = ExprTypeChecker.init(&context, &scopeStack);
+    var checker = ExprTypeChecker.init(&context, &scopeStack, &semantic_result);
     try expectError(SemanticError.TypeMismatch, checker.evaluate(binary));
 }

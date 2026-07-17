@@ -1,5 +1,5 @@
-const Type = @import("../semantic/types.zig").Type;
 const expr_ast = @import("expr.zig");
+const TypeRef = @import("type_ref.zig").TypeRef;
 
 pub const Expr = expr_ast.Expr;
 pub const FunctionCallStmt = expr_ast.FunctionCallStmt;
@@ -26,30 +26,28 @@ pub const FunctionDecl = struct {
     name: []const u8,
     params: []*Param,
     body: *BlockStmt,
-    returnType: Type,
+    returnType: TypeRef,
 };
 
 pub const ReturnStatement = struct {
     expression: *Expr,
-    resolvedType: ?Type = null,
 };
 
 pub const Param = struct {
-    dataType: Type,
+    dataType: TypeRef,
     name: []const u8,
 };
 
 pub const VarDecl = struct {
     immutable: bool,
     name: []const u8,
-    varType: Type,
+    varType: TypeRef,
     initializer: *Expr,
 };
 
 pub const VarAssign = struct {
     target: *Expr,
     value: *Expr,
-    resolvedType: ?Type,
 };
 
 pub const IfStatement = struct {
@@ -75,23 +73,22 @@ pub const StructStmt = struct {
 
 pub const StructPropertyField = struct {
     name: []const u8,
-    fieldType: Type,
+    fieldType: TypeRef,
     isImmutable: bool,
 };
 
 pub const StructMethodParameter = struct {
     name: []const u8,
-    paramType: Type,
+    paramType: TypeRef,
 };
 
 pub const StructMethodField = struct {
     name: []const u8,
     parameters: []*Param,
     body: *BlockStmt,
-    returnType: Type,
+    returnType: TypeRef,
 };
 
 pub const PrintStatement = struct {
     value: *Expr,
-    resolvedType: ?Type = null,
 };

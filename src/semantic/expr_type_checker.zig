@@ -3,6 +3,7 @@ const std = @import("std");
 const expr_ast = @import("../ast/expr.zig");
 const SemanticContext = @import("context.zig").SemanticContext;
 const SemanticError = @import("semantic_error.zig").SemanticError;
+const SemanticResult = @import("result.zig").SemanticResult;
 const ScopeStack = @import("scope.zig").ScopeStack;
 const types = @import("types.zig");
 const typeCompatibility = @import("type_compatibility.zig");
@@ -12,38 +13,34 @@ const Expr = expr_ast.Expr;
 pub const ExprTypeChecker = struct {
     context: *SemanticContext,
     scopeStack: *ScopeStack,
+    result: *SemanticResult,
 
-    pub fn init(context: *SemanticContext, scopeStack: *ScopeStack) ExprTypeChecker {
-        return .{ .context = context, .scopeStack = scopeStack };
+    pub fn init(context: *SemanticContext, scopeStack: *ScopeStack, result: *SemanticResult) ExprTypeChecker {
+        return .{ .context = context, .scopeStack = scopeStack, .result = result };
     }
 
     pub fn evaluate(self: *ExprTypeChecker, expr: *Expr) SemanticError!types.Type {
         switch (expr.*) {
             .Binary => {
-                return try self.resolveBinaryOperator(expr);
+                return try self.record(expr, try self.resolveBinaryOperator(expr));
             },
             .IntLiteral => {
-                expr.IntLiteral.resolvedType = types.INT;
-                return types.INT;
+                return try self.record(expr, types.INT);
             },
             .FloatLiteral => {
-                expr.FloatLiteral.resolvedType = types.FLOAT;
-                return types.FLOAT;
+                return try self.record(expr, types.FLOAT);
             },
             .BoolLiteral => {
-                expr.BoolLiteral.resolvedType = types.BOOL;
-                return types.BOOL;
+                return try self.record(expr, types.BOOL);
             },
             .StringLiteral => {
-                expr.StringLiteral.resolvedType = types.STRING;
-                return types.STRING;
+                return try self.record(expr, types.STRING);
             },
             .Identifier => {
                 const idExpr = expr.Identifier;
                 const symbol = self.scopeStack.lookupSymbol(idExpr.name) orelse return SemanticError.UndefinedVariable;
                 std.debug.print("Identifier {s} resolved to symbol with type {any}\n", .{ idExpr.name, symbol.symbolType });
-                expr.Identifier.resolvedType = symbol.symbolType;
-                return symbol.symbolType;
+                return try self.record(expr, symbol.symbolType);
             },
             .FunctionCall => {
                 const funcExpr = expr.FunctionCall;
@@ -51,7 +48,7 @@ pub const ExprTypeChecker = struct {
                 if (symbol.kind != .function) {
                     return SemanticError.TypeMismatch;
                 }
-                return symbol.symbolType;
+                return try self.record(expr, symbol.symbolType);
             },
             .StructInit => {
                 const structInit = expr.StructInit;
@@ -60,11 +57,11 @@ pub const ExprTypeChecker = struct {
                     return SemanticError.TypeMismatch;
                 }
                 symbol.symbolType.struct_name = structInit.structName;
-                return symbol.symbolType;
+                return try self.record(expr, symbol.symbolType);
             },
             .ExpressionStmt => {
                 std.debug.print("Evaluating expression statement: {any}\n", .{expr.ExpressionStmt});
-                return try self.evaluate(expr.ExpressionStmt);
+                return try self.record(expr, try self.evaluate(expr.ExpressionStmt));
             },
             .MemberAccess => {
                 const object = expr.MemberAccess;
@@ -82,13 +79,13 @@ pub const ExprTypeChecker = struct {
                         .StructProperty => |property_ptr| {
                             const property = property_ptr.*;
                             if (std.mem.eql(u8, property.name, memberName)) {
-                                return property.fieldType;
+                                return try self.record(expr, self.result.struct_property_types.get(property_ptr) orelse return SemanticError.TypeMismatch);
                             }
                         },
                         .StructMethod => |method_ptr| {
                             const method = method_ptr.*;
                             if (std.mem.eql(u8, method.name, memberName)) {
-                                return method.returnType;
+                                return try self.record(expr, self.result.struct_method_return_types.get(method_ptr) orelse return SemanticError.TypeMismatch);
                             }
                         },
                     }
@@ -102,14 +99,14 @@ pub const ExprTypeChecker = struct {
 
                 if (std.mem.eql(u8, unary.operator, "-")) {
                     if (operandType.isNumeric()) {
-                        return operandType;
+                        return self.record(expr, operandType);
                     }
                     return SemanticError.TypeMismatch;
                 }
 
                 if (std.mem.eql(u8, unary.operator, "!")) {
                     if (operandType.kind == .BOOL) {
-                        return types.BOOL;
+                        return self.record(expr, types.BOOL);
                     }
                     return SemanticError.TypeMismatch;
                 }
@@ -120,7 +117,7 @@ pub const ExprTypeChecker = struct {
                 const arrayExpr = expr.ArrayLiteral;
 
                 if (arrayExpr.elements.len == 0) {
-                    return types.Type{ .kind = .EMPTY, .isArray = true, .struct_name = null };
+                    return self.record(expr, types.Type{ .kind = .EMPTY, .isArray = true, .struct_name = null });
                 }
 
                 const firstElemType = try self.evaluate(arrayExpr.elements[0]);
@@ -132,7 +129,7 @@ pub const ExprTypeChecker = struct {
                     }
                 }
 
-                return types.Type{ .kind = firstElemType.kind, .isArray = true, .struct_name = firstElemType.struct_name };
+                return self.record(expr, types.Type{ .kind = firstElemType.kind, .isArray = true, .struct_name = firstElemType.struct_name });
             },
             .ArrayAccess => {
                 const arrayAccess = expr.ArrayAccess;
@@ -147,7 +144,7 @@ pub const ExprTypeChecker = struct {
                     return SemanticError.TypeMismatch;
                 }
 
-                return types.Type{ .kind = arrayType.kind, .isArray = false, .struct_name = arrayType.struct_name };
+                return self.record(expr, types.Type{ .kind = arrayType.kind, .isArray = false, .struct_name = arrayType.struct_name });
             },
         }
     }
@@ -163,12 +160,10 @@ pub const ExprTypeChecker = struct {
 
         if (isArithmeticOperator(binary.operator)) {
             if (typeCompatibility.commonNumericType(leftType, rightType)) |resultType| {
-                expr.Binary.resolvedType = resultType;
                 return resultType;
             }
 
             if (leftType.kind == .STRING and std.mem.eql(u8, binary.operator, "+")) {
-                expr.Binary.resolvedType = types.STRING;
                 return types.STRING;
             }
 
@@ -176,11 +171,15 @@ pub const ExprTypeChecker = struct {
         }
 
         if (isComparisonOperator(binary.operator)) {
-            expr.Binary.resolvedType = types.BOOL;
             return types.BOOL;
         }
 
         return SemanticError.TypeMismatch;
+    }
+
+    fn record(self: *ExprTypeChecker, expr: *Expr, resolved: types.Type) SemanticError!types.Type {
+        try self.result.expr_types.put(expr, resolved);
+        return resolved;
     }
 };
 

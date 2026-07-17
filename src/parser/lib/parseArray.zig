@@ -29,7 +29,6 @@ pub fn parseArrayExpression(self: *Parser) ParserError!*Expr {
     arrayExpr.* = .{
         .ArrayLiteral = ArrayExpression{
             .elements = elementsList.items,
-            .resolvedType = null,
         },
     };
 
