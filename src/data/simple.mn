@@ -5,6 +5,7 @@ total = total * total;
 var float PI = 3.14;
 var bool is_true = true;
 
+
 if (is_true) {
     print(total + 120 - 6579);
     print("");
@@ -19,4 +20,12 @@ print("");
 
 func sum (int a , int b) int {
     return a + b;
+}
+
+var int total2 = 100;
+
+if (false) {
+    print("total is greater than 90");
+}else{
+    print("total is less than 90");
 }

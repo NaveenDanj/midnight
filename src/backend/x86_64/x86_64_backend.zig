@@ -1,9 +1,11 @@
 const std = @import("std");
 const AsmBuilder = @import("../asm_builder.zig").AsmBuilder;
 const Instruction = @import("../../ir/ir.zig").Instruction;
+const Value = @import("../../ir/ir.zig").Value;
 
 pub const BackendError = error{
     MissingResolvedType,
+    UnsupportedValue,
     UnsupportedBinaryOperationType,
     UnsupportedInstruction,
     UnsupportedIntegerBinaryOperation,
@@ -11,6 +13,14 @@ pub const BackendError = error{
     UnsupportedStringBinaryOperation,
     UnsupportedPrintType,
 };
+
+pub fn emitAssembly(allocator: std.mem.Allocator, instructions: []Instruction) ![]const u8 {
+    var backend = X86_64Backend.init(allocator);
+    defer backend.deinit();
+    return try backend.generate(instructions);
+}
+
+pub const X86_64Emitter = X86_64Backend;
 
 pub const X86_64Backend = struct {
     allocator: std.mem.Allocator,
@@ -30,6 +40,7 @@ pub const X86_64Backend = struct {
         self.temp_slots.deinit();
         self.variable_slots.deinit();
         self.float_constants.deinit();
+        self.string_constants.deinit();
     }
 
     fn getTempSlot(self: *X86_64Backend, temp: u32) !i32 {
@@ -69,9 +80,56 @@ pub const X86_64Backend = struct {
         return label;
     }
 
-    fn loadTempInto(self: *X86_64Backend, asmBuilder: *AsmBuilder, temp: u32, reg: []const u8) !void {
+    fn emitLoadValueIntoReg(self: *X86_64Backend, asmBuilder: *AsmBuilder, value: Value, reg: []const u8) !void {
+        switch (value) {
+            .temp => |temp| {
+                const slot = try self.getTempSlot(temp);
+                try asmBuilder.emit("    mov {s}, qword [rbp-{d}]", .{ reg, slot });
+            },
+            .constantInt => |int_value| {
+                try asmBuilder.emit("    mov {s}, {d}", .{ reg, int_value });
+            },
+            .constantBool => |bool_value| {
+                const int_value: i64 = if (bool_value) 1 else 0;
+                try asmBuilder.emit("    mov {s}, {d}", .{ reg, int_value });
+            },
+            .string => |string_value| {
+                const label = try self.getStringConstantLabel(string_value);
+                try asmBuilder.emit("    mov {s}, {s}", .{ reg, label });
+            },
+            .variable => |name| {
+                const slot = try self.getVariableSlot(name);
+                try asmBuilder.emit("    mov {s}, qword [rbp-{d}]", .{ reg, slot });
+            },
+            .arrayIndex => |index| {
+                try asmBuilder.emit("    mov {s}, {d}", .{ reg, index });
+            },
+            else => return BackendError.UnsupportedValue,
+        }
+    }
+
+    fn emitLoadValueIntoXmm(self: *X86_64Backend, asmBuilder: *AsmBuilder, value: Value, reg: []const u8) !void {
+        switch (value) {
+            .temp => |temp| {
+                const slot = try self.getTempSlot(temp);
+                try asmBuilder.emit("    movsd {s}, qword [rbp-{d}]", .{ reg, slot });
+            },
+            .constantFloat => |float_value| {
+                const label = try self.getFloatConstantLabel(float_value);
+                try asmBuilder.emit("    movsd {s}, qword [{s}]", .{ reg, label });
+            },
+            else => return BackendError.UnsupportedValue,
+        }
+    }
+
+    fn emitStoreRegToTemp(self: *X86_64Backend, asmBuilder: *AsmBuilder, reg: []const u8, temp: u32) !void {
         const slot = try self.getTempSlot(temp);
-        try asmBuilder.emit("    mov {s}, qword [rbp-{d}]", .{ reg, slot });
+        try asmBuilder.emit("    mov qword [rbp-{d}], {s}", .{ slot, reg });
+    }
+
+    fn emitStoreXmmToTemp(self: *X86_64Backend, asmBuilder: *AsmBuilder, reg: []const u8, temp: u32) !void {
+        const slot = try self.getTempSlot(temp);
+        try asmBuilder.emit("    movsd qword [rbp-{d}], {s}", .{ slot, reg });
     }
 
     pub fn generate(self: *X86_64Backend, instructions: []Instruction) ![]const u8 {
@@ -156,9 +214,8 @@ pub const X86_64Backend = struct {
             },
 
             .StoreVar => |inst| {
-                const temp_slot = try self.getTempSlot(inst.value.temp);
                 const variable_slot = try self.getVariableSlot(inst.name);
-                try asmBuilder.emit("    mov rax, qword [rbp-{d}]", .{temp_slot});
+                try self.emitLoadValueIntoReg(asmBuilder, inst.value, "rax");
                 try asmBuilder.emit("    mov qword [rbp-{d}], rax", .{variable_slot});
             },
 
@@ -182,8 +239,7 @@ pub const X86_64Backend = struct {
             },
 
             .JumpIfFalse => |inst| {
-                const condition_slot = try self.getTempSlot(inst.condition.temp);
-                try asmBuilder.emit("    mov rax, qword [rbp-{d}]", .{condition_slot});
+                try self.emitLoadValueIntoReg(asmBuilder, inst.condition, "rax");
                 try asmBuilder.emit("    cmp rax, 0", .{});
                 try asmBuilder.emit("    je label_{d}", .{inst.label});
             },
@@ -197,24 +253,22 @@ pub const X86_64Backend = struct {
             },
 
             .PrintCall => |inst| {
-                const slot = try self.getTempSlot(inst.value.temp);
-                std.debug.print("Lowering print call for temp {d} with type {any}\n", .{ inst.value.temp, inst.resolvedType });
                 const resolvedType = inst.resolvedType orelse return BackendError.MissingResolvedType;
                 switch (resolvedType.kind) {
                     .INT, .BOOL => {
                         try asmBuilder.emit("    mov rdi, fmt_int", .{});
-                        try asmBuilder.emit("    mov rsi, qword [rbp-{d}]", .{slot});
+                        try self.emitLoadValueIntoReg(asmBuilder, inst.value, "rsi");
                         try asmBuilder.emit("    xor rax, rax", .{});
                         try asmBuilder.emit("    call printf", .{});
                     },
                     .FLOAT => {
                         try asmBuilder.emit("    mov rdi, fmt_float", .{});
-                        try asmBuilder.emit("    movsd xmm0, qword [rbp-{d}]", .{slot});
+                        try self.emitLoadValueIntoXmm(asmBuilder, inst.value, "xmm0");
                         try asmBuilder.emit("    xor rax, rax", .{});
                         try asmBuilder.emit("    call printf", .{});
                     },
                     .STRING => {
-                        try asmBuilder.emit("    mov rdi, qword [rbp-{d}]", .{slot});
+                        try self.emitLoadValueIntoReg(asmBuilder, inst.value, "rdi");
                         try asmBuilder.emit("    xor rax, rax", .{});
                         try asmBuilder.emit("    call puts", .{});
                     },
@@ -230,103 +284,9 @@ pub const X86_64Backend = struct {
         }
     }
 
-    pub fn toOwnedSlice(self: *AsmBuilder) ![]const u8 {
-        return try self.buffer.toOwnedSlice(self.allocator);
-    }
-
-    pub fn writeAsm(
-        self: *X86_64Backend,
-        asm_string: []const u8,
-        path: []const u8,
-    ) !void {
-        _ = self;
-        const io = std.Io.Threaded.global_single_threaded.io();
-
-        const dirname = std.fs.path.dirname(path);
-
-        if (dirname) |dir| {
-            try std.Io.Dir.cwd().createDirPath(io, dir);
-        }
-
-        try std.Io.Dir.cwd().writeFile(io, .{
-            .sub_path = path,
-            .data = asm_string,
-        });
-    }
-
-    fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) !void {
-        var threaded_io = std.Io.Threaded.init(allocator, .{});
-        defer threaded_io.deinit();
-        const io = threaded_io.io();
-        var child = try std.process.spawn(io, .{
-            .argv = argv,
-            .stdin = .inherit,
-            .stdout = .inherit,
-            .stderr = .inherit,
-        });
-
-        const term = try child.wait(io);
-        switch (term) {
-            .exited => |code| if (code != 0) return error.CommandFailed,
-            else => return error.CommandFailed,
-        }
-    }
-
-    pub fn build(self: *X86_64Backend, path: []const u8, asm_string: []const u8) !void {
-        self.writeAsm(asm_string, path) catch |err| {
-            std.debug.print("Error writing assembly file: {any}\n", .{err});
-            return err;
-        };
-
-        const output_dir = std.fs.path.dirname(path) orelse ".";
-        const object_path = try std.fmt.allocPrint(self.allocator, "{s}/out.o", .{output_dir});
-        defer self.allocator.free(object_path);
-        const executable_dir = "/tmp/midnight-build";
-        const executable_path = "/tmp/midnight-build/out.exe";
-
-        const fs_io = std.Io.Threaded.global_single_threaded.io();
-        try std.Io.Dir.cwd().createDirPath(fs_io, executable_dir);
-
-        try runCommand(self.allocator, &.{
-            "nasm",
-            "-f",
-            "elf64",
-            path,
-            "-o",
-            object_path,
-        });
-
-        try runCommand(self.allocator, &.{
-            "env",
-            "ZIG_GLOBAL_CACHE_DIR=/tmp/midnight-zig-cc-global-cache",
-            "ZIG_LOCAL_CACHE_DIR=/tmp/midnight-zig-cc-local-cache",
-            "zig",
-            "cc",
-            object_path,
-            "-o",
-            executable_path,
-        });
-
-        // run the output binary to verify it works
-        std.debug.print("Running the output binary to verify it works ==============================\n", .{});
-        try runCommand(self.allocator, &.{
-            executable_path,
-        });
-
-        // Cleanup intermediate files
-        const io = std.Io.Threaded.global_single_threaded.io();
-        try std.Io.Dir.cwd().deleteFile(io, object_path);
-        try std.Io.Dir.cwd().deleteFile(io, path);
-    }
-
     fn lowerIntBinaryOp(self: *X86_64Backend, asmBuilder: *AsmBuilder, inst: *const Instruction) !void {
-        // Implementation for lowering integer binary operations
-        const left_slot = try self.getTempSlot(inst.BinaryOp.left.temp);
-        const right_slot = try self.getTempSlot(inst.BinaryOp.right.temp);
-        const dest_slot = try self.getTempSlot(inst.BinaryOp.dest);
-
-        try asmBuilder.emit("    mov rax, qword [rbp-{d}]", .{left_slot});
-        try asmBuilder.emit("    mov rbx, qword [rbp-{d}]", .{right_slot});
+        try self.emitLoadValueIntoReg(asmBuilder, inst.BinaryOp.left, "rax");
+        try self.emitLoadValueIntoReg(asmBuilder, inst.BinaryOp.right, "rbx");
 
         switch (inst.BinaryOp.op) {
             .Add => {
@@ -348,16 +308,12 @@ pub const X86_64Backend = struct {
             },
         }
 
-        try asmBuilder.emit("    mov qword [rbp-{d}], rax", .{dest_slot});
+        try self.emitStoreRegToTemp(asmBuilder, "rax", inst.BinaryOp.dest);
     }
 
     fn lowerFloatBinaryOp(self: *X86_64Backend, asmBuilder: *AsmBuilder, inst: *const Instruction) !void {
-        const left_slot = try self.getTempSlot(inst.BinaryOp.left.temp);
-        const right_slot = try self.getTempSlot(inst.BinaryOp.right.temp);
-        const dest_slot = try self.getTempSlot(inst.BinaryOp.dest);
-
-        try asmBuilder.emit("    movsd xmm0, qword [rbp-{d}]", .{left_slot});
-        try asmBuilder.emit("    movsd xmm1, qword [rbp-{d}]", .{right_slot});
+        try self.emitLoadValueIntoXmm(asmBuilder, inst.BinaryOp.left, "xmm0");
+        try self.emitLoadValueIntoXmm(asmBuilder, inst.BinaryOp.right, "xmm1");
 
         switch (inst.BinaryOp.op) {
             .Add => {
@@ -378,7 +334,7 @@ pub const X86_64Backend = struct {
             },
         }
 
-        try asmBuilder.emit("    movsd qword [rbp-{d}], xmm0", .{dest_slot});
+        try self.emitStoreXmmToTemp(asmBuilder, "xmm0", inst.BinaryOp.dest);
     }
 
     fn lowerStringBinaryOp(self: *X86_64Backend, asmBuilder: *AsmBuilder, inst: *const Instruction) !void {
