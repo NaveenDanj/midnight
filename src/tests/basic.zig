@@ -105,6 +105,64 @@ test "parse shared type syntax for arrays and user types" {
     try expect(body[0].VariableDecl.varType.isArray);
 }
 
+test "parse function call statement using shared argument list" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const source =
+        \\func main() int {
+        \\    sum(1, 2 + 3);
+        \\    return 0;
+        \\}
+    ;
+
+    var lexer = Lexer.init(source);
+    var token_list = try lexer.lexAll(std.testing.allocator);
+    defer token_list.deinit(std.testing.allocator);
+
+    var parser = Parser.init(allocator, token_list.items);
+    const statements = try parser.parseProgram();
+
+    try expect(statements.len == 1);
+    const body = statements[0].FunctionDecl.body.statements;
+    try expect(body.len == 2);
+    try expect(body[0].* == .ExpressionStmt);
+    try expect(body[0].ExpressionStmt.* == .FunctionCall);
+    try expect(std.mem.eql(u8, body[0].ExpressionStmt.FunctionCall.name, "sum"));
+    try expect(body[0].ExpressionStmt.FunctionCall.args.len == 2);
+    try expect(body[0].ExpressionStmt.FunctionCall.args[0].* == .IntLiteral);
+    try expect(body[0].ExpressionStmt.FunctionCall.args[1].* == .Binary);
+}
+
+test "parse member function call keeps callee" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const source =
+        \\func main() int {
+        \\    counter.next(1);
+        \\    return 0;
+        \\}
+    ;
+
+    var lexer = Lexer.init(source);
+    var token_list = try lexer.lexAll(std.testing.allocator);
+    defer token_list.deinit(std.testing.allocator);
+
+    var parser = Parser.init(allocator, token_list.items);
+    const statements = try parser.parseProgram();
+
+    const call_expr = statements[0].FunctionDecl.body.statements[0].ExpressionStmt;
+    try expect(call_expr.* == .FunctionCall);
+    try expect(std.mem.eql(u8, call_expr.FunctionCall.name, "next"));
+    try expect(call_expr.FunctionCall.args.len == 1);
+    const callee = call_expr.FunctionCall.callee orelse return error.TestExpectedEqual;
+    try expect(callee.* == .MemberAccess);
+    try expect(std.mem.eql(u8, callee.MemberAccess.memberName, "next"));
+}
+
 test "parse member access assignment target" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();

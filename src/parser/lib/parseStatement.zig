@@ -20,7 +20,6 @@ const parseWhileStatement = @import("parseWhile.zig").parseWhileStatement;
 const parseFunctionDecl = @import("./parseFunctionDecl.zig").parseFunctionDecl;
 const parseStructStatement = @import("./parseStruct.zig").parseStructStatement;
 const parseVarAssignment = @import("./parseVarDec.zig").parseVarAssignment;
-const parseFunctionCall = @import("parseFunctionDecl.zig").parseFunctionCall;
 const parseExpr = @import("./parseExpr.zig").parseExpr;
 const parsePrintStatement = @import("./parsePrint.zig").parsePrintStatement;
 

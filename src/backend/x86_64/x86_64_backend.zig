@@ -228,26 +228,35 @@ pub const X86_64Backend = struct {
         path: []const u8,
     ) !void {
         _ = self;
+        const io = std.Io.Threaded.global_single_threaded.io();
 
         const dirname = std.fs.path.dirname(path);
 
         if (dirname) |dir| {
-            try std.fs.cwd().makePath(dir);
+            try std.Io.Dir.cwd().createDirPath(io, dir);
         }
 
-        const file = try std.fs.cwd().createFile(path, .{});
-        defer file.close();
-        try file.writeAll(asm_string);
+        try std.Io.Dir.cwd().writeFile(io, .{
+            .sub_path = path,
+            .data = asm_string,
+        });
     }
 
     fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) !void {
-        var child = std.process.Child.init(argv, allocator);
-        child.stdout_behavior = .Inherit;
-        child.stderr_behavior = .Inherit;
+        var threaded_io = std.Io.Threaded.init(allocator, .{});
+        defer threaded_io.deinit();
+        const io = threaded_io.io();
+        var child = try std.process.spawn(io, .{
+            .argv = argv,
+            .stdin = .inherit,
+            .stdout = .inherit,
+            .stderr = .inherit,
+        });
 
-        const term = try child.spawnAndWait();
-        if (term != .Exited or term.Exited != 0) {
-            return error.CommandFailed;
+        const term = try child.wait(io);
+        switch (term) {
+            .exited => |code| if (code != 0) return error.CommandFailed,
+            else => return error.CommandFailed,
         }
     }
 
@@ -260,8 +269,11 @@ pub const X86_64Backend = struct {
         const output_dir = std.fs.path.dirname(path) orelse ".";
         const object_path = try std.fmt.allocPrint(self.allocator, "{s}/out.o", .{output_dir});
         defer self.allocator.free(object_path);
-        const executable_path = try std.fmt.allocPrint(self.allocator, "{s}/out", .{output_dir});
-        defer self.allocator.free(executable_path);
+        const executable_dir = "/tmp/midnight-build";
+        const executable_path = "/tmp/midnight-build/out.exe";
+
+        const fs_io = std.Io.Threaded.global_single_threaded.io();
+        try std.Io.Dir.cwd().createDirPath(fs_io, executable_dir);
 
         try runCommand(self.allocator, &.{
             "nasm",
@@ -273,7 +285,11 @@ pub const X86_64Backend = struct {
         });
 
         try runCommand(self.allocator, &.{
-            "gcc",
+            "env",
+            "ZIG_GLOBAL_CACHE_DIR=/tmp/midnight-zig-cc-global-cache",
+            "ZIG_LOCAL_CACHE_DIR=/tmp/midnight-zig-cc-local-cache",
+            "zig",
+            "cc",
             object_path,
             "-o",
             executable_path,
@@ -286,8 +302,9 @@ pub const X86_64Backend = struct {
         });
 
         // Cleanup intermediate files
-        try std.fs.cwd().deleteFile(object_path);
-        try std.fs.cwd().deleteFile(path);
+        const io = std.Io.Threaded.global_single_threaded.io();
+        try std.Io.Dir.cwd().deleteFile(io, object_path);
+        try std.Io.Dir.cwd().deleteFile(io, path);
     }
 
     fn lowerIntBinaryOp(self: *X86_64Backend, asmBuilder: *AsmBuilder, inst: *const Instruction) !void {
