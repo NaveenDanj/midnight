@@ -6,6 +6,7 @@ const Type = @import("../../semantic/types.zig").Type;
 const Expr = @import("./parseExpr.zig").Expr;
 const parseType = @import("./parseTypeRef.zig").parseType;
 const parseExpr = @import("parseExpr.zig").parseExpr;
+const parseArgumentList = @import("parseExpr.zig").parseArgumentList;
 
 pub const FunctionDecl = struct {
     name: []const u8,
@@ -86,23 +87,10 @@ pub fn parseReturnStatement(self: *Parser) !*ReturnStatement {
 
 pub fn parseFunctionCall(self: *Parser) !*FunctionCallStmt {
     const funcName = try self.expect(.Identifier);
-    _ = try self.expect(.LParen);
-
-    var exprList = try std.ArrayList(*Expr).initCapacity(self.allocator, 0);
-
-    while (!self.check(.RParen)) {
-        const expr = try parseExpr(self);
-        try exprList.append(self.allocator, expr);
-
-        if (!self.check(.RParen)) {
-            _ = try self.expect(.Comma);
-        }
-    }
-
-    _ = try self.expect(.RParen);
+    const args = try parseArgumentList(self);
     _ = try self.expect(.Semicolon);
 
     const varAssignment = try self.allocator.create(FunctionCallStmt);
-    varAssignment.* = .{ .args = exprList.items, .name = funcName.lexeme, .resolvedType = null, .callee = null };
+    varAssignment.* = .{ .args = args, .name = funcName.lexeme, .resolvedType = null, .callee = null };
     return varAssignment;
 }

@@ -48,7 +48,6 @@ pub const UnaryExpr = struct {
     resolvedType: ?Type = null,
 };
 
-
 pub fn parseExpr(self: *Parser) ParserError!*Expr {
     return try parsePrecedence(self, .lowest);
 }
@@ -87,7 +86,6 @@ pub fn parseInfix(self: *Parser, left: *Expr, op: Token) ParserError!*Expr {
     return expr;
 }
 
-
 pub fn parsePrefix(self: *Parser) ParserError!*Expr {
     if (self.check(.Minus) or self.check(.BooleanOpNot)) {
         const op = self.advance() orelse return ParserError.UnExpectedToken;
@@ -108,7 +106,6 @@ pub fn parsePrefix(self: *Parser) ParserError!*Expr {
     return try parsePostFix(self);
 }
 
-
 pub fn parsePostFix(self: *Parser) ParserError!*Expr {
     var expr = try parsePrimary(self);
 
@@ -125,27 +122,15 @@ pub fn parsePostFix(self: *Parser) ParserError!*Expr {
             const newExpr = try self.allocator.create(Expr);
             newExpr.* = .{ .MemberAccess = memberAccess };
             expr = newExpr;
-        } else if (self.match(.LParen)) {
-            var argList = try std.ArrayList(*Expr).initCapacity(self.allocator, 0);
-
-            while (!self.check(.RParen)) {
-                const arg = try parseExpr(self);
-                try argList.append(self.allocator, arg);
-
-                if (!self.check(.RParen)) {
-                    _ = try self.expect(.Comma);
-                }
-            }
-
-            _ = try self.expect(.RParen);
-
+        } else if (self.check(.LParen)) {
+            const args = try parseArgumentList(self);
             const funcCall = FunctionCallStmt{
                 .name = switch (expr.*) {
                     .Identifier => expr.Identifier.name,
                     .MemberAccess => expr.MemberAccess.memberName,
                     else => return ParserError.UnExpectedToken,
                 },
-                .args = argList.items,
+                .args = args,
                 .resolvedType = null,
                 .callee = expr,
             };
@@ -169,6 +154,24 @@ pub fn parsePostFix(self: *Parser) ParserError!*Expr {
         } else break;
     }
     return expr;
+}
+
+pub fn parseArgumentList(self: *Parser) ParserError![]*Expr {
+    _ = try self.expect(.LParen);
+
+    var args = try std.ArrayList(*Expr).initCapacity(self.allocator, 0);
+
+    while (!self.check(.RParen)) {
+        const arg = try parseExpr(self);
+        try args.append(self.allocator, arg);
+
+        if (!self.check(.RParen)) {
+            _ = try self.expect(.Comma);
+        }
+    }
+
+    _ = try self.expect(.RParen);
+    return args.items;
 }
 
 pub fn parsePrimary(self: *Parser) ParserError!*Expr {
@@ -284,24 +287,11 @@ pub fn parseIdentifier(self: *Parser) ParserError!*Expr {
 
 pub fn parseFuncCallExpr(self: *Parser) ParserError!*Expr {
     const funcName = try self.expect(.Identifier);
-    _ = try self.expect(.LParen);
-
-    var exprList = try std.ArrayList(*Expr).initCapacity(self.allocator, 0);
-
-    while (!self.check(.RParen)) {
-        const expr = try parseExpr(self);
-        try exprList.append(self.allocator, expr);
-
-        if (!self.check(.RParen)) {
-            _ = try self.expect(.Comma);
-        }
-    }
-
-    _ = try self.expect(.RParen);
+    const args = try parseArgumentList(self);
 
     const funcCall = FunctionCallStmt{
         .name = funcName.lexeme,
-        .args = exprList.items,
+        .args = args,
         .resolvedType = null,
     };
 

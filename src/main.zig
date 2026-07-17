@@ -11,11 +11,14 @@ const X86_64Backend = @import("backend/x86_64/x86_64_backend.zig").X86_64Backend
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
+    const io = std.Io.Threaded.global_single_threaded.io();
 
-    const file = try std.fs.cwd().openFile("./src/data/simple.mn", .{});
-    defer file.close();
+    const file = try std.Io.Dir.cwd().openFile(io, "./src/data/simple.mn", .{});
+    defer file.close(io);
 
-    const content = try file.readToEndAlloc(allocator, 1024 * 1024);
+    var file_buffer: [4096]u8 = undefined;
+    var file_reader = file.reader(io, &file_buffer);
+    const content = try file_reader.interface.allocRemaining(allocator, .limited64(1024 * 1024));
     defer allocator.free(content);
 
     var lexer = Lexer.init(content);
