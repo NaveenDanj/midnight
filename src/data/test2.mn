@@ -1,0 +1,11 @@
+
+struct static Math {
+    const float PI = 3.14;
+
+    func floor(float num) int {
+        return num;
+    }
+
+}
+
+export Math;

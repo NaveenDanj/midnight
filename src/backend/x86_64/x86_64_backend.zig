@@ -338,8 +338,6 @@ pub const X86_64Backend = struct {
     }
 
     fn lowerStringBinaryOp(self: *X86_64Backend, asmBuilder: *AsmBuilder, inst: *const Instruction) !void {
-        // Implementation for lowering string binary operations
-        // For simplicity, we will only handle string concatenation (ADD)
         if (inst.BinaryOp.op != .Add) {
             return BackendError.UnsupportedStringBinaryOperation;
         }
