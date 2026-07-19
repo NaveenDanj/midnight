@@ -6,6 +6,8 @@ const lower_var = @import("./lib/lowerVar.zig");
 const lower_expr = @import("./lib/lowerExpr.zig");
 const lower_flow = @import("./lib/lowerFlowControl.zig");
 const lower_function = @import("./lib/lowerFunction.zig");
+const lower_struct_decl = @import("./lib/lowerStruct.zig");
+
 const LowerError = @import("./lower_error.zig").LowerError;
 const SemanticResult = @import("../semantic/result.zig").SemanticResult;
 
@@ -63,7 +65,9 @@ pub fn lowerStatementWithSemantics(builder: *InstructionBuilder, stmt: *Statemen
             const resolvedType = if (semantic) |result| result.print_types.get(stmt.PrintStatement) else null;
             try builder.emit(.{ .PrintCall = .{ .value = printValue, .resolvedType = resolvedType } });
         },
-        .StructDecl => {},
+        .StructDecl => {
+            try lower_struct_decl.lowerStructDecl(builder, stmt.StructDecl);
+        },
         else => {
             return LowerError.UnsupportedStatement;
         },

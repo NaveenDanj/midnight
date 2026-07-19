@@ -39,7 +39,6 @@ pub const ExprTypeChecker = struct {
             .Identifier => {
                 const idExpr = expr.Identifier;
                 const symbol = self.scopeStack.lookupSymbol(idExpr.name) orelse return SemanticError.UndefinedVariable;
-                std.debug.print("Identifier {s} resolved to symbol with type {any}\n", .{ idExpr.name, symbol.symbolType });
                 return try self.record(expr, symbol.symbolType);
             },
             .FunctionCall => {

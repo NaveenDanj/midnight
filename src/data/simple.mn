@@ -5,6 +5,20 @@ total = total * total;
 var float PI = 3.14;
 var bool is_true = true;
 
+struct Position {
+    var int x;
+    var int y;
+}
+
+struct Velocity {
+    var float vx;
+    var float vy;
+}
+
+struct GameObject {
+    var Position pos;
+    var Velocity vel;
+}
 
 if (is_true) {
     print(total + 120 - 6579);
@@ -18,11 +32,10 @@ print("hello world");
 print(is_true);
 print("");
 
-func sum (int a , int b) int {
-    return a + b;
-}
+var float total2 = 100;
 
-var int total2 = 100;
+print(total2);
+print("");
 
 if (false) {
     print("total is greater than 90");
