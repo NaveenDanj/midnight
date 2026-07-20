@@ -8,4 +8,5 @@ test {
     _ = @import("tests/phase7_errors.zig");
     _ = @import("tests/backend_value_handling.zig");
     _ = @import("tests/pipeline.zig");
+    _ = @import("tests/llvm_backend.zig");
 }

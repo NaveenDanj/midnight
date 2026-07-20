@@ -1,28 +1,32 @@
 const std = @import("std");
-const Type = @import("../semantic/types.zig").Type;
-const Instruction = @import("../ir/ir.zig").Instruction;
+
+const Type = @import("../../semantic/types.zig").Type;
 
 pub const LLVMTypeMapper = struct {
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) LLVMTypeMapper {
-        return LLVMTypeMapper{
-            .allocator = allocator,
-        };
+        return .{ .allocator = allocator };
     }
 
     pub fn deinit(self: *LLVMTypeMapper) void {
         _ = self;
     }
 
-    pub fn mapType(self: *LLVMTypeMapper, ir_type: Type) !*const u8 {
+    pub fn mapType(self: *LLVMTypeMapper, ir_type: Type) ![]const u8 {
         _ = self;
-        return switch (ir_type) {
-            .Int => "i32",
-            .Float => "float",
-            .Double => "double",
-            .Void => "void",
-            else => return error.UnsupportedType,
+
+        if (ir_type.isArray) {
+            return "ptr";
+        }
+
+        return switch (ir_type.kind) {
+            .INT => "i64",
+            .BOOL => "i1",
+            .FLOAT => "double",
+            .VOID => "void",
+            .STRING, .STRUCT => "ptr",
+            .FUNCTION, .EMPTY => error.UnsupportedType,
         };
     }
 };

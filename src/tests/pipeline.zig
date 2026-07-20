@@ -46,6 +46,49 @@ test "pipeline can stop after IR without emitting assembly" {
     try expect(result.artifact == null);
 }
 
+test "pipeline can emit LLVM IR without invoking native backend" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const source =
+        \\var int x = 1;
+        \\var int y = 2;
+        \\var int z = x + y;
+    ;
+
+    var result = try pipeline.compileSource(allocator, source, .{
+        .emit_asm = false,
+        .emit_llvm_ir = true,
+        .link = false,
+        .run = false,
+    });
+    defer result.deinit();
+
+    try expect(result.asm_text == null);
+    try expect(result.llvm_ir_text != null);
+    try expect(std.mem.indexOf(u8, result.llvm_ir_text.?, "define i32 @main()") != null);
+    try expect(std.mem.indexOf(u8, result.llvm_ir_text.?, "add i64") != null);
+}
+
+test "pipeline can emit target assembly from LLVM backend" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var result = try pipeline.compileSource(allocator, "var int x = 1;", .{
+        .backend = .llvm,
+        .emit_asm = true,
+        .link = false,
+        .run = false,
+    });
+    defer result.deinit();
+
+    try expect(result.asm_text != null);
+    try expect(std.mem.indexOf(u8, result.asm_text.?, ".text") != null);
+    try expect(std.mem.indexOf(u8, result.asm_text.?, "default rel") == null);
+}
+
 test "toolchain writes assembly without assembling or running" {
     const path = "/tmp/midnight-pipeline-tests/output.asm";
     const io = std.Io.Threaded.global_single_threaded.io();
