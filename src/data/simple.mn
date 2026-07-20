@@ -21,24 +21,34 @@ struct GameObject {
 }
 
 if (is_true) {
-    print(total + 120 - 6579);
-    print("");
+    print(total);
 } else {
     print(x);
-    print("");
 }
 
-print("hello world");
-print(is_true);
-print("");
 
-var float total2 = 100;
+var GameObject car = GameObject{
+    
+    pos = Position{
+        x = 90,
+        y = 23
+    },
+
+    vel = Velocity{
+        vx = 45,
+        vy = 100
+    }
+    
+};
+
+print("\nhello world");
+
+var float total2 = 100.90 / 67;
 
 print(total2);
-print("");
 
 if (false) {
-    print("total is greater than 90");
+    print("\ntotal is greater than 90");
 }else{
-    print("total is less than 90");
+    print("\ntotal is less than 90");
 }

@@ -83,6 +83,18 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    const llvm_include = getOutput(b, &.{
+        "llvm-config",
+        "--includedir",
+    });
+
+    const llvm_libdir = getOutput(b, &.{
+        "llvm-config",
+        "--libdir",
+    });
+
+    configureLLVM(exe.root_module, llvm_include, llvm_libdir);
+
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default
     // step). By default the install prefix is `zig-out/` but can be overridden
@@ -139,12 +151,15 @@ pub fn build(b: *std.Build) void {
     // times and since the two run steps do not depend on one another, this will
     // make the two of them run in parallel.
 
+    const test_module = b.createModule(.{
+        .root_source_file = b.path("src/test_runner.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    configureLLVM(test_module, llvm_include, llvm_libdir);
+
     const tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/test_runner.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
+        .root_module = test_module,
     });
 
     const run_tests = b.addRunArtifact(tests);
@@ -166,4 +181,22 @@ pub fn build(b: *std.Build) void {
     // Lastly, the Zig build system is relatively simple and self-contained,
     // and reading its source code will allow you to master it.
 
+}
+
+fn configureLLVM(module: *std.Build.Module, llvm_include: []const u8, llvm_libdir: []const u8) void {
+    module.link_libc = true;
+    module.addLibraryPath(.{
+        .cwd_relative = std.mem.trim(u8, llvm_libdir, " \n"),
+    });
+    module.addIncludePath(.{
+        .cwd_relative = std.mem.trim(u8, llvm_include, " \n"),
+    });
+    module.linkSystemLibrary("LLVM-21", .{});
+}
+
+fn getOutput(
+    b: *std.Build,
+    args: []const []const u8,
+) []const u8 {
+    return b.run(args);
 }
