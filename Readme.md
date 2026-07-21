@@ -6,11 +6,12 @@ The current implementation covers lexer, parser, AST construction, and a semanti
 ## Table of Contents
 
 1. [Quick Start](#quick-start)
-2. [Current Status](#current-status)
-3. [Documentation](#documentation)
-4. [Repository Structure](#repository-structure)
-5. [Known Runtime Limitation](#known-runtime-limitation)
-6. [Roadmap](#roadmap)
+2. [CLI Usage](#cli-usage)
+3. [Current Status](#current-status)
+4. [Documentation](#documentation)
+5. [Repository Structure](#repository-structure)
+6. [Known Runtime Limitation](#known-runtime-limitation)
+7. [Roadmap](#roadmap)
 
 ## Quick Start
 
@@ -21,13 +22,51 @@ Prerequisites:
 Build and run:
 
 ```bash
-zig build run
+zig build run -- run src/data/test3.mn
 ```
 
 Run tests:
 
 ```bash
 zig build test
+```
+
+## CLI Usage
+
+Midnight currently supports two CLI commands:
+
+```bash
+midnight run <file.mn>
+midnight build <file.mn> [-o output]
+```
+
+When running through Zig build, pass CLI arguments after `--`:
+
+```bash
+zig build run -- run src/data/test3.mn
+zig build run -- build src/data/test3.mn -o /tmp/midnight-build/app
+```
+
+Available options:
+
+```text
+--backend llvm|x86_64
+--emit-ir
+--emit-asm
+--emit-llvm-ir
+-o, --output <path>
+```
+
+The default backend is `llvm`. By default, generated executables are placed under a per-process `/tmp/midnight-build-<pid>` directory so the compiler can run even when the repository is stored on a mounted drive that blocks executable files.
+
+If this repository is on `/run/media/naveendanj/STORAGE`, use external Zig cache and prefix directories:
+
+```bash
+zig build run \
+  --cache-dir /tmp/midnight-zig-cache \
+  --global-cache-dir /tmp/midnight-zig-global-cache \
+  --prefix /tmp/midnight-zig-out \
+  -- run src/data/test3.mn
 ```
 
 ## Current Status
@@ -52,6 +91,10 @@ Implemented:
   - if/while condition type checks
   - function call argument checks
   - function return checks
+- CLI commands:
+  - `run`
+  - `build`
+- Compiler pipeline for lexing, parsing, semantic analysis, IR lowering, backend emission, linking, and optional execution
 
 ## Documentation
 
@@ -92,6 +135,10 @@ All detailed documentation is available under the `docs` folder.
 |- src/
    |- main.zig
    |- root.zig
+   |- cli/
+   |- compiler/
+   |- backend/
+   |- ir/
    |- lexer/
    |- parser/
    |- semantic/
@@ -100,7 +147,7 @@ All detailed documentation is available under the `docs` folder.
 
 ## Known Runtime Limitation
 
-Current sample program (`src/tests/test1.mn`) triggers a semantic error (`UndefinedVariable`) for struct method identifier usage because member access/receiver semantics are not fully implemented yet.
+Function codegen and advanced language features are still partial. Some programs may pass parsing and semantic analysis but fail during backend emission or linking.
 
 ## Roadmap
 
@@ -110,7 +157,7 @@ Primary next steps:
 2. Unary/member expression support in parser and semantic analysis
 3. Better diagnostics with source spans
 4. Typed AST completion and improved return-flow analysis
-5. IR design and lowering pipeline
+5. More complete function codegen and CLI commands such as `check`, `ir`, and `asm`
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.

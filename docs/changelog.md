@@ -2,6 +2,28 @@
 
 This document summarizes compiler and language changes made after the previous documentation update commit (`c54177b`).
 
+## CLI
+
+- Added command parsing for:
+  - `midnight run <file.mn>`
+  - `midnight build <file.mn> [-o output]`
+- `run` compiles, links, and executes the selected Midnight source file.
+- `build` compiles and links the selected Midnight source file, then prints the generated executable path.
+- Added CLI options:
+  - `--backend llvm|x86_64`
+  - `--emit-ir`
+  - `--emit-asm`
+  - `--emit-llvm-ir`
+  - `-o, --output <path>`
+- Default generated artifacts are placed in per-process `/tmp/midnight-build-<pid>` directories to avoid executable permission issues when the repository lives on a mounted `vfat` drive.
+
+Example:
+
+```bash
+zig build run -- run src/data/test3.mn
+zig build run -- build src/data/test3.mn -o /tmp/midnight-build/app
+```
+
 ## Parser and AST
 
 - Added expression statements, so standalone expressions like `call();` and `a + b;` are parsed as statement nodes.
@@ -48,11 +70,3 @@ This document summarizes compiler and language changes made after the previous d
 
 - Struct method body analysis is still limited in places (method fields are collected in struct metadata, but method-body semantics for receiver-scoped properties are not fully modeled yet).
 - Array indexing expressions are still a planned extension.
-
-
-
-
-sudo zig build run \                                                                                     
-  --cache-dir /tmp/midnight-zig-cache \
-  --global-cache-dir /tmp/midnight-zig-global-cache \
-  --prefix /tmp/midnight-zig-out

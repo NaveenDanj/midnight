@@ -7,7 +7,10 @@ source (.mn)
   -> lexer (Token stream)
   -> parser (AST statements/expressions)
   -> semantic analyzer (scope + type checks)
-  -> diagnostics / debug prints
+  -> IR lowering
+  -> backend emission (LLVM or x86_64)
+  -> toolchain link
+  -> optional run
 ```
 
 ## Core Modules
@@ -16,10 +19,37 @@ source (.mn)
 
 - `src/main.zig`
 - Responsibilities:
-  - read sample source file
-  - construct lexer, parser, semantic analyzer
-  - execute all frontend phases
-  - print debug traces
+  - parse CLI commands
+  - dispatch `run` and `build`
+  - translate CLI options into compiler pipeline options
+
+### CLI Layer
+
+- `src/cli/commands.zig`: command parser and help text
+- `src/cli/options.zig`: shared option structs for `run` and `build`
+
+Supported commands:
+
+```bash
+midnight run <file.mn>
+midnight build <file.mn> [-o output]
+```
+
+When invoked through Zig:
+
+```bash
+zig build run -- run src/data/test3.mn
+zig build run -- build src/data/test3.mn -o /tmp/midnight-build/app
+```
+
+### Compiler Pipeline
+
+- `src/compiler/pipeline.zig`
+- Responsibilities:
+  - read source files
+  - run lexer, parser, semantic analyzer, and IR lowering
+  - emit assembly or object output through the selected backend
+  - link and optionally run the result
 
 ### Lexer Layer
 
@@ -45,6 +75,13 @@ source (.mn)
 - `src/semantic/scope.zig`: nested scope stack
 - `src/semantic/anaylzer.zig`: semantic passes for statements/expressions
 - `src/semantic/semantic_error.zig`: semantic error set
+
+### IR and Backend Layers
+
+- `src/ir/`: IR instruction model and lowering
+- `src/backend/llvm/`: LLVM backend
+- `src/backend/x86_64/`: x86_64 assembly backend
+- `src/backend/toolchain.zig`: assembly/object writing, linking, and artifact execution
 
 ## AST Ownership Strategy
 
@@ -102,5 +139,5 @@ source (.mn)
 
 - No separate diagnostic reporting layer (errors are propagated as Zig errors)
 - No parser recovery strategy
-- No IR/lowering phase yet
-- No formal unit tests for lexer/parser/semantic behavior beyond basic Zig test harness scaffold
+- Function codegen is still partial
+- CLI supports `run` and `build`; additional commands like `check`, `ir`, and `asm` are planned

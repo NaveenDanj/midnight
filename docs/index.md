@@ -2,7 +2,7 @@
 
 This folder contains technical documentation for the Midnight programming language compiler written in Zig.
 
-Last refreshed: 2026-04-07
+Last refreshed: 2026-07-22
 
 ## Contents
 

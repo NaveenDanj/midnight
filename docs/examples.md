@@ -77,3 +77,22 @@ func main() int {
     return x;
 }
 ```
+
+Save a program as a `.mn` file, then run it through the CLI:
+
+```bash
+zig build run -- run path/to/program.mn
+```
+
+Build an executable without running it:
+
+```bash
+zig build run -- build path/to/program.mn -o /tmp/midnight-build/program
+```
+
+Enable debug output from the compiler pipeline:
+
+```bash
+zig build run -- run path/to/program.mn --emit-ir
+zig build run -- run path/to/program.mn --emit-llvm-ir
+```
