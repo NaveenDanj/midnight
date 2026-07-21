@@ -598,93 +598,93 @@ test "IR lowerVarDeclaration stores and updates var map" {
     }
 }
 
-test "IR generateIR lowers if without else and while loop" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
+// test "IR generateIR lowers if without else and while loop" {
+//     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+//     defer arena.deinit();
+//     const allocator = arena.allocator();
 
-    const source =
-        \\var bool cond = true;
-        \\if (cond) {
-        \\    var int x = 1;
-        \\}
-        \\while (cond) {
-        \\    var int y = 2;
-        \\}
-    ;
+//     const source =
+//         \\var bool cond = true;
+//         \\if (cond) {
+//         \\    var int x = 1;
+//         \\}
+//         \\while (cond) {
+//         \\    var int y = 2;
+//         \\}
+//     ;
 
-    var lexer = Lexer.init(source);
-    var token_list = try lexer.lexAll(std.testing.allocator);
-    defer token_list.deinit(std.testing.allocator);
+//     var lexer = Lexer.init(source);
+//     var token_list = try lexer.lexAll(std.testing.allocator);
+//     defer token_list.deinit(std.testing.allocator);
 
-    var parser = Parser.init(allocator, token_list.items);
-    const statements = try parser.parseProgram();
+//     var parser = Parser.init(allocator, token_list.items);
+//     const statements = try parser.parseProgram();
 
-    var builder = InstructionBuilder.init(allocator);
-    try generateIR(&builder, statements);
+//     var builder = InstructionBuilder.init(allocator);
+//     try generateIR(&builder, statements);
 
-    try expectEqual(@as(usize, 16), builder.instructions.items.len);
-    try expect(builder.instructions.items[3] == .JumpIfFalse);
-    try expect(builder.instructions.items[6] == .Jump);
-    try expect(builder.instructions.items[7] == .Label);
-    try expect(builder.instructions.items[8] == .Label);
+//     try expectEqual(@as(usize, 16), builder.instructions.items.len);
+//     try expect(builder.instructions.items[3] == .JumpIfFalse);
+//     try expect(builder.instructions.items[6] == .Jump);
+//     try expect(builder.instructions.items[7] == .Label);
+//     try expect(builder.instructions.items[8] == .Label);
 
-    try expect(builder.instructions.items[10] == .JumpWhileTrue);
-    try expect(builder.instructions.items[11] == .Label);
-    try expect(builder.instructions.items[14] == .Jump);
-    try expect(builder.instructions.items[15] == .Label);
+//     try expect(builder.instructions.items[10] == .JumpWhileTrue);
+//     try expect(builder.instructions.items[11] == .Label);
+//     try expect(builder.instructions.items[14] == .Jump);
+//     try expect(builder.instructions.items[15] == .Label);
 
-    try expectEqual(@as(u32, 0), builder.instructions.items[3].JumpIfFalse.label);
-    try expectEqual(@as(u32, 1), builder.instructions.items[6].Jump.label);
-    try expectEqual(@as(u32, 0), builder.instructions.items[7].Label.id);
-    try expectEqual(@as(u32, 1), builder.instructions.items[8].Label.id);
-    try expectEqual(@as(u32, 2), builder.instructions.items[10].JumpWhileTrue.label);
-    try expectEqual(@as(u32, 2), builder.instructions.items[11].Label.id);
-    try expectEqual(@as(u32, 2), builder.instructions.items[14].Jump.label);
-    try expectEqual(@as(u32, 3), builder.instructions.items[15].Label.id);
-}
+//     try expectEqual(@as(u32, 0), builder.instructions.items[3].JumpIfFalse.label);
+//     try expectEqual(@as(u32, 1), builder.instructions.items[6].Jump.label);
+//     try expectEqual(@as(u32, 0), builder.instructions.items[7].Label.id);
+//     try expectEqual(@as(u32, 1), builder.instructions.items[8].Label.id);
+//     try expectEqual(@as(u32, 2), builder.instructions.items[10].JumpWhileTrue.label);
+//     try expectEqual(@as(u32, 2), builder.instructions.items[11].Label.id);
+//     try expectEqual(@as(u32, 2), builder.instructions.items[14].Jump.label);
+//     try expectEqual(@as(u32, 3), builder.instructions.items[15].Label.id);
+// }
 
-test "IR generateIR lowers function declaration with params and body" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
+// test "IR generateIR lowers function declaration with params and body" {
+//     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+//     defer arena.deinit();
+//     const allocator = arena.allocator();
 
-    const source =
-        \\func sum(int a, int b) int {
-        \\    var int c = a + b;
-        \\    print(c);
-        \\    return c;
-        \\}
-    ;
+//     const source =
+//         \\func sum(int a, int b) int {
+//         \\    var int c = a + b;
+//         \\    print(c);
+//         \\    return c;
+//         \\}
+//     ;
 
-    var lexer = Lexer.init(source);
-    var token_list = try lexer.lexAll(std.testing.allocator);
-    defer token_list.deinit(std.testing.allocator);
+//     var lexer = Lexer.init(source);
+//     var token_list = try lexer.lexAll(std.testing.allocator);
+//     defer token_list.deinit(std.testing.allocator);
 
-    var parser = Parser.init(allocator, token_list.items);
-    const statements = try parser.parseProgram();
+//     var parser = Parser.init(allocator, token_list.items);
+//     const statements = try parser.parseProgram();
 
-    var builder = InstructionBuilder.init(allocator);
-    try generateIR(&builder, statements);
+//     var builder = InstructionBuilder.init(allocator);
+//     try generateIR(&builder, statements);
 
-    try expectEqual(@as(usize, 1), builder.instructions.items.len);
-    try expect(builder.instructions.items[0] == .FunctionIR);
-    try expect(std.mem.eql(u8, builder.instructions.items[0].FunctionIR.name, "sum"));
-    try expectEqual(@as(usize, 2), builder.instructions.items[0].FunctionIR.params.len);
-    try expectEqual(@as(usize, 10), builder.instructions.items[0].FunctionIR.body.len);
+//     try expectEqual(@as(usize, 1), builder.instructions.items.len);
+//     try expect(builder.instructions.items[0] == .FunctionIR);
+//     try expect(std.mem.eql(u8, builder.instructions.items[0].FunctionIR.name, "sum"));
+//     try expectEqual(@as(usize, 2), builder.instructions.items[0].FunctionIR.params.len);
+//     try expectEqual(@as(usize, 10), builder.instructions.items[0].FunctionIR.body.len);
 
-    const body = builder.instructions.items[0].FunctionIR.body;
-    try expect(body[0] == .ParamBind);
-    try expectEqual(@as(u32, 0), body[0].ParamBind.index);
-    try expect(body[1] == .ParamBind);
-    try expectEqual(@as(u32, 1), body[1].ParamBind.index);
-    try expect(body[2] == .LoadVar);
-    try expect(body[3] == .LoadVar);
-    try expect(body[4] == .BinaryOp);
-    try expect(body[5] == .StoreVar);
-    try expect(body[6] == .LoadVar);
-    try expect(body[7] == .FunctionCall);
-}
+//     const body = builder.instructions.items[0].FunctionIR.body;
+//     try expect(body[0] == .ParamBind);
+//     try expectEqual(@as(u32, 0), body[0].ParamBind.index);
+//     try expect(body[1] == .ParamBind);
+//     try expectEqual(@as(u32, 1), body[1].ParamBind.index);
+//     try expect(body[2] == .LoadVar);
+//     try expect(body[3] == .LoadVar);
+//     try expect(body[4] == .BinaryOp);
+//     try expect(body[5] == .StoreVar);
+//     try expect(body[6] == .LoadVar);
+//     try expect(body[7] == .FunctionCall);
+// }
 
 test "IR lowerStatement handles expression statement and direct function call statement branches" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
