@@ -27,20 +27,6 @@ if (is_true) {
 }
 
 
-var GameObject car = GameObject{
-    
-    pos = Position{
-        x = 90,
-        y = 23
-    },
-
-    vel = Velocity{
-        vx = 45,
-        vy = 100
-    }
-    
-};
-
 print("\nhello world");
 
 var float total2 = 100.90 / 67;

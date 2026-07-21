@@ -5,12 +5,18 @@ const BinaryOp = @import("../../ir/ir.zig").BinaryOp;
 const Instruction = @import("../../ir/ir.zig").Instruction;
 const Type = @import("../../semantic/types.zig").Type;
 const Value = @import("../../ir/ir.zig").Value;
+const FunctionRef = @import("./lib//function_emitter.zig").FunctionRef;
+
 const realPredicate = @import("./lib/predicates.zig").realPredicate;
 const intPredicate = @import("./lib/predicates.zig").intPredicate;
 const lowerBinaryOp = @import("./lib/bin_op_emitter.zig").lowerBinaryOp;
 const lowerPrintCall = @import("./lib/print_emitter.zig").lowerPrintCall;
+const lowerFunction = @import("./lib/function_emitter.zig").lowerFunction;
+const lowerFunctionCall = @import("./lib/function_emitter.zig").lowerFunctionCall;
 
 pub const LLVMBackendError = error{
+    ArgumentCountMismatch,
+    FunctionNotFound,
     MissingResolvedType,
     UnsupportedBinaryOperation,
     UnsupportedInstruction,
@@ -47,6 +53,7 @@ pub const LLVMBackend = struct {
     module: c.LLVMModuleRef,
     builder: c.LLVMBuilderRef,
     main_function: c.LLVMValueRef,
+    current_function: c.LLVMValueRef,
     printf_function: c.LLVMValueRef,
     printf_type: c.LLVMTypeRef,
     puts_function: c.LLVMValueRef,
@@ -54,6 +61,8 @@ pub const LLVMBackend = struct {
     temp_values: std.AutoHashMap(u32, c.LLVMValueRef),
     temp_types: std.AutoHashMap(u32, Type),
     variables: std.StringHashMap(VariableRef),
+    global_variables: std.StringHashMap(VariableRef),
+    functions: std.StringHashMap(FunctionRef),
     label_blocks: std.AutoHashMap(u32, c.LLVMBasicBlockRef),
     next_name_id: u32,
     current_block_terminated: bool,
@@ -80,6 +89,7 @@ pub const LLVMBackend = struct {
             .module = module,
             .builder = builder,
             .main_function = main_function,
+            .current_function = main_function,
             .printf_function = undefined,
             .printf_type = undefined,
             .puts_function = undefined,
@@ -87,6 +97,8 @@ pub const LLVMBackend = struct {
             .temp_values = std.AutoHashMap(u32, c.LLVMValueRef).init(allocator),
             .temp_types = std.AutoHashMap(u32, Type).init(allocator),
             .variables = std.StringHashMap(VariableRef).init(allocator),
+            .global_variables = std.StringHashMap(VariableRef).init(allocator),
+            .functions = std.StringHashMap(FunctionRef).init(allocator),
             .label_blocks = std.AutoHashMap(u32, c.LLVMBasicBlockRef).init(allocator),
             .next_name_id = 0,
             .current_block_terminated = false,
@@ -99,6 +111,12 @@ pub const LLVMBackend = struct {
         self.temp_values.deinit();
         self.temp_types.deinit();
         self.variables.deinit();
+        self.global_variables.deinit();
+        var function_it = self.functions.iterator();
+        while (function_it.next()) |entry| {
+            self.allocator.free(entry.value_ptr.param_types);
+        }
+        self.functions.deinit();
         self.label_blocks.deinit();
         c.LLVMDisposeBuilder(self.builder);
         c.LLVMDisposeModule(self.module);
@@ -157,7 +175,7 @@ pub const LLVMBackend = struct {
                 try self.putTemp(inst.dest, value, typ);
             },
             .LoadVar => |inst| {
-                const typ = inst.resolvedType orelse return LLVMBackendError.MissingResolvedType;
+                const typ = inst.resolvedType orelse self.lookupVariableType(inst.name) orelse return LLVMBackendError.MissingResolvedType;
                 const variable = try self.ensureVariable(inst.name, typ);
                 const value = c.LLVMBuildLoad2(self.builder, try self.llvmType(typ), variable.pointer, try self.nextName("loadtmp"));
                 try self.putTemp(inst.dest, value, typ);
@@ -194,9 +212,9 @@ pub const LLVMBackend = struct {
                 _ = c.LLVMBuildRet(self.builder, try self.valueRef(inst.value, typ));
                 self.current_block_terminated = true;
             },
-            .PrintCall => |inst| try lowerPrintCall(inst.value, inst.resolvedType orelse return LLVMBackendError.MissingResolvedType),
-            .FunctionIR,
-            .FunctionCall,
+            .PrintCall => |inst| try lowerPrintCall(self, inst.value, inst.resolvedType orelse return LLVMBackendError.MissingResolvedType),
+            .FunctionIR => |inst| try lowerFunction(self, inst),
+            .FunctionCall => |inst| try lowerFunctionCall(self, inst),
             .ParamBind,
             .AllocStruct,
             .StoreField,
@@ -226,9 +244,32 @@ pub const LLVMBackend = struct {
             return variable;
         }
 
+        if (self.global_variables.get(name)) |variable| {
+            return variable;
+        }
+
+        if (self.current_function == self.main_function) {
+            return try self.ensureGlobalVariable(name, typ);
+        }
+
         const pointer = c.LLVMBuildAlloca(self.builder, try self.llvmType(typ), try self.toZ(name));
         const variable = VariableRef{ .pointer = pointer, .typ = typ };
         try self.variables.put(name, variable);
+        return variable;
+    }
+
+    fn ensureGlobalVariable(self: *LLVMBackend, name: []const u8, typ: Type) !VariableRef {
+        if (self.global_variables.get(name)) |variable| {
+            return variable;
+        }
+
+        const llvm_type = try self.llvmType(typ);
+        const pointer = c.LLVMAddGlobal(self.module, llvm_type, try self.toZ(name));
+        c.LLVMSetLinkage(pointer, c.LLVMInternalLinkage);
+        c.LLVMSetInitializer(pointer, c.LLVMConstNull(llvm_type));
+
+        const variable = VariableRef{ .pointer = pointer, .typ = typ };
+        try self.global_variables.put(name, variable);
         return variable;
     }
 
@@ -237,7 +278,7 @@ pub const LLVMBackend = struct {
             return block;
         }
 
-        const block = c.LLVMAppendBasicBlockInContext(self.context, self.main_function, try self.nextName("label"));
+        const block = c.LLVMAppendBasicBlockInContext(self.context, self.current_function, try self.nextName("label"));
         try self.label_blocks.put(id, block);
         return block;
     }
@@ -254,10 +295,36 @@ pub const LLVMBackend = struct {
             .constantFloat => Type{ .kind = .FLOAT },
             .constantBool => Type{ .kind = .BOOL },
             .string => Type{ .kind = .STRING },
-            .variable => |name| if (self.variables.get(name)) |variable| variable.typ else null,
+            .variable => |name| self.lookupVariableType(name),
             .arrayIndex => Type{ .kind = .INT },
             .paramIndex => null,
         };
+    }
+
+    fn lookupVariableType(self: *LLVMBackend, name: []const u8) ?Type {
+        if (self.variables.get(name)) |variable| {
+            return variable.typ;
+        }
+
+        if (self.global_variables.get(name)) |variable| {
+            return variable.typ;
+        }
+
+        return null;
+    }
+
+    pub fn inferBinaryType(self: *LLVMBackend, left: Value, right: Value) ?Type {
+        const left_type = self.valueType(left);
+        const right_type = self.valueType(right);
+
+        if (left_type) |typ| {
+            if (typ.kind == .FLOAT) return typ;
+        }
+        if (right_type) |typ| {
+            if (typ.kind == .FLOAT) return typ;
+        }
+
+        return left_type orelse right_type;
     }
 
     pub fn valueRef(self: *LLVMBackend, value: Value, expected_type: Type) !c.LLVMValueRef {
@@ -278,7 +345,7 @@ pub const LLVMBackend = struct {
             .constantBool => |bool_value| c.LLVMConstInt(try self.llvmType(expected_type), if (bool_value) 1 else 0, 0),
             .string => |string_value| c.LLVMBuildGlobalStringPtr(self.builder, try self.toZ(string_value), try self.nextName("str")),
             .variable => |name| blk: {
-                const variable = self.variables.get(name) orelse return LLVMBackendError.UnsupportedValue;
+                const variable = self.variables.get(name) orelse self.global_variables.get(name) orelse return LLVMBackendError.UnsupportedValue;
                 const loaded = c.LLVMBuildLoad2(self.builder, try self.llvmType(variable.typ), variable.pointer, try self.nextName("loadtmp"));
                 break :blk try self.coerceValue(loaded, variable.typ, expected_type);
             },
@@ -306,7 +373,7 @@ pub const LLVMBackend = struct {
         return value;
     }
 
-    fn llvmType(self: *LLVMBackend, typ: Type) LLVMBackendError!c.LLVMTypeRef {
+    pub fn llvmType(self: *LLVMBackend, typ: Type) LLVMBackendError!c.LLVMTypeRef {
         if (typ.isArray) {
             return c.LLVMPointerTypeInContext(self.context, 0);
         }

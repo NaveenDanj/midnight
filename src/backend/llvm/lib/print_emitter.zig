@@ -7,7 +7,7 @@ const realPredicate = @import("./predicates.zig").realPredicate;
 const intPredicate = @import("./predicates.zig").intPredicate;
 const Value = @import("../../../ir/ir.zig").Value;
 
-fn lowerPrintCall(self: *LLVMBackend, value: Value, typ: Type) !void {
+pub fn lowerPrintCall(self: *LLVMBackend, value: Value, typ: Type) !void {
     switch (typ.kind) {
         .INT => {
             const format = c.LLVMBuildGlobalStringPtr(self.builder, "%lld", try self.nextName("fmt.int"));
