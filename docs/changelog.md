@@ -48,3 +48,11 @@ This document summarizes compiler and language changes made after the previous d
 
 - Struct method body analysis is still limited in places (method fields are collected in struct metadata, but method-body semantics for receiver-scoped properties are not fully modeled yet).
 - Array indexing expressions are still a planned extension.
+
+
+
+
+sudo zig build run \                                                                                     
+  --cache-dir /tmp/midnight-zig-cache \
+  --global-cache-dir /tmp/midnight-zig-global-cache \
+  --prefix /tmp/midnight-zig-out

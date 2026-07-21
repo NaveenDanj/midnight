@@ -1,31 +1,69 @@
 const std = @import("std");
+const cli = @import("cli/commands.zig");
+const cli_options = @import("cli/options.zig");
 const pipeline = @import("compiler/pipeline.zig");
-const c = @cImport({
-    @cInclude("llvm-c/Core.h");
-});
 
-pub fn main() !void {
-    const context = c.LLVMContextCreate();
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.arena.allocator();
 
-    defer c.LLVMContextDispose(context);
+    const command = cli.parseArgs(allocator, init.minimal.args) catch |err| {
+        std.debug.print("error: {s}\n\n", .{@errorName(err)});
+        cli.printHelp();
+        return err;
+    };
 
-    std.debug.print(
-        "LLVM context created\n",
-        .{},
-    );
+    switch (command) {
+        .help => cli.printHelp(),
+        .run => |options| {
+            var result = try pipeline.compileFile(allocator, makeCompileOptions(allocator, options, true));
+            defer result.deinit();
+        },
+        .build => |options| {
+            var result = try pipeline.compileFile(allocator, makeCompileOptions(allocator, options, false));
+            defer result.deinit();
 
-    const allocator = std.heap.page_allocator;
-    var result = try pipeline.compileFile(allocator, .{
-        .source_path = "./src/data/test3.mn",
-        .output_dir = "/tmp/midnight-llvm-build",
-        .asm_path = "/tmp/midnight-llvm-build/output.s",
-        .object_path = "/tmp/midnight-llvm-build/out.o",
-        .emit_ir = true,
-        .emit_asm = true,
-        .emit_llvm_ir = true,
-        .backend = .llvm,
+            if (result.artifact) |artifact| {
+                std.debug.print("Built {s}\n", .{artifact.executable_path});
+            }
+        },
+    }
+}
+
+fn makeCompileOptions(
+    allocator: std.mem.Allocator,
+    options: cli_options.CommonOptions,
+    run: bool,
+) pipeline.CompileOptions {
+    const default_output_dir = defaultOutputDir(allocator);
+
+    const output_dir = if (options.output_path) |path|
+        std.fs.path.dirname(path) orelse default_output_dir
+    else
+        default_output_dir;
+
+    const executable_name = if (options.output_path) |path|
+        std.fs.path.basename(path)
+    else
+        "out";
+
+    const asm_path = std.fmt.allocPrint(allocator, "{s}/output.s", .{output_dir}) catch @panic("OOM");
+    const object_path = std.fmt.allocPrint(allocator, "{s}/out.o", .{output_dir}) catch @panic("OOM");
+
+    return .{
+        .source_path = options.source_path,
+        .output_dir = output_dir,
+        .asm_path = asm_path,
+        .object_path = object_path,
+        .executable_name = executable_name,
+        .backend = options.backend,
+        .emit_ir = options.emit_ir,
+        .emit_asm = options.emit_asm,
+        .emit_llvm_ir = options.emit_llvm_ir,
         .link = true,
-        .run = true,
-    });
-    defer result.deinit();
+        .run = run,
+    };
+}
+
+fn defaultOutputDir(allocator: std.mem.Allocator) []const u8 {
+    return std.fmt.allocPrint(allocator, "/tmp/midnight-build-{d}", .{std.os.linux.getpid()}) catch @panic("OOM");
 }

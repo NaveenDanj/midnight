@@ -110,17 +110,17 @@ pub fn compileSource(allocator: std.mem.Allocator, source: []const u8, options: 
         llvm_ir_text = try llvm_backend.emitLLVMIR(allocator, instructions);
     }
 
-    // if (options.emit_ir) {
-    //     std.debug.print("=== Generated IR ===\n", .{});
-    //     for (instructions) |instruction| {
-    //         std.debug.print("{any}\n", .{instruction});
-    //     }
-    // }
-
-    std.debug.print("=== Generated LLVM IR ===\n", .{});
-    if (llvm_ir_text) |text| {
-        std.debug.print("{s}\n", .{text});
+    if (options.emit_ir) {
+        std.debug.print("=== Generated IR ===\n", .{});
+        for (instructions) |instruction| {
+            std.debug.print("{any}\n", .{instruction});
+        }
     }
+
+    if (options.emit_llvm_ir) if (llvm_ir_text) |text| {
+        std.debug.print("=== Generated LLVM IR ===\n", .{});
+        std.debug.print("{s}\n", .{text});
+    };
 
     var artifact: ?toolchain.BuildArtifact = null;
     errdefer if (artifact) |*build_artifact| build_artifact.deinit();
