@@ -7,7 +7,7 @@ const realPredicate = @import("./predicates.zig").realPredicate;
 const intPredicate = @import("./predicates.zig").intPredicate;
 
 pub fn lowerBinaryOp(self: *LLVMBackend, inst: anytype) !void {
-    const resolved_type = inst.resolvedType orelse return LLVMBackendError.MissingResolvedType;
+    const resolved_type = inst.resolvedType orelse self.inferBinaryType(inst.left, inst.right) orelse return LLVMBackendError.MissingResolvedType;
     const name = try self.nextName("bintmp");
 
     switch (inst.op) {

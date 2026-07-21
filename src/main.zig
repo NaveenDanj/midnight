@@ -16,7 +16,7 @@ pub fn main() !void {
 
     const allocator = std.heap.page_allocator;
     var result = try pipeline.compileFile(allocator, .{
-        .source_path = "./src/data/simple.mn",
+        .source_path = "./src/data/test3.mn",
         .output_dir = "/tmp/midnight-llvm-build",
         .asm_path = "/tmp/midnight-llvm-build/output.s",
         .object_path = "/tmp/midnight-llvm-build/out.o",
