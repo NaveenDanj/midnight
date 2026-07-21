@@ -15,6 +15,7 @@ pub const Command = union(enum) {
     run: options.RunOptions,
     build: options.BuildOptions,
     help,
+    version,
 };
 
 pub fn parseArgs(allocator: std.mem.Allocator, args: std.process.Args) !Command {
@@ -35,6 +36,10 @@ pub fn parseArgs(allocator: std.mem.Allocator, args: std.process.Args) !Command 
 
     if (std.mem.eql(u8, command_name, "build")) {
         return .{ .build = try parseCommonOptions(&iterator) };
+    }
+
+    if (std.mem.eql(u8, command_name, "version")) {
+        return .version;
     }
 
     return CliError.UnknownCommand;
