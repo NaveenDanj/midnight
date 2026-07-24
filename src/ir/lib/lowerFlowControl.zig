@@ -18,7 +18,10 @@ pub fn lowerIfStatementWithSemantics(builder: *InstructionBuilder, ifStmt: *IfSt
 
     try builder.emit(.{ .JumpIfFalse = .{ .condition = condition, .label = elseLabel } });
     try lowerStatementsWithSemantics(builder, ifStmt.thenBlock.statements, semantic);
-    try builder.emit(.{ .Jump = .{ .label = endLabel } });
+    const then_terminated = builder.current_block_terminated;
+    if (!then_terminated) {
+        try builder.emit(.{ .Jump = .{ .label = endLabel } });
+    }
 
     try builder.emit(.{ .Label = .{ .id = elseLabel } });
     if (ifStmt.elseBlock) |elseBlock| {
@@ -40,6 +43,8 @@ pub fn lowerWhileStatementWithSemantics(builder: *InstructionBuilder, whileStmt:
     const condition = try lowerExpressionWithSemantics(builder, whileStmt.expression, semantic);
     try builder.emit(.{ .JumpIfFalse = .{ .condition = condition, .label = endLabel } });
     try lowerStatementsWithSemantics(builder, whileStmt.body.statements, semantic);
-    try builder.emit(.{ .Jump = .{ .label = startLabel } });
+    if (!builder.current_block_terminated) {
+        try builder.emit(.{ .Jump = .{ .label = startLabel } });
+    }
     try builder.emit(.{ .Label = .{ .id = endLabel } });
 }

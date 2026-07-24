@@ -80,6 +80,9 @@ pub fn lowerBlock(builder: *InstructionBuilder, statements: []*Statement) anyerr
 pub fn lowerBlockWithSemantics(builder: *InstructionBuilder, statements: []*Statement, semantic: ?*const SemanticResult) anyerror!void {
     for (statements) |stmt| {
         try lowerStatementWithSemantics(builder, stmt, semantic);
+        if (builder.current_block_terminated) {
+            break;
+        }
     }
 }
 

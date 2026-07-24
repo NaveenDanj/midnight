@@ -53,7 +53,7 @@ pub const AssignmentChecker = struct {
             .Identifier => {
                 const symbol = self.scopeStack.lookupSymbol(varAssign.target.Identifier.name) orelse return SemanticError.UndefinedVariable;
 
-                if (symbol.kind != .variable) {
+                if (symbol.kind != .variable and symbol.kind != .parameter) {
                     return SemanticError.TypeMismatch;
                 }
 

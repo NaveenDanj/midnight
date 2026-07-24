@@ -128,6 +128,15 @@ pub const SemanticAnalyzer = struct {
                 var checker = self.functionChecker();
                 try checker.analyzeFunctionCall(stmt.FunctionCallStatement);
             },
+            .ExpressionStmt => {
+                switch (stmt.ExpressionStmt.*) {
+                    .FunctionCall => {
+                        var checker = self.functionChecker();
+                        try checker.analyzeFunctionCall(&stmt.ExpressionStmt.FunctionCall);
+                    },
+                    else => return SemanticError.UnsupportedStatement,
+                }
+            },
             .IfStatement => {
                 try self.analyzeIfStatement(stmt.IfStatement);
             },
@@ -142,7 +151,6 @@ pub const SemanticAnalyzer = struct {
             .PrintStatement => {
                 try self.analyzePrintStatement(stmt.PrintStatement);
             },
-            else => return SemanticError.UnsupportedStatement,
         }
     }
 

@@ -189,7 +189,7 @@ pub const LLVMBackend = struct {
             .JumpIfFalse => |inst| {
                 const condition = try self.valueRef(inst.condition, Type{ .kind = .BOOL });
                 const false_block = try self.labelBlock(inst.label);
-                const continue_block = c.LLVMAppendBasicBlockInContext(self.context, self.main_function, try self.nextName("if.cont"));
+                const continue_block = c.LLVMAppendBasicBlockInContext(self.context, self.current_function, try self.nextName("if.cont"));
                 _ = c.LLVMBuildCondBr(self.builder, condition, continue_block, false_block);
                 self.current_block_terminated = true;
                 c.LLVMPositionBuilderAtEnd(self.builder, continue_block);
@@ -379,7 +379,7 @@ pub const LLVMBackend = struct {
         }
 
         return switch (typ.kind) {
-            .INT => c.LLVMInt64TypeInContext(self.context),
+            .INT => c.LLVMInt32TypeInContext(self.context),
             .BOOL => c.LLVMInt1TypeInContext(self.context),
             .FLOAT => c.LLVMDoubleTypeInContext(self.context),
             .VOID => c.LLVMVoidTypeInContext(self.context),
@@ -402,6 +402,7 @@ pub const LLVMBackend = struct {
 
     fn printModule(self: *LLVMBackend) ![]const u8 {
         const llvm_text = c.LLVMPrintModuleToString(self.module);
+        std.debug.print("LLVM IR:\n{s}\n", .{llvm_text});
         defer c.LLVMDisposeMessage(llvm_text);
         return try self.allocator.dupe(u8, std.mem.span(llvm_text));
     }

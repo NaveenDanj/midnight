@@ -129,7 +129,8 @@ pub fn lowerFunctionCall(self: *LLVMBackend, inst: @FieldType(Instruction, "Func
         arg_values[index] = try self.valueRef(arg, arg_type);
     }
 
-    const result = c.LLVMBuildCall2(self.builder, func_type, function, arg_values.ptr, @intCast(arg_values.len), try self.nextName("calltmp"));
+    const call_name = if (return_type.kind == .VOID) "" else try self.nextName("calltmp");
+    const result = c.LLVMBuildCall2(self.builder, func_type, function, arg_values.ptr, @intCast(arg_values.len), call_name);
     if (return_type.kind != .VOID) {
         try self.putTemp(inst.dest, result, return_type);
     }

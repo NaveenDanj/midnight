@@ -71,6 +71,38 @@ test "pipeline can emit LLVM IR without invoking native backend" {
     try expect(std.mem.indexOf(u8, result.llvm_ir_text.?, "add i64") != null);
 }
 
+test "pipeline emits LLVM IR for recursive factorial with early return" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const source =
+        \\func factorial(int n) int {
+        \\    if (n == 1) {
+        \\        return 1;
+        \\    }
+        \\
+        \\    return n * factorial(n - 1);
+        \\}
+        \\
+        \\var int val = factorial(5);
+        \\print(val);
+    ;
+
+    var result = try pipeline.compileSource(allocator, source, .{
+        .backend = .llvm,
+        .emit_asm = false,
+        .emit_llvm_ir = true,
+        .link = false,
+        .run = false,
+    });
+    defer result.deinit();
+
+    try expect(result.llvm_ir_text != null);
+    try expect(std.mem.indexOf(u8, result.llvm_ir_text.?, "define i64 @factorial") != null);
+    try expect(std.mem.indexOf(u8, result.llvm_ir_text.?, "call i64 @factorial") != null);
+}
+
 test "pipeline can emit target assembly from LLVM backend" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();

@@ -9,6 +9,7 @@ pub const InstructionBuilder = struct {
     labelCounter: u32,
     var_map: std.StringHashMap(Value),
     version_map: std.StringHashMap(u32),
+    current_block_terminated: bool,
 
     pub fn init(allocator: std.mem.Allocator) InstructionBuilder {
         return InstructionBuilder{
@@ -18,11 +19,17 @@ pub const InstructionBuilder = struct {
             .labelCounter = 0,
             .var_map = std.StringHashMap(Value).init(allocator),
             .version_map = std.StringHashMap(u32).init(allocator),
+            .current_block_terminated = false,
         };
     }
 
     pub fn emit(self: *InstructionBuilder, instruction: Instruction) !void {
         try self.instructions.append(self.allocator, instruction);
+        switch (instruction) {
+            .Jump, .Return => self.current_block_terminated = true,
+            .Label => self.current_block_terminated = false,
+            else => {},
+        }
     }
 
     pub fn newTemp(self: *InstructionBuilder) u32 {
@@ -52,6 +59,7 @@ pub const InstructionBuilder = struct {
     pub fn free(self: *InstructionBuilder) void {
         self.instructions.deinit(self.allocator);
         self.var_map.deinit();
+        self.version_map.deinit();
     }
 
     pub fn printIR(self: *InstructionBuilder) void {

@@ -11,6 +11,7 @@ const LexerError = @import("../lexer/lexer.zig").LexerError;
 const SemanticAnalyzer = @import("../semantic/anaylzer.zig").SemanticAnalyzer;
 const SemanticError = @import("../semantic/semantic_error.zig").SemanticError;
 const Statement = @import("../ast/stmt.zig").Statement;
+const FunctionCallStmt = @import("../ast/stmt.zig").FunctionCallStmt;
 
 test "lexer returns error for unknown character" {
     var lexer = Lexer.init("@");
@@ -38,6 +39,66 @@ test "semantic analyzer returns unsupported statement for expression statements"
 
     var analyzer = try SemanticAnalyzer.init(allocator);
     try expectError(SemanticError.UnsupportedStatement, analyzer.analyzeProgram(statements));
+}
+
+test "semantic analyzer accepts function call expression statements" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const arg = try allocator.create(Expr);
+    arg.* = .{ .IntLiteral = .{ .value = 1 } };
+
+    const args = try allocator.alloc(*Expr, 1);
+    args[0] = arg;
+
+    const call_expr = try allocator.create(Expr);
+    call_expr.* = .{ .FunctionCall = FunctionCallStmt{
+        .name = "identity",
+        .args = args,
+    } };
+
+    const call_stmt = try allocator.create(Statement);
+    call_stmt.* = .{ .ExpressionStmt = call_expr };
+
+    const ret_expr = try allocator.create(Expr);
+    ret_expr.* = .{ .Identifier = .{ .name = "x" } };
+
+    const ret_stmt = try allocator.create(@import("../ast/stmt.zig").ReturnStatement);
+    ret_stmt.* = .{ .expression = ret_expr };
+
+    const ret_statement = try allocator.create(Statement);
+    ret_statement.* = .{ .ReturnStatement = ret_stmt };
+
+    const param = try allocator.create(@import("../ast/stmt.zig").Param);
+    param.* = .{ .dataType = .{ .name = "int" }, .name = "x" };
+
+    const params = try allocator.alloc(*@import("../ast/stmt.zig").Param, 1);
+    params[0] = param;
+
+    const body_statements = try allocator.alloc(*Statement, 2);
+    body_statements[0] = call_stmt;
+    body_statements[1] = ret_statement;
+
+    const body = try allocator.create(@import("../ast/stmt.zig").BlockStmt);
+    body.* = .{ .statements = body_statements };
+
+    const func = try allocator.create(@import("../ast/stmt.zig").FunctionDecl);
+    func.* = .{
+        .name = "identity",
+        .params = params,
+        .body = body,
+        .returnType = .{ .name = "int" },
+    };
+
+    const func_stmt = try allocator.create(Statement);
+    func_stmt.* = .{ .FunctionDecl = func };
+
+    const statements = try allocator.alloc(*Statement, 1);
+    statements[0] = func_stmt;
+
+    var analyzer = try SemanticAnalyzer.init(allocator);
+    try analyzer.analyzeProgram(statements);
 }
 
 test "backend returns error for unsupported instruction" {
