@@ -11,10 +11,8 @@ pub const TokenType = enum {
     RBracket,
     Underscore,
     Dot,
-
-    And,
-    Or,
-    Not,
+    Pipe,
+    Ampersand,
 
     // operators
     Equal,
@@ -29,6 +27,8 @@ pub const TokenType = enum {
     GreaterThanEqual,
     NotEqual,
     BooleanOpNot,
+    BooleanOpAnd,
+    BooleanOpOr,
 
     // literals
     Identifier,

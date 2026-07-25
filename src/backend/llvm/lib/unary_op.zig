@@ -4,8 +4,9 @@ const LLVMBackendError = @import("../llvm_backend.zig").LLVMBackendError;
 const c = @import("../../../llvm.zig").c;
 const Type = @import("../../../semantic/types.zig").Type;
 const UnaryOperator = @import("../../../ir/ir.zig").UnaryOperator;
+const Instruction = @import("../../../ir/ir.zig").Instruction;
 
-pub fn lowerUnaryOp(self: *LLVMBackend, inst: *UnaryOperator) !void {
+pub fn lowerUnaryOp(self: *LLVMBackend, inst: anytype) !void {
     switch (inst.op) {
         .Negate => {
             const typ = inst.resolvedType orelse return LLVMBackendError.MissingResolvedType;

@@ -62,7 +62,10 @@ pub fn parsePrefix(self: *Parser) ParserError!*Expr {
         const unaryOp = switch (op.kind) {
             .Minus => UnaryOperator.Negate,
             .BooleanOpNot => UnaryOperator.Not,
-            else => return ParserError.UnExpectedToken,
+            else => {
+                std.debug.print("Unexpected token: {any}\n", .{op.kind});
+                return ParserError.UnExpectedToken;
+            },
         };
 
         const unary = UnaryExpr{

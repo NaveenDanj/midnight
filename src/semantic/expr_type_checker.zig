@@ -196,5 +196,7 @@ fn isComparisonOperator(operator: []const u8) bool {
         std.mem.eql(u8, operator, "<") or
         std.mem.eql(u8, operator, ">") or
         std.mem.eql(u8, operator, "<=") or
-        std.mem.eql(u8, operator, ">=");
+        std.mem.eql(u8, operator, ">=") or
+        std.mem.eql(u8, operator, "&&") or
+        std.mem.eql(u8, operator, "||");
 }

@@ -105,6 +105,16 @@ pub const Lexer = struct {
             else
                 self.makeToken(TokenType.GreaterThan),
 
+            '|' => return if (self.isMatch('|'))
+                self.makeToken(TokenType.BooleanOpOr)
+            else
+                self.makeToken(TokenType.Pipe),
+
+            '&' => return if (self.isMatch('&'))
+                self.makeToken(TokenType.BooleanOpAnd)
+            else
+                self.makeToken(TokenType.Ampersand),
+
             else => {},
         }
 
