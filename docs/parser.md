@@ -38,6 +38,7 @@ The expression parser (`parseExpr.zig`) uses precedence climbing:
 - binary
 - unary
 - array literal
+- array access
 - function call expression
 - member access expression
 - struct initialization expression
@@ -107,6 +108,6 @@ Current strategy is fail-fast with no synchronization/recovery.
 
 ## Extension Points
 
-- Add array indexing support in lvalue/rvalue expressions.
-- Consider assignment expressions at expression level if language should support chained assignment.
+- Extend array access support through the rest of the compiler pipeline.
+- Consider assignment expressions at expression level if the language should support chained assignment.
 - Add richer parser diagnostics carrying token context.

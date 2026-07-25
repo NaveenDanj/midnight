@@ -2,66 +2,83 @@
 
 ## Purpose
 
-Midnight is a hobby compiler project for a small systems-style programming language. The implementation is written in Zig and currently includes a frontend pipeline plus early backend/codegen work:
+Midnight is a hobby compiler project for a small typed language implemented in Zig. The project has moved beyond a frontend-only prototype and now includes:
 
 - lexical analysis
-- parsing to an AST
-- semantic analysis (types, scopes, symbol checks)
+- parsing into AST nodes
+- semantic analysis
 - IR lowering
-- LLVM and x86_64 backend experiments
-- CLI-driven build and run commands
+- LLVM backend emission
+- x86_64 backend emission
+- CLI-driven build and run flow
 
-The project is intended as a learning and experimentation platform for compiler engineering. The long-term target is to continue improving the IR/backend layers and eventually support GPU-oriented backends.
+The codebase is still exploratory, but it already supports real end-to-end compilation for a meaningful subset of the language.
 
-## Current Features
+## Current Feature Snapshot
 
-- Function declarations with typed parameters and return types
-- Variable declarations (`var` and `const`) with explicit types
-- Variable assignment statements
-- Return statements
-- If/else statements
-- While loops
-- Struct declarations with properties and methods
-- Function call expressions and function call statements
-- Primitive types: `int`, `float`, `bool`, `string`, `void`
-- Binary expressions with precedence parsing
-- CLI commands for running and building `.mn` files
+### Statements
+
+- variable declarations
+- assignment statements
+- return statements
+- `if` / `else`
+- `while`
+- function declarations
+- struct declarations
+- print statements
+- expression statements for function calls
+
+### Expressions
+
+- integer, float, bool, and string literals
+- identifiers
+- unary expressions (`-`, `!`)
+- binary arithmetic and comparison expressions
+- equality expressions
+- boolean `&&` and `||`
+- function calls
+- member access
+- struct initialization
+- array literals
+
+### Types
+
+- `int`
+- `float`
+- `bool`
+- `string`
+- `void`
+- named struct types
+- array type syntax via `TypeRef.is_array`
 
 ## Current Compilation Pipeline
 
-1. Source file is selected through the CLI (`midnight run <file.mn>` or `midnight build <file.mn>`).
-2. Lexer tokenizes the source into `Token` values.
-3. Parser builds a list of AST statements.
-4. Semantic analyzer validates symbols, scope, mutability, and type compatibility.
-5. IR lowering converts AST/semantic output into compiler IR.
-6. The selected backend emits assembly/object output.
-7. The toolchain links an executable.
-8. `run` executes the artifact; `build` leaves the artifact on disk.
+1. source file is selected through the CLI
+2. lexer tokenizes input
+3. parser builds pointer-based AST nodes under `src/ast/`
+4. semantic analyzer checks scopes, types, mutability, calls, returns, structs, and prints
+5. IR lowering converts AST plus semantic info into `src/ir/ir.zig` instructions
+6. selected backend emits LLVM IR, object code, or x86_64 assembly
+7. toolchain links an executable when requested
+8. `run` executes the resulting artifact
 
-## Notable Implementation Details
+## Sample Programs In The Repository
 
-- The analyzer file is named `anaylzer.zig` (typo in filename).
-- CLI execution uses the process arena allocator provided by Zig startup.
-- The parser and semantic analyzer operate over pointer-based AST nodes.
-- Default generated artifacts use `/tmp/midnight-build-<pid>` to avoid executable permission issues on mounted drives.
+- `src/data/test3.mn`: loop-heavy benchmark-style sample using function calls and `print`
+- `src/data/simple.mn`: variables, structs, conditionals, prints, and arithmetic
+- `src/data/struct.mn`: richer struct usage, nested initialization, and recursive function examples
+- `src/data/ir.mn`: mixed experimental syntax and future-facing constructs, useful as a feature sketch more than a guaranteed passing sample
 
-## CLI Usage
+## Practical Notes
 
-```bash
-zig build run -- run src/data/test3.mn
-zig build run -- build src/data/test3.mn -o /tmp/midnight-build/app
-```
+- The semantic analyzer filename is still `src/semantic/anaylzer.zig`.
+- The default backend is LLVM.
+- Generated executable paths are placed under `/tmp/midnight-build-<pid>` by default to avoid execution issues on mounted drives.
+- Repository-local execution on `vfat` mounts can fail because of Zig cache execution rules and filesystem executable limitations.
 
-When the repository is on a mounted `vfat` drive, use external Zig cache and prefix directories:
+## Current Constraints
 
-```bash
-zig build run \
-  --cache-dir /tmp/midnight-zig-cache \
-  --global-cache-dir /tmp/midnight-zig-global-cache \
-  --prefix /tmp/midnight-zig-out \
-  -- run src/data/test3.mn
-```
-
-## Current Known Limitations
-
-Function codegen and advanced language features are still partial. Some programs may pass parsing and semantic analysis but fail during backend emission or linking.
+- array indexing and array element mutation are not fully supported end-to-end
+- struct method receiver semantics are incomplete
+- return checking is not fully path-sensitive
+- diagnostics are still raw Zig error propagation rather than polished compiler diagnostics

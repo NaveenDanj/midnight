@@ -1,94 +1,147 @@
 # Semantic Analysis
 
-## Core Components
+## Main Components
 
-- `SemanticAnalyzer`: orchestrates semantic checks
-- `ScopeStack`: nested lexical scopes
-- `Symbol`: name, kind, type, immutability, function params
-- `Type` and `TypeKind`: simple nominal type system
+- `SemanticAnalyzer`: statement-level orchestration
+- `ExprTypeChecker`: expression typing
+- `AssignmentChecker`: declarations and assignments
+- `FunctionChecker`: function declarations, calls, and returns
+- `StructChecker`: struct declarations and struct initialization checks
+- `ScopeStack`: nested lexical scope management
+- `SemanticContext`: registered structs and functions
+- `SemanticResult`: resolved semantic metadata reused by IR lowering
 
 ## Scope Model
 
-`ScopeStack` operations:
+`ScopeStack` supports:
 
-- `pushScope()` creates a new hash map scope
-- `popScope()` removes current scope
-- `declareSymbol()` inserts symbol into current scope and prevents redeclaration in same scope
-- `lookupSymbol()` searches from innermost scope outward
+- `pushScope()`
+- `popScope()`
+- `declareSymbol()`
+- `lookupSymbol()`
 
-## Analyzer Workflow
+Lookup walks from innermost scope outward.
+
+## Symbol Kinds
+
+Current symbol kinds:
+
+- `variable`
+- `function`
+- `parameter`
+- `structure`
+
+Parameters are tracked distinctly from variables, which matters for assignment semantics and function analysis.
+
+## Semantic Workflow
 
 ### Program level
 
-- creates global scope
-- visits each top-level statement
+- create global scope
+- analyze top-level statements in order
 
 ### Function declarations
 
-1. collects parameter types
-2. declares function symbol in enclosing scope
-3. enters function-local scope
-4. validates return behavior against declared return type
-5. declares parameters as local symbols
-6. analyzes function body block
+1. resolve parameter types
+2. declare the function in scope and semantic context
+3. push a function-local scope
+4. declare parameters
+5. analyze the function body
+6. validate return usage against the declared return type
 
-### Block statements
+### Blocks
 
-- each block introduces a new scope
-- analyzes nested statements in that scope
+- each block pushes a nested scope
+- statements are analyzed sequentially
 
-## Type Compatibility Rules
+### Expression statements
 
-`areTypesCompatible(expected, actual)` currently implements:
+- bare function calls such as `loop(100);` are accepted
+- non-call expression statements are still rejected as unsupported semantic statements
 
-- `void` expected type: always incompatible
-- `string` expected type: only `string` actual
-- numeric expected types (`int` or `float`): both numeric types accepted
-- otherwise exact kind equality
+## Type System Snapshot
 
-This means numeric assignment/calls are permissive across int/float.
+Current type kinds:
 
-Additional current behavior:
+- `INT`
+- `FLOAT`
+- `BOOL`
+- `STRING`
+- `VOID`
+- `FUNCTION`
+- `STRUCT`
+- `EMPTY`
 
-- struct compatibility checks include struct-name equality
-- array shape (`isArray`) participates in practical compatibility through expression typing flow
-- empty array literals produce `EMPTY` kind and can initialize typed arrays
+`Type` also tracks:
 
-## Expression Type Evaluation
+- `struct_name`
+- `isArray`
 
-Supported expression typing:
+## What Is Checked Today
 
-- literals resolve to primitive types
-- identifier resolves from symbol table
-- function call resolves from function symbol return type
-- member access resolves against struct field/method declarations
-- unary expressions:
-  - `-expr` requires numeric operand
-  - `!expr` requires boolean operand
-- array literals:
-  - empty arrays resolve to `EMPTY` array type
-  - non-empty arrays require homogeneous element types and resolve to typed array
-- binary expressions:
-  - arithmetic operators require numeric compatibility (plus allows string concatenation)
-  - equality operators return `bool`
+### Variable declarations
 
-## Implemented Semantic Checks
+- declared type must be assignable from initializer type
+- `const` and `var` declarations are added to scope
+- struct initializers are checked field-by-field
+- typed arrays can be initialized from homogeneous array literals
+- empty array literals are allowed through `EMPTY`
 
-- variable declaration type compatibility
-- assignment target exists and is mutable
-- member assignment checks struct field existence, mutability, and assignment type compatibility
-- assignment expression type compatibility
-- if/while condition must be `bool`
-- function symbol lookup and call argument count/type checks
-- missing return in non-void function
-- value return in void function rejected
-- struct declarations are added to semantic scope/context as structure symbols
-- struct initialization validates field names, types, and required-field initialization
+### Assignments
 
-## Known Semantic Gaps
+- assignment target must resolve in scope
+- immutable targets are rejected
+- identifier assignments check type compatibility
+- member assignments validate field existence and mutability
+- array assignment rules exist in the checker, but end-to-end indexing support is still incomplete elsewhere
 
-- Struct method bodies are not fully analyzed with receiver-aware member semantics.
-- Function call expression branch returns symbol type but expression resolvedType annotations are still partial.
-- Return-flow analysis is shallow (no full control-flow path analysis).
-- Analyzer allocates temporary `Statement` wrappers in some checks that are unused and can be removed.
-- Error variants are broad (`TypeMismatch`) for many distinct causes.
+### Control flow
+
+- `if` and `while` conditions must be `bool`
+
+### Functions
+
+- declared functions are registered in semantic context
+- call argument count must match
+- call argument types must be assignable
+- return expressions are checked against declared return type
+
+### Structs
+
+- struct declarations are registered in context
+- field types are resolved
+- struct initialization requires known fields and compatible values
+
+### Prints
+
+- print statements record their resolved type
+- printing structs is rejected
+
+## Expression Typing
+
+The expression type checker handles:
+
+- literals
+- identifiers
+- unary expressions
+- binary expressions
+- function calls
+- member access
+- array literals
+- array access typing paths
+- struct initialization expressions
+
+Notable rules:
+
+- numeric operators accept numeric operands
+- `+` also supports string concatenation
+- equality and comparison operators return `bool`
+- boolean operators expect boolean operands
+- member access resolves through struct metadata
+
+## Current Weak Spots
+
+- diagnostics are broad, often returning `TypeMismatch` for many distinct causes
+- receiver-aware semantics inside struct methods are still limited
+- return-flow validation is not fully path-sensitive
+- array indexing support is only partially implemented across parser, semantics, IR, and backend

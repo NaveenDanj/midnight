@@ -1,8 +1,8 @@
 # Midnight Documentation Index
 
-This folder contains technical documentation for the Midnight programming language compiler written in Zig.
+This folder contains technical and user-facing documentation for the Midnight compiler project.
 
-Last refreshed: 2026-07-22
+Last refreshed: 2026-07-25
 
 ## Contents
 
@@ -16,4 +16,4 @@ Last refreshed: 2026-07-22
 8. [Error Model](./error-model.md)
 9. [Examples](./examples.md)
 10. [Roadmap](./roadmap.md)
-11. [Recent Changes Since Last Docs Update](./changelog.md)
+11. [Recent Changes](./changelog.md)

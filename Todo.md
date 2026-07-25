@@ -33,6 +33,6 @@
 [X] Struct member access and method calls semantic checks
 [X] More expression types (unary, ternary, etc.)
 🔲 Full error reporting with line numbers and context
-🔲 Intermediate Representation (IR) generation
+[x] Intermediate Representation (IR) generation
 🔲 Optional: Optimizations
-🔲 Optional: Code emission / target backend
+[x] Optional: Code emission / target backend

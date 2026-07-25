@@ -4,140 +4,181 @@
 
 ```text
 source (.mn)
-  -> lexer (Token stream)
-  -> parser (AST statements/expressions)
-  -> semantic analyzer (scope + type checks)
+  -> lexer
+  -> parser
+  -> semantic analyzer
   -> IR lowering
-  -> backend emission (LLVM or x86_64)
-  -> toolchain link
+  -> backend emission
+  -> link
   -> optional run
 ```
 
-## Core Modules
+## Main Modules
 
 ### Entrypoint
 
 - `src/main.zig`
-- Responsibilities:
-  - parse CLI commands
-  - dispatch `run` and `build`
-  - translate CLI options into compiler pipeline options
+- parses CLI arguments
+- dispatches `run`, `build`, `help`, and `version`
 
 ### CLI Layer
 
-- `src/cli/commands.zig`: command parser and help text
-- `src/cli/options.zig`: shared option structs for `run` and `build`
+- `src/cli/commands.zig`
+- `src/cli/compiler_options.zig`
+- `src/cli/handle_commands.zig`
+- `src/cli/options.zig`
+
+Responsibilities:
+
+- parse command-line arguments
+- translate flags to pipeline options
+- print help and version output
 
 Supported commands:
 
 ```bash
 midnight run <file.mn>
 midnight build <file.mn> [-o output]
-```
-
-When invoked through Zig:
-
-```bash
-zig build run -- run src/data/test3.mn
-zig build run -- build src/data/test3.mn -o /tmp/midnight-build/app
+midnight help
+midnight version
 ```
 
 ### Compiler Pipeline
 
 - `src/compiler/pipeline.zig`
-- Responsibilities:
-  - read source files
-  - run lexer, parser, semantic analyzer, and IR lowering
-  - emit assembly or object output through the selected backend
-  - link and optionally run the result
+
+Responsibilities:
+
+- read source text
+- run lexer, parser, semantic analyzer, and IR lowering
+- optionally emit assembly or LLVM IR
+- optionally link an executable
+- optionally run the executable
+
+### AST Layer
+
+- `src/ast/expr.zig`
+- `src/ast/stmt.zig`
+- `src/ast/type_ref.zig`
+
+This layer is the shared syntax model consumed by parser, semantic analysis, and IR lowering.
 
 ### Lexer Layer
 
-- `src/lexer/tokens.zig`: token enum and token struct
-- `src/lexer/keywords.zig`: identifier-to-keyword mapping
-- `src/lexer/lexer.zig`: scanner state machine and token emission
+- `src/lexer/tokens.zig`
+- `src/lexer/keywords.zig`
+- `src/lexer/lexer.zig`
 
 ### Parser Layer
 
-- `src/parser/parser.zig`: parser cursor, token navigation helpers, program loop
-- `src/parser/lib/`: statement and expression parsers
-  - `parseExpr.zig`: Pratt-like precedence parser
-  - `parseStatement.zig`: statement dispatcher
-  - `parseFunctionDecl.zig`: function declarations and returns
-  - `parseVarDec.zig`: variable declarations and assignments
-  - `parseIf.zig`, `parseWhile.zig`, `parseBlock.zig`
-  - `parseStruct.zig`: struct declarations
+- `src/parser/parser.zig`
+- `src/parser/lib/parseStatement.zig`
+- `src/parser/lib/parseExpr.zig`
+- `src/parser/lib/parseFunctionDecl.zig`
+- `src/parser/lib/parseVarDec.zig`
+- `src/parser/lib/parseStruct.zig`
+- `src/parser/lib/parseIf.zig`
+- `src/parser/lib/parseWhile.zig`
+- `src/parser/lib/parseBlock.zig`
+- `src/parser/lib/parseTypeRef.zig`
 
 ### Semantic Layer
 
-- `src/semantic/types.zig`: type system and literal wrappers
-- `src/semantic/symbol.zig`: symbol representation
-- `src/semantic/scope.zig`: nested scope stack
-- `src/semantic/anaylzer.zig`: semantic passes for statements/expressions
-- `src/semantic/semantic_error.zig`: semantic error set
+- `src/semantic/anaylzer.zig`
+- `src/semantic/expr_type_checker.zig`
+- `src/semantic/function_checker.zig`
+- `src/semantic/assignment_checker.zig`
+- `src/semantic/struct_checker.zig`
+- `src/semantic/type_compatibility.zig`
+- `src/semantic/context.zig`
+- `src/semantic/scope.zig`
+- `src/semantic/symbol.zig`
+- `src/semantic/types.zig`
 
-### IR and Backend Layers
+Responsibilities:
 
-- `src/ir/`: IR instruction model and lowering
-- `src/backend/llvm/`: LLVM backend
-- `src/backend/x86_64/`: x86_64 assembly backend
-- `src/backend/toolchain.zig`: assembly/object writing, linking, and artifact execution
+- scope creation and symbol lookup
+- type compatibility checks
+- variable declaration and assignment validation
+- function declaration, call, and return validation
+- struct declaration and struct initialization validation
+- print statement validation
 
-## AST Ownership Strategy
+### IR Layer
 
-- AST nodes are heap allocated (`allocator.create`) and linked by pointers.
-- Parsed statement list is returned as `[]*Statement`.
-- Expression trees use recursive pointer references (`Binary.left`, `Binary.right`).
+- `src/ir/ir.zig`
+- `src/ir/builder.zig`
+- `src/ir/lower.zig`
+- `src/ir/lib/lowerExpr.zig`
+- `src/ir/lib/lowerFlowControl.zig`
+- `src/ir/lib/lowerFunction.zig`
+- `src/ir/lib/lowerStruct.zig`
+- `src/ir/lib/lowerVar.zig`
 
-## Build System
+Responsibilities:
 
-`build.zig` defines:
+- encode backend-facing instructions
+- assign temps and labels
+- lower AST control flow into jumps and labels
+- preserve semantic type information where backends need it
 
-- module `midnight` rooted at `src/root.zig`
-- executable `midnight` rooted at `src/main.zig`
-- top-level step `zig build run`
-- top-level step `zig build test`
+### Backend Layer
 
-## Data Model Summary
+- `src/backend/llvm/`
+- `src/backend/x86_64/`
+- `src/backend/toolchain.zig`
 
-### Token
+Current backend split:
 
-- kind (`TokenType`)
-- lexeme slice
-- line and column counters
+- LLVM backend can emit LLVM IR, assembly, and object files
+- x86_64 backend emits assembly
+- toolchain support links and runs final artifacts
 
-### Statement union variants
+## AST Summary
 
-- FunctionDecl
-- Block
-- VariableDecl
-- ReturnStatement
-- IfStatement
-- WhileStatement
-- StructDecl
-- VarAssignment
-- FunctionCallStatement
+### Statement variants
 
-### Expression union variants
+- `PrintStatement`
+- `FunctionDecl`
+- `Block`
+- `VariableDecl`
+- `ReturnStatement`
+- `IfStatement`
+- `WhileStatement`
+- `StructDecl`
+- `VarAssignment`
+- `FunctionCallStatement`
+- `ExpressionStmt`
 
-- Binary
-- IntLiteral
-- FloatLiteral
-- BoolLiteral
-- StringLiteral
-- Identifier
-- FunctionCall
+### Expression variants
 
-## Design Strengths
+- `Binary`
+- `IntLiteral`
+- `FloatLiteral`
+- `BoolLiteral`
+- `StringLiteral`
+- `Identifier`
+- `ArrayLiteral`
+- `ArrayAccess`
+- `FunctionCall`
+- `MemberAccess`
+- `StructInit`
+- `ExpressionStmt`
+- `Unary`
 
-- Clear module boundaries by compilation phase
-- Good use of explicit AST types
-- Scope lookup from innermost to outermost is clean
-- Precedence parsing structure is easy to extend
+## Build System Notes
 
-## Current Constraints
+`build.zig` currently:
 
-- No separate diagnostic reporting layer (errors are propagated as Zig errors)
-- No parser recovery strategy
-- Function codegen is still partial
-- CLI supports `run` and `build`; additional commands like `check`, `ir`, and `asm` are planned
+- defines the reusable `midnight` module at `src/root.zig`
+- defines the CLI executable at `src/main.zig`
+- configures LLVM include and library paths through `llvm-config`
+- exposes `zig build run`
+- exposes `zig build test`
+
+## Current Architectural Constraints
+
+- diagnostics are still error-set driven, not structured diagnostic objects
+- control-flow and return analysis are still shallow compared to a CFG-based design
+- some IR instruction variants exist ahead of complete backend support
+- the sample programs under `src/data/` mix stable coverage examples with experimental inputs

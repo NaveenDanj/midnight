@@ -2,46 +2,43 @@
 
 ## Prerequisites
 
-- Zig 0.15.2 or compatible 0.15.x toolchain
-- Windows, Linux, or macOS terminal
+- Zig `0.15.2` or a compatible `0.15.x` release
+- LLVM development tools discoverable through `llvm-config`
+- a Unix-like shell environment for the current build and run flow
 
-## Build and Run
+## Basic Commands
 
-From repository root:
+Run the current sample program:
 
 ```bash
 zig build run -- run src/data/test3.mn
 ```
 
-This compiles the Midnight CLI and asks it to run the sample source file at `src/data/test3.mn`.
-
-To build a Midnight program without running it:
+Build a Midnight program without running it:
 
 ```bash
 zig build run -- build src/data/test3.mn -o /tmp/midnight-build/app
 ```
 
-Then run the generated executable directly:
+Run the generated program:
 
 ```bash
 /tmp/midnight-build/app
 ```
 
-## CLI Commands
+Print CLI help:
 
 ```bash
-midnight run <file.mn>
-midnight build <file.mn> [-o output]
+zig build run -- help
 ```
 
-When invoking through Zig, put Midnight CLI arguments after `--`:
+Show the compiler version:
 
 ```bash
-zig build run -- run src/data/test3.mn
-zig build run -- build src/data/test3.mn -o /tmp/midnight-build/app
+zig build run -- version
 ```
 
-Supported options:
+## Useful Flags
 
 ```text
 --backend llvm|x86_64
@@ -51,13 +48,20 @@ Supported options:
 -o, --output <path>
 ```
 
-The default backend is `llvm`.
+Examples:
 
-## Mounted Drive Note
+```bash
+zig build run -- run src/data/test3.mn --emit-ir
+zig build run -- run src/data/test3.mn --emit-llvm-ir
+zig build run -- run src/data/test3.mn --backend x86_64 --emit-asm
+zig build run -- build src/data/test3.mn --backend llvm -o /tmp/midnight-build/app
+```
 
-If the repository is on a `vfat` mounted drive such as `/run/media/naveendanj/STORAGE`, plain `zig build run` may fail with `AccessDenied` because Zig tries to execute its build runner from `.zig-cache` inside the repository.
+## Mounted Drive Notes
 
-Use external cache and install directories:
+If the repository is on a mounted `vfat` drive such as `/run/media/naveendanj/STORAGE`, plain `zig build run` may fail with `AccessDenied` because Zig tries to execute cached build artifacts inside the repository.
+
+Use external cache and install directories instead:
 
 ```bash
 zig build run \
@@ -67,41 +71,41 @@ zig build run \
   -- run src/data/test3.mn
 ```
 
-## Run Tests
+If you build a binary directly onto that `vfat` mount, it may also fail to run as `./build/out` because the mount can require an executable extension such as `.exe`. Outputs under `/tmp` avoid that problem.
+
+## What The Compiler Does Today
+
+For `midnight run <file.mn>`, the project currently:
+
+1. reads the source file
+2. lexes it into tokens
+3. parses it into AST nodes
+4. runs semantic analysis
+5. lowers to IR
+6. emits assembly or LLVM object/IR output
+7. links an executable
+8. optionally runs the executable
+
+## Tests
+
+Run the test suite with:
 
 ```bash
 zig build test
 ```
 
-`build.zig` defines test execution for both:
-
-- module tests (`src/root.zig`)
-- executable-root tests (`src/main.zig`)
+The tree currently includes parser, semantic, IR, backend, and pipeline tests.
 
 ## Project Layout
 
-- `src/main.zig`: CLI entrypoint and command dispatcher
-- `src/cli/`: command parsing and CLI options
-- `src/compiler/`: compiler pipeline orchestration
-- `src/backend/`: LLVM, x86_64, and toolchain integration
-- `src/ir/`: IR instruction model and lowering
-- `src/lexer/`: token and lexical scanner logic
-- `src/parser/`: parser state, AST statement/expression builders
-- `src/parser/lib/`: statement-specific parsing modules
-- `src/semantic/`: type system, scope stack, symbol table, semantic analyzer
-- `src/tests/`: sample Midnight source files
-
-## Current Execution Behavior
-
-For `midnight run <file.mn>`, the compiler currently:
-
-1. reads the source file
-2. lexes tokens
-3. parses statements
-4. runs semantic analysis
-5. lowers to IR
-6. emits backend output
-7. links an executable
-8. runs the executable
-
-If semantic errors are found, execution terminates with a Zig error trace.
+- `src/main.zig`: CLI entrypoint
+- `src/cli/`: command parsing and option translation
+- `src/compiler/`: compilation pipeline
+- `src/ast/`: AST node definitions
+- `src/lexer/`: lexer and token definitions
+- `src/parser/`: parser and parse helpers
+- `src/semantic/`: semantic analysis, scopes, symbols, and types
+- `src/ir/`: IR instructions and lowering
+- `src/backend/`: LLVM backend, x86_64 backend, and toolchain integration
+- `src/data/`: sample Midnight programs
+- `src/tests/`: Zig test coverage

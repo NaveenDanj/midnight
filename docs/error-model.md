@@ -10,7 +10,7 @@ Defined in `src/parser/error.zig`:
 - `TokenNotFound`
 - `OutOfMemory`
 
-Parser and parse helpers return these errors directly.
+These are returned directly by parser helpers and the main parser loop.
 
 ## Semantic Errors
 
@@ -24,26 +24,44 @@ Defined in `src/semantic/semantic_error.zig`:
 - `MissingReturnStatement`
 - `SymbolImmutable`
 - `ArgumentCountMismatch`
+- `FunctionAlreadyDeclared`
+- `StructAlreadyDeclared`
+- `StructFieldMismatch`
+- `StructFieldUnIntialized`
+- `UnsupportedStatement`
 
-Semantic analyzer propagates these errors directly to caller (`main.zig`).
+Current common sources:
 
-## Runtime Diagnostic Behavior
+- `TypeMismatch`: incompatible assignment, invalid operand types, bad condition types, or bad return types
+- `UnsupportedStatement`: non-call expression statements in semantic analysis
+- `MissingReturnStatement`: non-void function without a direct return the current analysis can see
 
-- On error, Zig prints stack trace with file and line locations.
-- No compiler-specific pretty diagnostics are emitted yet.
-- No source snippet extraction or caret-style user-facing diagnostics yet.
+## Backend Errors
 
-## Recommended Diagnostic Improvements
+LLVM backend errors currently include:
 
-1. Define unified compiler diagnostic struct with:
-   - phase (`lexer`, `parser`, `semantic`)
-   - message
-   - token/span location
-   - optional note list
-2. Replace broad `TypeMismatch` with targeted variants:
-   - `InvalidBinaryOperandTypes`
-   - `InvalidReturnType`
-   - `InvalidAssignmentType`
-   - `ConditionMustBeBool`
-3. Preserve original token line/column and lexeme for all diagnostics.
-4. Add parser synchronization points (for example at `;` or `}`) to continue after certain syntax errors.
+- `ArgumentCountMismatch`
+- `FunctionNotFound`
+- `MissingResolvedType`
+- `UnsupportedBinaryOperation`
+- `UnsupportedInstruction`
+- `UnsupportedType`
+- `UnsupportedValue`
+- `LLVMModuleVerificationFailed`
+- target initialization and emission failures
+
+x86_64 backend errors include unsupported instruction and type cases where lowering is incomplete.
+
+## Current Diagnostic Behavior
+
+- errors bubble up as Zig errors
+- Zig prints stack traces with source locations
+- there is no compiler-specific pretty printer yet
+- there are no source snippets or caret diagnostics yet
+
+## Recommended Next Improvements
+
+1. Replace generic `TypeMismatch` cases with more precise semantic errors.
+2. Attach source spans to AST nodes and diagnostics.
+3. Add user-facing compiler messages instead of raw Zig stack traces for normal compile failures.
+4. Distinguish unsupported features from actual malformed user programs more clearly.

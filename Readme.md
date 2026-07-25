@@ -1,28 +1,37 @@
 # Midnight
 
-Midnight is a personal programming language and compiler project written in Zig.
-The current implementation covers lexer, parser, AST construction, and a semantic analysis pass.
+Midnight is a small programming language and compiler project written in Zig. The current codebase includes a full source-to-executable pipeline:
 
-## Table of Contents
-
-1. [Quick Start](#quick-start)
-2. [CLI Usage](#cli-usage)
-3. [Current Status](#current-status)
-4. [Documentation](#documentation)
-5. [Repository Structure](#repository-structure)
-6. [Known Runtime Limitation](#known-runtime-limitation)
-7. [Roadmap](#roadmap)
+- lexer
+- parser and AST construction
+- semantic analysis
+- IR lowering
+- LLVM and x86_64 backend paths
+- CLI commands for building and running `.mn` programs
 
 ## Quick Start
 
 Prerequisites:
 
-- Zig 0.15.2 (or compatible 0.15.x)
+- Zig `0.15.2` or another compatible `0.15.x` release
+- LLVM development tools available to `llvm-config` for the LLVM backend build
 
-Build and run:
+Run the sample program:
 
 ```bash
 zig build run -- run src/data/test3.mn
+```
+
+Build a Midnight source file without running it:
+
+```bash
+zig build run -- build src/data/test3.mn -o /tmp/midnight-build/app
+```
+
+Run the produced executable:
+
+```bash
+/tmp/midnight-build/app
 ```
 
 Run tests:
@@ -31,23 +40,27 @@ Run tests:
 zig build test
 ```
 
-## CLI Usage
+## CLI
 
-Midnight currently supports two CLI commands:
+Midnight currently supports:
 
 ```bash
 midnight run <file.mn>
 midnight build <file.mn> [-o output]
+midnight version
+midnight help
 ```
 
-When running through Zig build, pass CLI arguments after `--`:
+When invoking through Zig, place Midnight CLI arguments after `--`:
 
 ```bash
 zig build run -- run src/data/test3.mn
 zig build run -- build src/data/test3.mn -o /tmp/midnight-build/app
+zig build run -- run src/data/test3.mn --backend x86_64 --emit-ir
+zig build run -- run src/data/test3.mn --backend llvm --emit-llvm-ir
 ```
 
-Available options:
+Supported options:
 
 ```text
 --backend llvm|x86_64
@@ -57,9 +70,14 @@ Available options:
 -o, --output <path>
 ```
 
-The default backend is `llvm`. By default, generated executables are placed under a per-process `/tmp/midnight-build-<pid>` directory so the compiler can run even when the repository is stored on a mounted drive that blocks executable files.
+Defaults:
 
-If this repository is on `/run/media/naveendanj/STORAGE`, use external Zig cache and prefix directories:
+- backend: `llvm`
+- build output: a per-process directory under `/tmp/midnight-build-<pid>`
+
+## Mounted Drive Notes
+
+If the repository lives on a mounted `vfat` drive such as `/run/media/...`, Zig may fail to execute build artifacts from the repository-local cache with `AccessDenied`. In that case, use external cache and install directories:
 
 ```bash
 zig build run \
@@ -69,36 +87,103 @@ zig build run \
   -- run src/data/test3.mn
 ```
 
-## Current Status
+Also note that executables written directly onto `vfat` mounts with `showexec` may not run unless they have a DOS-style executable extension such as `.exe`. Writing outputs under `/tmp` avoids that issue.
 
-Implemented:
+## Current Language Surface
 
-- Lexer and token model
-- Pratt-style expression parsing with precedence
-- Statement parsing for:
-  - variable declarations (`var`, `const`)
-  - assignment
-  - `if` / `else`
-  - `while`
-  - function declarations
-  - function calls
-  - struct declarations
-- AST node allocation and tree construction
-- Semantic analysis for:
-  - scope stack and symbol table management
-  - declaration and assignment checks
-  - basic type compatibility checks
-  - if/while condition type checks
-  - function call argument checks
-  - function return checks
-- CLI commands:
-  - `run`
-  - `build`
-- Compiler pipeline for lexing, parsing, semantic analysis, IR lowering, backend emission, linking, and optional execution
+Implemented and documented in the current tree:
+
+- variable declarations with `var` and `const`
+- typed function declarations and returns
+- `if` / `else`
+- `while`
+- assignments
+- function calls in expression and statement position
+- primitive types: `int`, `float`, `bool`, `string`, `void`
+- unary operators: `-`, `!`
+- binary arithmetic, comparison, equality, and boolean operators
+- struct declarations with fields and methods
+- struct initialization
+- member access and member assignment
+- array type syntax and array literals
+- print statements
+
+## Current Compiler Pipeline
+
+```text
+source (.mn)
+  -> lexer
+  -> parser
+  -> semantic analyzer
+  -> IR lowering
+  -> backend emission
+  -> link
+  -> optional run
+```
+
+The project now has real IR and backend phases, so the docs in `docs/` describe both frontend and backend work, not just parsing and semantic analysis.
+
+## Examples
+
+Recursive function:
+
+```mn
+func factorial(int n) int {
+    if (n == 1) {
+        return 1;
+    }
+
+    return n * factorial(n - 1);
+}
+
+print(factorial(5));
+```
+
+Loop and mutation:
+
+```mn
+func countdown(int start) int {
+    var int current = start;
+
+    while (current > 0) {
+        print(current);
+        current = current - 1;
+    }
+
+    return 0;
+}
+
+countdown(3);
+```
+
+Struct and nested assignment:
+
+```mn
+struct Sample {
+    var int a;
+    var int b;
+}
+
+struct Person {
+    var string first_name;
+    var Sample sample;
+}
+
+var Person person = Person{
+    first_name = "Naveen",
+    sample = Sample{
+        a = 10,
+        b = 20
+    }
+};
+
+person.sample.a = 99;
+print(person.first_name);
+```
+
+More examples are in [docs/examples.md](docs/examples.md).
 
 ## Documentation
-
-All detailed documentation is available under the `docs` folder.
 
 - [Documentation Index](docs/index.md)
 - [Project Overview](docs/overview.md)
@@ -111,53 +196,35 @@ All detailed documentation is available under the `docs` folder.
 - [Error Model](docs/error-model.md)
 - [Examples](docs/examples.md)
 - [Roadmap](docs/roadmap.md)
+- [Changelog](docs/changelog.md)
 
-## Repository Structure
+## Repository Layout
 
 ```text
 .
-|- build.zig
-|- build.zig.zon
 |- Readme.md
-|- Todo.md
+|- build.zig
 |- docs/
-|  |- index.md
-|  |- overview.md
-|  |- getting-started.md
-|  |- language-spec.md
-|  |- compiler-architecture.md
-|  |- lexer.md
-|  |- parser.md
-|  |- semantic-analysis.md
-|  |- error-model.md
-|  |- examples.md
-|  |- roadmap.md
 |- src/
-   |- main.zig
-   |- root.zig
-   |- cli/
-   |- compiler/
-   |- backend/
-   |- ir/
-   |- lexer/
-   |- parser/
-   |- semantic/
-   |- tests/
+|  |- ast/
+|  |- backend/
+|  |- cli/
+|  |- compiler/
+|  |- data/
+|  |- ir/
+|  |- lexer/
+|  |- parser/
+|  |- semantic/
+|  |- tests/
 ```
 
-## Known Runtime Limitation
+## Known Gaps
 
-Function codegen and advanced language features are still partial. Some programs may pass parsing and semantic analysis but fail during backend emission or linking.
-
-## Roadmap
-
-Primary next steps:
-
-1. Struct member access and method semantics
-2. Unary/member expression support in parser and semantic analysis
-3. Better diagnostics with source spans
-4. Typed AST completion and improved return-flow analysis
-5. More complete function codegen and CLI commands such as `check`, `ir`, and `asm`
+- array indexing and array element assignment are present in the IR model but not fully implemented end-to-end
+- struct method receiver semantics are still incomplete
+- return-flow analysis is still shallow rather than fully path-sensitive
+- diagnostics are still surfaced as Zig errors rather than user-friendly compiler messages
 
 ## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE).

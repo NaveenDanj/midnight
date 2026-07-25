@@ -1,51 +1,38 @@
-func factorial(int n) int {
+func matrixBenchmark() int {
 
-    if(n == 0) {
-        return 0;
-    }
-        
-    if (n == 1) {
-        return 1;
+    var int size = 200;
+
+    var int i = 0;
+    var int j = 0;
+    var int k = 0;
+
+    var int result = 0;
+
+
+    while(i < size) {
+
+        j = 0;
+
+        while(j < size) {
+
+            k = 0;
+
+            while(k < size) {
+
+                result = result + (i * j) + k;
+
+                k = k + 1;
+            }
+
+            j = j + 1;
+        }
+
+        i = i + 1;
     }
 
-    return n * factorial(n-1); 
+
+    return result;
 }
 
-func fib(int n) int {
 
-    if(n == 0) {
-        return 0;
-    }
-        
-    if (n == 1) {
-        return 1;
-    }
-
-    return fib(n-1) + fib(n-2);
-}
-
-func loop(int val) void {
-    
-    while(val > 0){
-        print(val);
-        print("");
-        val = val - 1;
-    }
-
-}
-
-var int val = factorial(10);
-var int fib_val = fib(10); 
-
-print("factorial : ");
-print(val);
-print("");
-
-print("fibbonachi : ");
-print(fib_val);
-print("");
-
-var int test2 = 100;
-loop(test2);
-print("");
-print(test2);
+print(matrixBenchmark());

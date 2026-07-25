@@ -1,58 +1,55 @@
 # Language Specification (Current)
 
-This document describes the currently implemented syntax and semantics based on parser and analyzer code.
+This document describes the language surface that the current Midnight parser and semantic analyzer are aiming to support today.
 
 ## Lexical Elements
 
-### Punctuation and delimiters
+### Delimiters
 
-- `;` statement terminator
-- `,` separator
-- `(` `)` grouping and parameter lists
-- `{` `}` blocks and struct initializers
-- `[` `]` array literals and array type suffixes
-- `.` member access
+- `;`
+- `,`
+- `(`
+- `)`
+- `{`
+- `}`
+- `[`
+- `]`
+- `.`
 
 ### Operators
 
-- Assignment: `=`
-- Equality: `==`, `!=`
-- Arithmetic: `+`, `-`, `*`, `/`
-- Comparison: `<`, `<=`, `>`, `>=`
-- Unary: `-`, `!`
+- assignment: `=`
+- equality: `==`, `!=`
+- comparison: `<`, `<=`, `>`, `>=`
+- arithmetic: `+`, `-`, `*`, `/`, `%`
+- boolean: `&&`, `||`
+- unary: `-`, `!`
 
 ### Keywords
 
-- Control flow: `if`, `else`, `while`, `return`
-- Declarations: `func`, `var`, `const`, `struct`
-- Literals: `true`, `false`
-- Special keyword: `empty`
-- Type keywords: `int`, `float`, `bool`, `void`, `string`
-
-### Literals
-
-- Integer literals
-- Float literals
-- String literals (double quoted)
-- Boolean literals (`true`, `false`)
-- Array literals (`[expr, expr, ...]`)
+- control flow: `if`, `else`, `while`, `return`
+- declarations: `func`, `var`, `const`, `struct`
+- built-in statement: `print`
+- literals: `true`, `false`
+- special keyword: `empty`
+- primitive type names: `int`, `float`, `bool`, `void`, `string`
 
 ## Types
 
-Supported type kinds:
+Supported semantic type kinds:
 
 - `INT`
 - `FLOAT`
 - `BOOL`
 - `STRING`
 - `VOID`
-- `FUNCTION` (used in symbol/type tagging)
+- `FUNCTION`
 - `STRUCT`
-- `EMPTY` (used for empty array semantic flow)
+- `EMPTY`
 
-`Type` also tracks `isArray`, so declarations like `int[]` are represented as array-typed values.
+Array-typed values are represented by `Type.isArray`.
 
-## Grammar (EBNF-style)
+## Grammar Sketch
 
 ```ebnf
 program             = { statement } ;
@@ -63,17 +60,19 @@ statement           = var_decl
                     | while_stmt
                     | function_decl
                     | struct_decl
+                    | print_stmt
                     | expr_stmt ;
 
-var_decl            = ("var" | "const") type [ "[" "]" ] identifier "=" expr ";" ;
+var_decl            = ("var" | "const") type identifier "=" expr ";" ;
+return_stmt         = "return" expr ";" ;
+print_stmt          = "print" expr ";" ;
+
 expr_stmt           = expr "=" expr ";"
                     | expr ";" ;
 
 function_decl       = "func" identifier "(" [ params ] ")" type block ;
 params              = param { "," param } ;
 param               = type identifier ;
-
-return_stmt         = "return" expr ";" ;
 
 if_stmt             = "if" "(" expr ")" block [ "else" block ] ;
 while_stmt          = "while" "(" expr ")" block ;
@@ -86,7 +85,8 @@ struct_method       = "func" identifier "(" [ params ] ")" type block ;
 expr                = precedence_expr ;
 precedence_expr     = prefix_expr { binary_op prefix_expr } ;
 prefix_expr         = ("-" | "!") prefix_expr | postfix_expr ;
-postfix_expr        = primary { "." identifier | "(" [ args ] ")" } ;
+postfix_expr        = primary { "." identifier | "(" [ args ] ")" | "[" expr "]" } ;
+
 primary             = struct_init
                     | array_literal
                     | identifier
@@ -103,7 +103,8 @@ init_field          = identifier "=" expr ;
 array_literal       = "[" [ args ] "]" ;
 args                = expr { "," expr } ;
 
-type                = "int" | "float" | "bool" | "void" | "string" | identifier ;
+type                = base_type [ "[" "]" ] ;
+base_type           = "int" | "float" | "bool" | "void" | "string" | identifier ;
 ```
 
 ## Operator Precedence
@@ -113,26 +114,26 @@ From low to high:
 1. equality: `==`, `!=`
 2. comparison: `<`, `<=`, `>`, `>=`
 3. sum: `+`, `-`
-4. product: `*`, `/`
+4. product: `*`, `/`, `%`
 5. prefix: unary `-`, `!`
-6. postfix: member access and calls
+6. postfix: member access, calls, indexing
 
-## Semantic Rules (Current)
+## Current Semantic Rules
 
-- Declared variables must have initializer type compatible with declared type.
-- `const` symbols cannot be reassigned.
-- Assignment targets may be identifiers or member-access expressions.
-- Member assignment validates field existence, mutability, and type compatibility.
-- While/if conditions must evaluate to `bool`.
-- Called identifiers must resolve to function symbols.
-- Function call argument count and argument types are checked.
-- Non-void functions must contain at least one return statement with compatible type.
-- Void functions must not return a value.
-- Array literals must be homogeneous.
-- Empty array literals are represented with `EMPTY` kind and allowed in array declarations.
+- declared variables must have an initializer type compatible with the declared type
+- `const` values cannot be reassigned
+- assignments can target identifiers, member access paths, and partially modeled array access paths
+- `if` and `while` conditions must evaluate to `bool`
+- function calls must resolve to function symbols with matching argument counts and compatible argument types
+- non-void functions must contain at least one return statement with a compatible return value
+- array literals must be homogeneous
+- empty array literals use the `EMPTY` type path and can initialize typed arrays
+- struct initialization validates known fields and compatible field values
 
-## Known Language Gaps
+## Important Current Limits
 
-- Array indexing expressions are not implemented yet.
-- Struct receiver semantics inside method bodies are not fully modeled.
-- Return-path completeness for branches/loops is not fully path-sensitive.
+- the parser supports array access syntax, but array indexing is not fully implemented end-to-end across semantics, IR, and backends
+- bare expression statements are only semantically supported for function calls
+- struct receiver semantics inside methods are still incomplete
+- return analysis is not fully path-sensitive
+- `return` currently always expects an expression in the parser, so `void` function behavior is stricter and more limited than a finished language design would likely want
