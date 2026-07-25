@@ -5,6 +5,7 @@ const Precedence = @import("./operator.zig").Precedence;
 const mapOperatorToPrecedence = @import("./operator.zig").mapOperatorToPrecedence;
 const Token = @import("../../lexer/tokens.zig").Token;
 const ast = @import("../../ast/expr.zig");
+const UnaryOperator = @import("../../ir/ir.zig").UnaryOperator;
 const Expr = ast.Expr;
 const BinaryExpr = ast.BinaryExpr;
 const IdentifierExpr = ast.IdentifierExpr;
@@ -58,8 +59,14 @@ pub fn parsePrefix(self: *Parser) ParserError!*Expr {
         const op = self.advance() orelse return ParserError.UnExpectedToken;
         const right = try parsePrecedence(self, .prefix);
 
+        const unaryOp = switch (op.kind) {
+            .Minus => UnaryOperator.Negate,
+            .BooleanOpNot => UnaryOperator.Not,
+            else => return ParserError.UnExpectedToken,
+        };
+
         const unary = UnaryExpr{
-            .operator = op.lexeme,
+            .operator = unaryOp,
             .operand = right,
         };
 

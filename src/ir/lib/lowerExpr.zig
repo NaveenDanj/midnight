@@ -75,6 +75,19 @@ pub fn lowerExpressionWithSemantics(builder: *InstructionBuilder, expr: *Expr, s
             return .{ .temp = tempId };
         },
 
+        .Unary => {
+            const operandValue = try lowerExpressionWithSemantics(builder, expr.Unary.operand, semantic);
+            const t = builder.newTemp();
+
+            try builder.emit(.{ .UnaryOp = .{
+                .op = expr.Unary.operator,
+                .operand = operandValue,
+                .dest = t,
+                .resolvedType = lookupExprType(semantic, expr),
+            } });
+            return .{ .temp = t };
+        },
+
         .Binary => {
             const leftValue = try lowerExpressionWithSemantics(builder, expr.Binary.left, semantic);
             const rightValue = try lowerExpressionWithSemantics(builder, expr.Binary.right, semantic);

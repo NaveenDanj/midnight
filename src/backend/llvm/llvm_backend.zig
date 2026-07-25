@@ -13,12 +13,14 @@ const lowerBinaryOp = @import("./lib/bin_op_emitter.zig").lowerBinaryOp;
 const lowerPrintCall = @import("./lib/print_emitter.zig").lowerPrintCall;
 const lowerFunction = @import("./lib/function_emitter.zig").lowerFunction;
 const lowerFunctionCall = @import("./lib/function_emitter.zig").lowerFunctionCall;
+const lowerUnaryOp = @import("./lib/unary_op.zig").lowerUnaryOp;
 
 pub const LLVMBackendError = error{
     ArgumentCountMismatch,
     FunctionNotFound,
     MissingResolvedType,
     UnsupportedBinaryOperation,
+    UnsupportedUnaryOperation,
     UnsupportedInstruction,
     UnsupportedType,
     UnsupportedValue,
@@ -186,6 +188,7 @@ pub const LLVMBackend = struct {
                 _ = c.LLVMBuildStore(self.builder, try self.valueRef(inst.value, typ), variable.pointer);
             },
             .BinaryOp => |inst| try lowerBinaryOp(self, inst),
+            .UnaryOp => |inst| try lowerUnaryOp(self, inst),
             .JumpIfFalse => |inst| {
                 const condition = try self.valueRef(inst.condition, Type{ .kind = .BOOL });
                 const false_block = try self.labelBlock(inst.label);

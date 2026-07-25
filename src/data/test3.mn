@@ -1,13 +1,12 @@
 func matrixBenchmark() int {
 
     var int size = 200;
-
     var int i = 0;
     var int j = 0;
     var int k = 0;
 
     var int result = 0;
-
+    var float res = 10 / 2;
 
     while(i < size) {
 
@@ -34,5 +33,6 @@ func matrixBenchmark() int {
     return result;
 }
 
-
-print(matrixBenchmark());
+if (!(10 < 9)) {
+    print("true");
+}

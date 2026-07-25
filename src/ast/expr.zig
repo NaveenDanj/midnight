@@ -1,3 +1,5 @@
+const UnaryOperator = @import("../ir/ir.zig").UnaryOperator;
+
 pub const Expr = union(enum) {
     Binary: BinaryExpr,
     IntLiteral: IntLiteral,
@@ -25,7 +27,7 @@ pub const IdentifierExpr = struct {
 };
 
 pub const UnaryExpr = struct {
-    operator: []const u8,
+    operator: UnaryOperator,
     operand: *Expr,
 };
 

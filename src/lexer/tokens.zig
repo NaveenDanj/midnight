@@ -12,6 +12,10 @@ pub const TokenType = enum {
     Underscore,
     Dot,
 
+    And,
+    Or,
+    Not,
+
     // operators
     Equal,
     DoubleEqual,

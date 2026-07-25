@@ -95,15 +95,16 @@ pub const ExprTypeChecker = struct {
             .Unary => {
                 const unary = expr.Unary;
                 const operandType = try self.evaluate(unary.operand);
+                const operator = unary.operator;
 
-                if (std.mem.eql(u8, unary.operator, "-")) {
+                if (operator == .Negate) {
                     if (operandType.isNumeric()) {
                         return self.record(expr, operandType);
                     }
                     return SemanticError.TypeMismatch;
                 }
 
-                if (std.mem.eql(u8, unary.operator, "!")) {
+                if (operator == .Not) {
                     if (operandType.kind == .BOOL) {
                         return self.record(expr, types.BOOL);
                     }
