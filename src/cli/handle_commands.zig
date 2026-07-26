@@ -20,7 +20,7 @@ pub fn handle_cli_commands(allocator: std.mem.Allocator, command: *const Command
             }
         },
         .version => {
-            std.debug.print("Midnight Compiler version 0.1.0\n", .{});
+            std.debug.print("Midnight Compiler version 0.1.0-alpha.1\n", .{});
         },
     }
 }
