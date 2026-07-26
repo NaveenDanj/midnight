@@ -17,6 +17,7 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
     const llvm_root = b.option([]const u8, "llvm-root", "Path to an LLVM installation root containing include/ and lib/") orelse "";
+    const llvm_lib_name = b.option([]const u8, "llvm-lib-name", "Exact LLVM library name to link against") orelse "";
     // It's also possible to define more custom flags to toggle optional features
     // of this build script using `b.option()`. All defined flags (including
     // target and optimize options) will be listed when running `zig build --help`
@@ -86,7 +87,9 @@ pub fn build(b: *std.Build) void {
 
     const llvm_paths = resolveLLVMPaths(b, target.result, llvm_root);
 
-    configureLLVM(exe.root_module, llvm_paths.include, llvm_paths.lib);
+    const resolved_llvm_lib_name = resolveLLVMLibName(target.result, llvm_lib_name);
+
+    configureLLVM(exe.root_module, llvm_paths.include, llvm_paths.lib, resolved_llvm_lib_name);
 
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default
@@ -149,7 +152,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    configureLLVM(test_module, llvm_paths.include, llvm_paths.lib);
+    configureLLVM(test_module, llvm_paths.include, llvm_paths.lib, resolved_llvm_lib_name);
 
     const tests = b.addTest(.{
         .root_module = test_module,
@@ -199,7 +202,19 @@ fn resolveLLVMPaths(b: *std.Build, resolved_target: std.Target, llvm_root: []con
     };
 }
 
-fn configureLLVM(module: *std.Build.Module, llvm_include: []const u8, llvm_libdir: []const u8) void {
+fn resolveLLVMLibName(resolved_target: std.Target, override_name: []const u8) []const u8 {
+    if (override_name.len != 0) {
+        return override_name;
+    }
+
+    if (resolved_target.os.tag == .windows) {
+        return "LLVM";
+    }
+
+    return "LLVM-21";
+}
+
+fn configureLLVM(module: *std.Build.Module, llvm_include: []const u8, llvm_libdir: []const u8, llvm_lib_name: []const u8) void {
     module.link_libc = true;
     module.addLibraryPath(.{
         .cwd_relative = std.mem.trim(u8, llvm_libdir, " \n"),
@@ -207,7 +222,7 @@ fn configureLLVM(module: *std.Build.Module, llvm_include: []const u8, llvm_libdi
     module.addIncludePath(.{
         .cwd_relative = std.mem.trim(u8, llvm_include, " \n"),
     });
-    module.linkSystemLibrary("LLVM-21", .{});
+    module.linkSystemLibrary(llvm_lib_name, .{});
 }
 
 fn getOutput(
