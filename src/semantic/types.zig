@@ -29,6 +29,8 @@ pub const Type = struct {
     kind: TypeKind,
     struct_name: ?[]const u8 = null,
     isArray: bool = false,
+    dynamicArray: bool = false,
+    staticLength: ?u32 = null,
 
     pub fn isNumeric(self: Type) bool {
         return self.kind == .INT or self.kind == .FLOAT;

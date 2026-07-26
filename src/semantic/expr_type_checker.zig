@@ -117,7 +117,7 @@ pub const ExprTypeChecker = struct {
                 const arrayExpr = expr.ArrayLiteral;
 
                 if (arrayExpr.elements.len == 0) {
-                    return self.record(expr, types.Type{ .kind = .EMPTY, .isArray = true, .struct_name = null });
+                    return self.record(expr, types.Type{ .kind = .EMPTY, .isArray = true, .staticLength = 0, .struct_name = null });
                 }
 
                 const firstElemType = try self.evaluate(arrayExpr.elements[0]);
@@ -129,7 +129,13 @@ pub const ExprTypeChecker = struct {
                     }
                 }
 
-                return self.record(expr, types.Type{ .kind = firstElemType.kind, .isArray = true, .struct_name = firstElemType.struct_name });
+                return self.record(expr, types.Type{
+                    .kind = firstElemType.kind,
+                    .isArray = true,
+                    .dynamicArray = false,
+                    .staticLength = @intCast(arrayExpr.elements.len),
+                    .struct_name = firstElemType.struct_name,
+                });
             },
             .ArrayAccess => {
                 const arrayAccess = expr.ArrayAccess;

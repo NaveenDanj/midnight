@@ -1,6 +1,1 @@
-pub const LowerError = error{
-    UnsupportedExpression,
-    UnsupportedStatement,
-    UnsupportedLValue,
-    UnknownOperator,
-};
+pub const LowerError = error{ UnsupportedExpression, UnsupportedStatement, UnsupportedLValue, UnknownOperator, IndexOutOfBounds };

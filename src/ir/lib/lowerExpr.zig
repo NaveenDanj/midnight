@@ -9,10 +9,19 @@ const SemanticResult = @import("../../semantic/result.zig").SemanticResult;
 const Type = @import("../../semantic/types.zig").Type;
 
 pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
-    return lowerExpressionWithSemantics(builder, expr, null);
+    return lowerExpressionWithSemanticsAndExpectedType(builder, expr, null, null);
 }
 
 pub fn lowerExpressionWithSemantics(builder: *InstructionBuilder, expr: *Expr, semantic: ?*const SemanticResult) !Value {
+    return lowerExpressionWithSemanticsAndExpectedType(builder, expr, semantic, null);
+}
+
+pub fn lowerExpressionWithSemanticsAndExpectedType(
+    builder: *InstructionBuilder,
+    expr: *Expr,
+    semantic: ?*const SemanticResult,
+    expected_type: ?Type,
+) !Value {
     switch (expr.*) {
         .IntLiteral => {
             const t = builder.newTemp();
@@ -62,13 +71,21 @@ pub fn lowerExpressionWithSemantics(builder: *InstructionBuilder, expr: *Expr, s
 
         .ArrayLiteral => {
             const tempId = builder.newTemp();
+            const array_type = expectedArrayAllocationType(lookupExprType(semantic, expr), expected_type) orelse inferArrayLiteralType(expr.ArrayLiteral.elements);
+
+            try builder.emit(.{ .AllocArray = .{
+                .length = @intCast(expr.ArrayLiteral.elements.len),
+                .dest = tempId,
+                .resolvedType = array_type,
+            } });
 
             for (expr.ArrayLiteral.elements, 0..) |element, index| {
-                const elemValue = try lowerExpressionWithSemantics(builder, element, semantic);
+                const elemValue = try lowerExpressionWithSemanticsAndExpectedType(builder, element, semantic, null);
                 try builder.emit(.{ .StoreIndex = .{
                     .array = .{ .temp = tempId },
-                    .index = .{ .arrayIndex = @intCast(index) },
+                    .index = .{ .constantInt = std.math.cast(i64, index) orelse return LowerError.IndexOutOfBounds },
                     .value = elemValue,
+                    .resolvedType = arrayElementType(array_type),
                 } });
             }
 
@@ -76,7 +93,7 @@ pub fn lowerExpressionWithSemantics(builder: *InstructionBuilder, expr: *Expr, s
         },
 
         .Unary => {
-            const operandValue = try lowerExpressionWithSemantics(builder, expr.Unary.operand, semantic);
+            const operandValue = try lowerExpressionWithSemanticsAndExpectedType(builder, expr.Unary.operand, semantic, null);
             const t = builder.newTemp();
 
             try builder.emit(.{ .UnaryOp = .{
@@ -89,8 +106,8 @@ pub fn lowerExpressionWithSemantics(builder: *InstructionBuilder, expr: *Expr, s
         },
 
         .Binary => {
-            const leftValue = try lowerExpressionWithSemantics(builder, expr.Binary.left, semantic);
-            const rightValue = try lowerExpressionWithSemantics(builder, expr.Binary.right, semantic);
+            const leftValue = try lowerExpressionWithSemanticsAndExpectedType(builder, expr.Binary.left, semantic, null);
+            const rightValue = try lowerExpressionWithSemanticsAndExpectedType(builder, expr.Binary.right, semantic, null);
             const t = builder.newTemp();
 
             try builder.emit(.{ .BinaryOp = .{
@@ -112,7 +129,7 @@ pub fn lowerExpressionWithSemantics(builder: *InstructionBuilder, expr: *Expr, s
             } });
 
             for (expr.StructInit.fields) |field| {
-                const value = try lowerExpressionWithSemantics(builder, field.value, semantic);
+                const value = try lowerExpressionWithSemanticsAndExpectedType(builder, field.value, semantic, null);
                 try builder.emit(.{ .StoreField = .{
                     .object = .{ .temp = tempId },
                     .fieldName = field.name,
@@ -124,7 +141,7 @@ pub fn lowerExpressionWithSemantics(builder: *InstructionBuilder, expr: *Expr, s
         },
 
         .MemberAccess => {
-            const obj = try lowerExpressionWithSemantics(builder, expr.MemberAccess.object.?, semantic);
+            const obj = try lowerExpressionWithSemanticsAndExpectedType(builder, expr.MemberAccess.object.?, semantic, null);
             const t = builder.newTemp();
             try builder.emit(.{ .LoadField = .{
                 .object = obj,
@@ -135,13 +152,14 @@ pub fn lowerExpressionWithSemantics(builder: *InstructionBuilder, expr: *Expr, s
         },
 
         .ArrayAccess => {
-            const array = try lowerExpressionWithSemantics(builder, expr.ArrayAccess.array, semantic);
-            const index = try lowerExpressionWithSemantics(builder, expr.ArrayAccess.index, semantic);
+            const array = try lowerExpressionWithSemanticsAndExpectedType(builder, expr.ArrayAccess.array, semantic, null);
+            const index = try lowerExpressionWithSemanticsAndExpectedType(builder, expr.ArrayAccess.index, semantic, null);
             const t = builder.newTemp();
             try builder.emit(.{ .LoadIndex = .{
                 .array = array,
                 .index = index,
                 .dest = t,
+                .resolvedType = lookupExprType(semantic, expr),
             } });
             return .{ .temp = t };
         },
@@ -150,7 +168,7 @@ pub fn lowerExpressionWithSemantics(builder: *InstructionBuilder, expr: *Expr, s
             var args = try std.ArrayList(Value).initCapacity(builder.allocator, expr.FunctionCall.args.len);
 
             for (expr.FunctionCall.args) |arg| {
-                const v = try lowerExpressionWithSemantics(builder, arg, semantic);
+                const v = try lowerExpressionWithSemanticsAndExpectedType(builder, arg, semantic, null);
                 try args.append(builder.allocator, v);
             }
 
@@ -178,7 +196,7 @@ pub fn lowerLValueWithSemantics(builder: *InstructionBuilder, expr: *Expr, value
         },
 
         .MemberAccess => {
-            const obj = try lowerExpressionWithSemantics(builder, expr.MemberAccess.object.?, semantic);
+            const obj = try lowerExpressionWithSemanticsAndExpectedType(builder, expr.MemberAccess.object.?, semantic, null);
             try builder.emit(.{ .StoreField = .{
                 .object = obj,
                 .fieldName = expr.MemberAccess.memberName,
@@ -187,13 +205,16 @@ pub fn lowerLValueWithSemantics(builder: *InstructionBuilder, expr: *Expr, value
         },
 
         .ArrayAccess => {
-            const array = try lowerExpressionWithSemantics(builder, expr.ArrayAccess.array, semantic);
-            const index = try lowerExpressionWithSemantics(builder, expr.ArrayAccess.index, semantic);
-            try builder.emit(.{ .StoreIndex = .{
-                .array = array,
-                .index = index,
-                .value = value,
-            } });
+            const array = try lowerExpressionWithSemanticsAndExpectedType(builder, expr.ArrayAccess.array, semantic, null);
+            const index = try lowerExpressionWithSemanticsAndExpectedType(builder, expr.ArrayAccess.index, semantic, null);
+            try builder.emit(.{
+                .StoreIndex = .{
+                    .array = array,
+                    .index = index,
+                    .value = value,
+                    .resolvedType = .{ .isArray = false, .kind = .INT, .struct_name = null },
+                },
+            });
         },
 
         else => {
@@ -207,6 +228,49 @@ fn lookupExprType(semantic: ?*const SemanticResult, expr: *const Expr) ?Type {
         return result.expr_types.get(expr);
     }
     return null;
+}
+
+fn arrayElementType(array_type: Type) Type {
+    return .{
+        .kind = array_type.kind,
+        .isArray = false,
+        .struct_name = array_type.struct_name,
+    };
+}
+
+fn inferArrayLiteralType(elements: []*Expr) Type {
+    if (elements.len == 0) {
+        return .{ .kind = .EMPTY, .isArray = true, .staticLength = 0 };
+    }
+
+    const first = inferExpressionType(elements[0]);
+    return .{
+        .kind = first.kind,
+        .isArray = true,
+        .dynamicArray = false,
+        .staticLength = @intCast(elements.len),
+        .struct_name = first.struct_name,
+    };
+}
+
+fn expectedArrayAllocationType(inferred_type: ?Type, expected_type: ?Type) ?Type {
+    if (expected_type) |typ| {
+        if (typ.isArray) {
+            return typ;
+        }
+    }
+    return inferred_type;
+}
+
+fn inferExpressionType(expr: *const Expr) Type {
+    return switch (expr.*) {
+        .IntLiteral => .{ .kind = .INT },
+        .FloatLiteral => .{ .kind = .FLOAT },
+        .BoolLiteral => .{ .kind = .BOOL },
+        .StringLiteral => .{ .kind = .STRING },
+        .ArrayLiteral => inferArrayLiteralType(expr.ArrayLiteral.elements),
+        else => .{ .kind = .INT },
+    };
 }
 
 fn mapOperatorToBinaryOp(operator: []const u8) LowerError!BinaryOp {

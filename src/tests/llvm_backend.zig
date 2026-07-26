@@ -127,3 +127,39 @@ test "LLVM emitter wrapper delegates to backend" {
 
     try expect(std.mem.indexOf(u8, llvm_ir, "define i32 @main()") != null);
 }
+
+test "LLVM backend emits array allocation and indexed access" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const instructions = [_]Instruction{
+        .{ .AllocArray = .{
+            .length = 3,
+            .dest = 0,
+            .resolvedType = .{ .kind = .INT, .isArray = true, .staticLength = 3 },
+        } },
+        .{ .StoreIndex = .{
+            .array = .{ .temp = 0 },
+            .index = .{ .constantInt = 0 },
+            .value = .{ .constantInt = 11 },
+            .resolvedType = .{ .kind = .INT },
+        } },
+        .{ .LoadIndex = .{
+            .array = .{ .temp = 0 },
+            .index = .{ .constantInt = 0 },
+            .dest = 1,
+            .resolvedType = .{ .kind = .INT },
+        } },
+        .{ .PrintCall = .{
+            .value = .{ .temp = 1 },
+            .resolvedType = .{ .kind = .INT },
+        } },
+    };
+
+    const llvm_ir = try emitLLVMIR(allocator, &instructions);
+
+    try expect(std.mem.indexOf(u8, llvm_ir, "@malloc") != null);
+    try expect(std.mem.indexOf(u8, llvm_ir, "getelementptr") != null);
+    try expect(std.mem.indexOf(u8, llvm_ir, "load i32") != null);
+}

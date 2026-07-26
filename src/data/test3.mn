@@ -1,3 +1,21 @@
-if (!(10 < 9) && (10 < 9)) {
-    print("true");
+var int[10] arr = [];
+var int index = 0;
+
+while(index < 10) {
+
+    if(index == 0) {
+        arr[index] = 10;
+    }else{
+        arr[index] = index *100;
+    }
+
+    index = index + 1;
+}
+
+index = 0;
+
+while(index < 10) {
+    print(arr[index]);
+    print("");
+    index = index + 1;
 }
