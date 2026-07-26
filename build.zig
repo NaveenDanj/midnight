@@ -208,7 +208,7 @@ fn resolveLLVMLibName(resolved_target: std.Target, override_name: []const u8) []
     }
 
     if (resolved_target.os.tag == .windows) {
-        return "LLVM";
+        return "LLVM-C";
     }
 
     return "LLVM-21";
