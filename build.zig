@@ -16,6 +16,7 @@ pub fn build(b: *std.Build) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
+    const llvm_root = b.option([]const u8, "llvm-root", "Path to an LLVM installation root containing include/ and lib/") orelse "";
     // It's also possible to define more custom flags to toggle optional features
     // of this build script using `b.option()`. All defined flags (including
     // target and optimize options) will be listed when running `zig build --help`
@@ -83,17 +84,9 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    const llvm_include = getOutput(b, &.{
-        "llvm-config",
-        "--includedir",
-    });
+    const llvm_paths = resolveLLVMPaths(b, target.result, llvm_root);
 
-    const llvm_libdir = getOutput(b, &.{
-        "llvm-config",
-        "--libdir",
-    });
-
-    configureLLVM(exe.root_module, llvm_include, llvm_libdir);
+    configureLLVM(exe.root_module, llvm_paths.include, llvm_paths.lib);
 
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default
@@ -156,7 +149,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    configureLLVM(test_module, llvm_include, llvm_libdir);
+    configureLLVM(test_module, llvm_paths.include, llvm_paths.lib);
 
     const tests = b.addTest(.{
         .root_module = test_module,
@@ -181,6 +174,29 @@ pub fn build(b: *std.Build) void {
     // Lastly, the Zig build system is relatively simple and self-contained,
     // and reading its source code will allow you to master it.
 
+}
+
+const LLVMPaths = struct {
+    include: []const u8,
+    lib: []const u8,
+};
+
+fn resolveLLVMPaths(b: *std.Build, resolved_target: std.Target, llvm_root: []const u8) LLVMPaths {
+    if (llvm_root.len != 0) {
+        return .{
+            .include = b.pathJoin(&.{ llvm_root, "include" }),
+            .lib = b.pathJoin(&.{ llvm_root, "lib" }),
+        };
+    }
+
+    if (resolved_target.os.tag == .windows) {
+        @panic("Windows builds require -Dllvm-root=<path to LLVM install> because llvm-config is not available.");
+    }
+
+    return .{
+        .include = getOutput(b, &.{ "llvm-config", "--includedir" }),
+        .lib = getOutput(b, &.{ "llvm-config", "--libdir" }),
+    };
 }
 
 fn configureLLVM(module: *std.Build.Module, llvm_include: []const u8, llvm_libdir: []const u8) void {
