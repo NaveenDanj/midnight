@@ -134,6 +134,7 @@ pub fn linkObject(allocator: std.mem.Allocator, options: ObjectLinkOptions) !Bui
         "zig",
         "cc",
         object_path,
+        "runtime/string.o",
         "-o",
         executable_path,
     });

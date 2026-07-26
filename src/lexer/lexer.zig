@@ -37,6 +37,7 @@ pub const Lexer = struct {
         try tokens.append(allocator, Token{
             .kind = TokenType.EOF,
             .lexeme = "",
+            .literal_value = null,
             .line = self.line,
             .column = self.column,
         });
@@ -85,6 +86,7 @@ pub const Lexer = struct {
             '*' => return self.makeToken(TokenType.Star),
             '/' => return self.makeToken(TokenType.Slash),
             '"' => return try self.scanString(),
+            '%' => return self.makeToken(TokenType.Modulo),
 
             '!' => return if (self.isMatch('='))
                 self.makeToken(TokenType.NotEqual)
@@ -161,6 +163,7 @@ pub const Lexer = struct {
         return Token{
             .kind = kind,
             .lexeme = self.source[self.start..self.current],
+            .literal_value = null,
             .line = self.line,
             .column = self.column,
         };
@@ -210,6 +213,16 @@ pub const Lexer = struct {
 
         _ = self.advance();
 
-        return self.makeToken(TokenType.StringLiteral);
+        const raw = self.source[self.start + 1 .. self.current - 1];
+
+        return Token{
+            .kind = TokenType.StringLiteral,
+            .lexeme = self.source[self.start..self.current],
+            .literal_value = raw,
+            .line = self.line,
+            .column = self.column,
+        };
+
+        // return self.makeToken(TokenType.StringLiteral);
     }
 };

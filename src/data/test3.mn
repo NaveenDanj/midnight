@@ -19,3 +19,11 @@ while(index < 10) {
     print("");
     index = index + 1;
 }
+
+var string greet = "Hello" + " " + "World";
+print(greet);
+
+struct Person {
+    var string first_name;
+    var string last_name;
+}

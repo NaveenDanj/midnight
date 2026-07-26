@@ -14,6 +14,7 @@ pub fn lowerBinaryOp(self: *LLVMBackend, inst: anytype) !void {
         .Add, .Subtract, .Multiply, .Divide, .Modulo => {
             const left = try self.valueRef(inst.left, resolved_type);
             const right = try self.valueRef(inst.right, resolved_type);
+
             const result = switch (resolved_type.kind) {
                 .INT, .BOOL => switch (inst.op) {
                     .Add => c.LLVMBuildAdd(self.builder, left, right, name),
@@ -28,6 +29,26 @@ pub fn lowerBinaryOp(self: *LLVMBackend, inst: anytype) !void {
                     .Subtract => c.LLVMBuildFSub(self.builder, left, right, name),
                     .Multiply => c.LLVMBuildFMul(self.builder, left, right, name),
                     .Divide => c.LLVMBuildFDiv(self.builder, left, right, name),
+                    else => return LLVMBackendError.UnsupportedBinaryOperation,
+                },
+                .STRING => switch (inst.op) {
+                    .Add => blk: {
+                        const concat = try self.getStringConcatFunction();
+
+                        var args = [_]c.LLVMValueRef{
+                            left,
+                            right,
+                        };
+
+                        break :blk c.LLVMBuildCall2(
+                            self.builder,
+                            concat.func_type,
+                            concat.value,
+                            &args,
+                            args.len,
+                            name,
+                        );
+                    },
                     else => return LLVMBackendError.UnsupportedBinaryOperation,
                 },
                 else => return LLVMBackendError.UnsupportedBinaryOperation,

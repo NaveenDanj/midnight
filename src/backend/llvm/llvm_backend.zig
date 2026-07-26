@@ -492,6 +492,50 @@ pub const LLVMBackend = struct {
         return try self.allocator.dupeZ(u8, raw_name);
     }
 
+    pub fn getStringConcatFunction(self: *LLVMBackend) !FunctionRef {
+        const function_name = "midnight_string_concat";
+
+        if (self.functions.get(function_name)) |function_ref| {
+            return function_ref;
+        }
+
+        const i8_ptr_type = c.LLVMPointerTypeInContext(self.context, 0);
+
+        var llvm_param_types = [_]c.LLVMTypeRef{
+            i8_ptr_type,
+            i8_ptr_type,
+        };
+
+        var param_types = [_]Type{
+            .{ .kind = .STRING },
+            .{ .kind = .STRING },
+        };
+
+        const function_type = c.LLVMFunctionType(
+            i8_ptr_type,
+            &llvm_param_types,
+            llvm_param_types.len,
+            0,
+        );
+
+        const function = c.LLVMAddFunction(
+            self.module,
+            function_name,
+            function_type,
+        );
+
+        const function_ref = FunctionRef{
+            .value = function,
+            .func_type = function_type,
+            .return_type = Type{ .kind = .STRING },
+            .param_types = try self.allocator.dupe(Type, param_types[0..]),
+        };
+
+        try self.functions.put(function_name, function_ref);
+
+        return function_ref;
+    }
+
     pub fn toZ(self: *LLVMBackend, value: []const u8) ![:0]const u8 {
         return try self.allocator.dupeZ(u8, value);
     }

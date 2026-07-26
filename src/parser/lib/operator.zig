@@ -17,7 +17,7 @@ pub fn mapOperatorToPrecedence(token: TokenType) Precedence {
     return switch (token) {
         .BooleanOpNot => .prefix,
 
-        .Star, .Slash => .product,
+        .Star, .Slash, .Modulo => .product,
         .Plus, .Minus => .sum,
 
         .LessThan,

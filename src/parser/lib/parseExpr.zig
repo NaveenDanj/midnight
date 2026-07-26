@@ -232,7 +232,7 @@ pub fn parseBoolean(self: *Parser) ParserError!*Expr {
 pub fn parseString(self: *Parser) ParserError!*Expr {
     const token = try self.expect(.StringLiteral);
     const stringLiteral = ast.StringLiteral{
-        .value = token.lexeme,
+        .value = token.literal_value orelse return ParserError.UnExpectedToken,
     };
     const expr = try self.allocator.create(Expr);
     expr.* = .{ .StringLiteral = stringLiteral };
