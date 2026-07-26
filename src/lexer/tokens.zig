@@ -13,7 +13,6 @@ pub const TokenType = enum {
     Dot,
     Pipe,
     Ampersand,
-
     // operators
     Equal,
     DoubleEqual,
@@ -29,6 +28,7 @@ pub const TokenType = enum {
     BooleanOpNot,
     BooleanOpAnd,
     BooleanOpOr,
+    Modulo,
 
     // literals
     Identifier,
@@ -68,6 +68,7 @@ pub const TokenType = enum {
 pub const Token = struct {
     kind: TokenType,
     lexeme: []const u8,
+    literal_value: ?[]const u8,
     line: u32,
     column: u32,
 };
