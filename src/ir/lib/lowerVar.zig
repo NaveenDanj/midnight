@@ -26,11 +26,11 @@ pub fn lowerVarAssignmentWithSemantics(builder: *InstructionBuilder, varAssign: 
 }
 
 pub fn lowerVarDeclarationWithSemantics(builder: *InstructionBuilder, varDecl: *VarDecl, semantic: ?*const SemanticResult) !void {
-    const rhs = try lower_expr.lowerExpressionWithSemantics(builder, varDecl.initializer, semantic);
-    try builder.declareVariable(varDecl.name, rhs);
     const resolvedType = if (semantic) |result|
         result.var_decl_types.get(varDecl) orelse typeResolver.resolveTypeRefUnchecked(varDecl.varType)
     else
         typeResolver.resolveTypeRefUnchecked(varDecl.varType);
+    const rhs = try lower_expr.lowerExpressionWithSemanticsAndExpectedType(builder, varDecl.initializer, semantic, resolvedType);
+    try builder.declareVariable(varDecl.name, rhs);
     try builder.emit(.{ .StoreVar = .{ .name = varDecl.name, .value = rhs, .resolvedType = resolvedType } });
 }

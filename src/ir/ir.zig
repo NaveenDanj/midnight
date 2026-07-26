@@ -2,7 +2,7 @@ const std = @import("std");
 const Type = @import("../semantic/types.zig").Type;
 const Param = @import("../ast/stmt.zig").Param;
 
-pub const Value = union(enum) { temp: u32, constantInt: i64, constantFloat: f64, constantBool: bool, string: []const u8, variable: []const u8, paramIndex: i64, arrayIndex: u32 };
+pub const Value = union(enum) { temp: u32, constantInt: i64, constantFloat: f64, constantBool: bool, string: []const u8, variable: []const u8, paramIndex: i64 };
 
 pub const BinaryOp = enum {
     Add,
@@ -53,6 +53,11 @@ pub const Instruction = union(enum) {
         dest: u32,
         resolvedType: ?Type,
     },
+    AllocArray: struct {
+        length: u32,
+        dest: u32,
+        resolvedType: ?Type,
+    },
     LoadVar: struct {
         name: []const u8,
         dest: u32,
@@ -90,11 +95,13 @@ pub const Instruction = union(enum) {
         array: Value,
         index: Value,
         dest: u32,
+        resolvedType: ?Type,
     },
     StoreIndex: struct {
         array: Value,
         index: Value,
         value: Value,
+        resolvedType: ?Type,
     },
     JumpWhileTrue: struct {
         condition: Value,

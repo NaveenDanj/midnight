@@ -4,6 +4,10 @@ const Type = @import("types.zig").Type;
 pub fn equals(a: Type, b: Type) bool {
     if (a.kind != b.kind) return false;
     if (a.isArray != b.isArray) return false;
+    if (a.isArray) {
+        if (a.dynamicArray != b.dynamicArray) return false;
+        if (a.staticLength != b.staticLength) return false;
+    }
 
     if (a.kind == .STRUCT) {
         const a_name = a.struct_name orelse return false;
@@ -22,7 +26,23 @@ pub fn isAssignable(expected: Type, actual: Type) bool {
     }
 
     if (expected.isArray or actual.isArray) {
-        return expected.isArray == actual.isArray and expected.kind == actual.kind and structNamesEqual(expected, actual);
+        if (expected.isArray != actual.isArray) return false;
+        if (expected.kind != actual.kind) return false;
+        if (!structNamesEqual(expected, actual)) return false;
+
+        if (expected.dynamicArray) {
+            return true;
+        }
+
+        if (expected.staticLength) |expected_length| {
+            if (actual.dynamicArray) return false;
+            if (actual.staticLength) |actual_length| {
+                return actual_length <= expected_length;
+            }
+            return false;
+        }
+
+        return !actual.dynamicArray and actual.staticLength == null;
     }
 
     if (expected.kind == .STRING) {

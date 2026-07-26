@@ -101,9 +101,6 @@ pub const X86_64Backend = struct {
                 const slot = try self.getVariableSlot(name);
                 try asmBuilder.emit("    mov {s}, qword [rbp-{d}]", .{ reg, slot });
             },
-            .arrayIndex => |index| {
-                try asmBuilder.emit("    mov {s}, {d}", .{ reg, index });
-            },
             else => return BackendError.UnsupportedValue,
         }
     }

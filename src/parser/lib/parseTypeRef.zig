@@ -2,6 +2,7 @@ const Parser = @import("../parser.zig").Parser;
 const ParserError = @import("../error.zig").ParserError;
 const TypeRef = @import("../../ast/type_ref.zig").TypeRef;
 const TokenType = @import("../../lexer/tokens.zig").TokenType;
+const std = @import("std");
 
 const primitive_type_tokens = [_]TokenType{ .KwInt, .KwFloat, .KwBool, .KwVoid, .KwString };
 
@@ -30,8 +31,29 @@ pub fn parseBaseType(self: *Parser) ParserError!TypeRef {
 pub fn parseArraySuffix(self: *Parser, base_type: TypeRef) ParserError!TypeRef {
     if (self.check(.LBracket)) {
         _ = try self.expect(.LBracket);
+
+        var array_type = TypeRef{
+            .name = base_type.name,
+            .is_array = true,
+            .dynamic_array = false,
+            .static_length = null,
+        };
+
+        if (self.check(.IntegerLiteral)) {
+            const length = try self.expect(.IntegerLiteral);
+            array_type.static_length = std.fmt.parseInt(u32, length.lexeme, 10) catch return ParserError.UnExpectedToken;
+        } else if (self.check(.Underscore)) {
+            _ = try self.expect(.Underscore);
+            array_type.dynamic_array = true;
+        } else if (self.check(.RBracket)) {
+            // Keep `int[]` working as a shorthand for dynamic arrays.
+            array_type.dynamic_array = true;
+        } else {
+            return ParserError.UnExpectedToken;
+        }
+
         _ = try self.expect(.RBracket);
-        return TypeRef{ .name = base_type.name, .is_array = true };
+        return array_type;
     }
 
     return base_type;

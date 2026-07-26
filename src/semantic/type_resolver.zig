@@ -24,6 +24,8 @@ pub fn resolveTypeRef(context: *SemanticContext, type_ref: TypeRef) SemanticErro
     };
 
     resolved.isArray = type_ref.is_array;
+    resolved.dynamicArray = type_ref.dynamic_array;
+    resolved.staticLength = type_ref.static_length;
     return resolved;
 }
 
@@ -42,5 +44,7 @@ pub fn resolveTypeRefUnchecked(type_ref: TypeRef) types.Type {
         types.Type{ .kind = .STRUCT, .struct_name = type_ref.name };
 
     resolved.isArray = type_ref.is_array;
+    resolved.dynamicArray = type_ref.dynamic_array;
+    resolved.staticLength = type_ref.static_length;
     return resolved;
 }

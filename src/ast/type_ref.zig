@@ -3,6 +3,8 @@ const std = @import("std");
 pub const TypeRef = struct {
     name: []const u8,
     is_array: bool = false,
+    dynamic_array: bool = false,
+    static_length: ?u32 = null,
 
     pub fn isNamed(self: TypeRef, name: []const u8) bool {
         return std.mem.eql(u8, self.name, name);

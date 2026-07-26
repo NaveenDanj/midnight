@@ -78,6 +78,7 @@ pub const Lexer = struct {
             '[' => return self.makeToken(TokenType.LBracket),
             ']' => return self.makeToken(TokenType.RBracket),
             '.' => return self.makeToken(TokenType.Dot),
+            '_' => return self.makeToken(TokenType.Underscore),
 
             '+' => return self.makeToken(TokenType.Plus),
             '-' => return self.makeToken(TokenType.Minus),

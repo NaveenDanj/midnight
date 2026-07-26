@@ -14,6 +14,9 @@ const lowerPrintCall = @import("./lib/print_emitter.zig").lowerPrintCall;
 const lowerFunction = @import("./lib/function_emitter.zig").lowerFunction;
 const lowerFunctionCall = @import("./lib/function_emitter.zig").lowerFunctionCall;
 const lowerUnaryOp = @import("./lib/unary_op.zig").lowerUnaryOp;
+const lowerAllocArray = @import("./lib/arr_emitter.zig").lowerAllocArray;
+const lowerLoadIndex = @import("./lib/arr_emitter.zig").lowerLoadIndex;
+const lowerStoreIndex = @import("./lib/arr_emitter.zig").lowerStoreIndex;
 
 pub const LLVMBackendError = error{
     ArgumentCountMismatch,
@@ -60,6 +63,10 @@ pub const LLVMBackend = struct {
     printf_type: c.LLVMTypeRef,
     puts_function: c.LLVMValueRef,
     puts_type: c.LLVMTypeRef,
+    malloc_function: c.LLVMValueRef,
+    malloc_type: c.LLVMTypeRef,
+    abort_function: c.LLVMValueRef,
+    abort_type: c.LLVMTypeRef,
     temp_values: std.AutoHashMap(u32, c.LLVMValueRef),
     temp_types: std.AutoHashMap(u32, Type),
     variables: std.StringHashMap(VariableRef),
@@ -96,6 +103,10 @@ pub const LLVMBackend = struct {
             .printf_type = undefined,
             .puts_function = undefined,
             .puts_type = undefined,
+            .malloc_function = undefined,
+            .malloc_type = undefined,
+            .abort_function = undefined,
+            .abort_type = undefined,
             .temp_values = std.AutoHashMap(u32, c.LLVMValueRef).init(allocator),
             .temp_types = std.AutoHashMap(u32, Type).init(allocator),
             .variables = std.StringHashMap(VariableRef).init(allocator),
@@ -176,6 +187,7 @@ pub const LLVMBackend = struct {
                 const value = c.LLVMBuildGlobalStringPtr(self.builder, try self.toZ(inst.value), name);
                 try self.putTemp(inst.dest, value, typ);
             },
+            .AllocArray => |inst| try lowerAllocArray(self, inst),
             .LoadVar => |inst| {
                 const typ = inst.resolvedType orelse self.lookupVariableType(inst.name) orelse return LLVMBackendError.MissingResolvedType;
                 const variable = try self.ensureVariable(inst.name, typ);
@@ -218,12 +230,12 @@ pub const LLVMBackend = struct {
             .PrintCall => |inst| try lowerPrintCall(self, inst.value, inst.resolvedType orelse return LLVMBackendError.MissingResolvedType),
             .FunctionIR => |inst| try lowerFunction(self, inst),
             .FunctionCall => |inst| try lowerFunctionCall(self, inst),
+            .LoadIndex => |inst| try lowerLoadIndex(self, inst),
+            .StoreIndex => |inst| try lowerStoreIndex(self, inst),
             .ParamBind,
             .AllocStruct,
             .StoreField,
             .LoadField,
-            .LoadIndex,
-            .StoreIndex,
             .JumpWhileTrue,
             => return LLVMBackendError.UnsupportedInstruction,
         }
@@ -240,6 +252,13 @@ pub const LLVMBackend = struct {
         var puts_params = [_]c.LLVMTypeRef{ptr_type};
         self.puts_type = c.LLVMFunctionType(i32_type, &puts_params, puts_params.len, 0);
         self.puts_function = c.LLVMAddFunction(self.module, "puts", self.puts_type);
+
+        var malloc_params = [_]c.LLVMTypeRef{c.LLVMInt64TypeInContext(self.context)};
+        self.malloc_type = c.LLVMFunctionType(ptr_type, &malloc_params, malloc_params.len, 0);
+        self.malloc_function = c.LLVMAddFunction(self.module, "malloc", self.malloc_type);
+
+        self.abort_type = c.LLVMFunctionType(c.LLVMVoidTypeInContext(self.context), null, 0, 0);
+        self.abort_function = c.LLVMAddFunction(self.module, "abort", self.abort_type);
     }
 
     fn ensureVariable(self: *LLVMBackend, name: []const u8, typ: Type) !VariableRef {
@@ -299,7 +318,6 @@ pub const LLVMBackend = struct {
             .constantBool => Type{ .kind = .BOOL },
             .string => Type{ .kind = .STRING },
             .variable => |name| self.lookupVariableType(name),
-            .arrayIndex => Type{ .kind = .INT },
             .paramIndex => null,
         };
     }
@@ -352,7 +370,7 @@ pub const LLVMBackend = struct {
                 const loaded = c.LLVMBuildLoad2(self.builder, try self.llvmType(variable.typ), variable.pointer, try self.nextName("loadtmp"));
                 break :blk try self.coerceValue(loaded, variable.typ, expected_type);
             },
-            .arrayIndex, .paramIndex => return LLVMBackendError.UnsupportedValue,
+            .paramIndex => return LLVMBackendError.UnsupportedValue,
         };
     }
 

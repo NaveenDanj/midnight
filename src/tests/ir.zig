@@ -436,19 +436,20 @@ test "IR lowerExpression lowers array literal including empty array" {
 
     const arr_result = try lowerExpression(&builder_non_empty, arr_expr);
     try assertTemp(arr_result, 0);
-    try expectEqual(@as(usize, 4), builder_non_empty.instructions.items.len);
-    try expect(builder_non_empty.instructions.items[0] == .LoadConstInt);
-    try expect(builder_non_empty.instructions.items[1] == .StoreIndex);
-    try expect(builder_non_empty.instructions.items[2] == .LoadConstInt);
-    try expect(builder_non_empty.instructions.items[3] == .StoreIndex);
+    try expectEqual(@as(usize, 5), builder_non_empty.instructions.items.len);
+    try expect(builder_non_empty.instructions.items[0] == .AllocArray);
+    try expect(builder_non_empty.instructions.items[1] == .LoadConstInt);
+    try expect(builder_non_empty.instructions.items[2] == .StoreIndex);
+    try expect(builder_non_empty.instructions.items[3] == .LoadConstInt);
+    try expect(builder_non_empty.instructions.items[4] == .StoreIndex);
 
-    switch (builder_non_empty.instructions.items[1].StoreIndex.index) {
-        .arrayIndex => |idx| try expectEqual(@as(u32, 0), idx),
+    switch (builder_non_empty.instructions.items[2].StoreIndex.index) {
+        .constantInt => |idx| try expectEqual(@as(i64, 0), idx),
         else => try expect(false),
     }
 
-    switch (builder_non_empty.instructions.items[3].StoreIndex.index) {
-        .arrayIndex => |idx| try expectEqual(@as(u32, 1), idx),
+    switch (builder_non_empty.instructions.items[4].StoreIndex.index) {
+        .constantInt => |idx| try expectEqual(@as(i64, 1), idx),
         else => try expect(false),
     }
 
@@ -459,7 +460,8 @@ test "IR lowerExpression lowers array literal including empty array" {
 
     const empty_result = try lowerExpression(&builder_empty, empty_arr_expr);
     try assertTemp(empty_result, 0);
-    try expectEqual(@as(usize, 0), builder_empty.instructions.items.len);
+    try expectEqual(@as(usize, 1), builder_empty.instructions.items.len);
+    try expect(builder_empty.instructions.items[0] == .AllocArray);
 }
 
 test "IR lowerExpression maps every supported binary operator" {

@@ -68,7 +68,7 @@ test "pipeline can emit LLVM IR without invoking native backend" {
     try expect(result.asm_text == null);
     try expect(result.llvm_ir_text != null);
     try expect(std.mem.indexOf(u8, result.llvm_ir_text.?, "define i32 @main()") != null);
-    try expect(std.mem.indexOf(u8, result.llvm_ir_text.?, "add i64") != null);
+    try expect(std.mem.indexOf(u8, result.llvm_ir_text.?, "add i32") != null);
 }
 
 test "pipeline emits LLVM IR for recursive factorial with early return" {
@@ -99,8 +99,8 @@ test "pipeline emits LLVM IR for recursive factorial with early return" {
     defer result.deinit();
 
     try expect(result.llvm_ir_text != null);
-    try expect(std.mem.indexOf(u8, result.llvm_ir_text.?, "define i64 @factorial") != null);
-    try expect(std.mem.indexOf(u8, result.llvm_ir_text.?, "call i64 @factorial") != null);
+    try expect(std.mem.indexOf(u8, result.llvm_ir_text.?, "define i32 @factorial") != null);
+    try expect(std.mem.indexOf(u8, result.llvm_ir_text.?, "call i32 @factorial") != null);
 }
 
 test "pipeline can emit target assembly from LLVM backend" {
