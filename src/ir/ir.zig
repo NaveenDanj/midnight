@@ -1,6 +1,8 @@
 const std = @import("std");
 const Type = @import("../semantic/types.zig").Type;
 const Param = @import("../ast/stmt.zig").Param;
+const StructInitExpr = @import("../ast/expr.zig").StructInitExpr;
+const StructStmt = @import("../ast/stmt.zig").StructStmt;
 
 pub const Value = union(enum) { temp: u32, constantInt: i64, constantFloat: f64, constantBool: bool, string: []const u8, variable: []const u8, paramIndex: i64 };
 
@@ -85,6 +87,8 @@ pub const Instruction = union(enum) {
         object: Value,
         fieldName: []const u8,
         value: Value,
+        fieldIndex: u32,
+        resolvedType: ?Type,
     },
     LoadField: struct {
         object: Value,
@@ -113,6 +117,9 @@ pub const Instruction = union(enum) {
         body: []Instruction,
         returnType: Type,
     },
+    StructDeclIR: struct {
+        definition: *StructStmt,
+    },
     FunctionCall: struct {
         name: []const u8,
         args: []Value,
@@ -124,7 +131,9 @@ pub const Instruction = union(enum) {
     },
     AllocStruct: struct {
         structType: []const u8,
+        definition: StructInitExpr,
         dest: u32,
+        resolvedType: ?Type,
     },
     PrintCall: struct {
         value: Value,

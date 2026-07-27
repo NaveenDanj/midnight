@@ -27,28 +27,26 @@ pub const StructChecker = struct {
     pub fn analyzeStructStatement(self: *StructChecker, structStmt: *StructStmt) SemanticError!void {
         try self.scopeStack.declareSymbol(structStmt.name, .structure, types.Type{ .kind = .STRUCT, .struct_name = structStmt.name }, true, &[_]types.Type{});
         try self.context.addStruct(structStmt);
+        try self.recordStructFieldTypes(structStmt);
     }
 
     pub fn analyzeStructFields(self: *StructChecker, structDef: *StructStmt, structInitStmt: *StructInitExpr) SemanticError!void {
         var hashMap = std.StringHashMap(types.Type).init(self.allocator);
         defer hashMap.deinit();
 
+        try self.recordStructFieldTypes(structDef);
+
         for (structDef.fields) |field| {
             switch (field) {
-                .StructProperty => {
-                    const property = field.StructProperty;
-                    const fieldType = try typeResolver.resolveTypeRef(self.context, property.fieldType);
-                    try self.result.struct_property_types.put(property, fieldType);
+                .StructProperty => |property| {
+                    const fieldType = self.result.struct_property_types.get(property) orelse try typeResolver.resolveTypeRef(self.context, property.fieldType);
                     _ = try hashMap.put(property.name, fieldType);
                 },
-                .StructMethod => |method| {
-                    const returnType = try typeResolver.resolveTypeRef(self.context, method.returnType);
-                    try self.result.struct_method_return_types.put(method, returnType);
-                },
+                .StructMethod => {},
             }
         }
 
-        var exprChecker = ExprTypeChecker.init(self.context, self.scopeStack, self.result);
+        var exprChecker = ExprTypeChecker.init(self.context, self.scopeStack, self.result, null);
         for (structInitStmt.fields) |field| {
             const expectedType = hashMap.get(field.name) orelse return SemanticError.StructFieldMismatch;
             const actualType = try exprChecker.evaluate(field.value);
@@ -76,6 +74,25 @@ pub const StructChecker = struct {
                     }
                 },
                 else => {},
+            }
+        }
+    }
+
+    fn recordStructFieldTypes(self: *StructChecker, structStmt: *StructStmt) SemanticError!void {
+        for (structStmt.fields) |field| {
+            switch (field) {
+                .StructProperty => |property| {
+                    if (self.result.struct_property_types.get(property) == null) {
+                        const fieldType = try typeResolver.resolveTypeRef(self.context, property.fieldType);
+                        try self.result.struct_property_types.put(property, fieldType);
+                    }
+                },
+                .StructMethod => |method| {
+                    if (self.result.struct_method_return_types.get(method) == null) {
+                        const returnType = try typeResolver.resolveTypeRef(self.context, method.returnType);
+                        try self.result.struct_method_return_types.put(method, returnType);
+                    }
+                },
             }
         }
     }

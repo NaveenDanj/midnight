@@ -1,2 +1,3 @@
 linux for running test3.mn
 sudo zig build run --cache-dir /tmp/midnight-zig-cache --global-cache-dir /tmp/midnight-zig-global-cache --prefix /tmp/midnight-zig-out -- run src/data/test3.mn
+ @naveendanj  sudo zig build run --cache-dir /tmp/midnight-zig-cache --global-cache-dir /tmp/midnight-zig-global-cache --prefix /tmp/midnight-zig-out -- run src/data/test3.mn
