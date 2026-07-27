@@ -8,6 +8,9 @@ const LLVMEmitter = @import("../backend/llvm/llvm_emitter.zig").LLVMEmitter;
 const LLVMTypeMapper = @import("../backend/llvm/llvm_type_mapper.zig").LLVMTypeMapper;
 const emitLLVMIR = @import("../backend/llvm/llvm_backend.zig").emitLLVMIR;
 const Instruction = @import("../ir/ir.zig").Instruction;
+const expr_ast = @import("../ast/expr.zig");
+const stmt_ast = @import("../ast/stmt.zig");
+const TypeRef = @import("../ast/type_ref.zig").TypeRef;
 
 // test "LLVM backend emits constants variables and integer arithmetic" {
 //     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
@@ -161,5 +164,56 @@ test "LLVM backend emits array allocation and indexed access" {
 
     try expect(std.mem.indexOf(u8, llvm_ir, "@malloc") != null);
     try expect(std.mem.indexOf(u8, llvm_ir, "getelementptr") != null);
+    try expect(std.mem.indexOf(u8, llvm_ir, "load i32") != null);
+}
+
+test "LLVM backend emits struct allocation and field access" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const age = try allocator.create(stmt_ast.StructPropertyField);
+    age.* = .{ .name = "age", .fieldType = TypeRef{ .name = "int" }, .isImmutable = false };
+
+    const fields = try allocator.alloc(stmt_ast.StructField, 1);
+    fields[0] = .{ .StructProperty = age };
+
+    const struct_def = try allocator.create(stmt_ast.StructStmt);
+    struct_def.* = .{ .name = "Person", .fields = fields };
+
+    const init_fields = try allocator.alloc(expr_ast.StructInitField, 0);
+    const init = expr_ast.StructInitExpr{ .structName = "Person", .fields = init_fields };
+
+    const instructions = [_]Instruction{
+        .{ .StructDeclIR = .{ .definition = struct_def } },
+        .{ .AllocStruct = .{
+            .structType = "Person",
+            .definition = init,
+            .dest = 0,
+            .resolvedType = .{ .kind = .STRUCT, .struct_name = "Person" },
+        } },
+        .{ .StoreField = .{
+            .object = .{ .temp = 0 },
+            .fieldName = "age",
+            .value = .{ .constantInt = 42 },
+            .fieldIndex = 0,
+            .resolvedType = .{ .kind = .INT },
+        } },
+        .{ .LoadField = .{
+            .object = .{ .temp = 0 },
+            .fieldName = "age",
+            .dest = 1,
+        } },
+        .{ .PrintCall = .{
+            .value = .{ .temp = 1 },
+            .resolvedType = .{ .kind = .INT },
+        } },
+    };
+
+    const llvm_ir = try emitLLVMIR(allocator, &instructions);
+
+    try expect(std.mem.indexOf(u8, llvm_ir, "%Person = type { i32 }") != null);
+    try expect(std.mem.indexOf(u8, llvm_ir, "@malloc") != null);
+    try expect(std.mem.indexOf(u8, llvm_ir, "getelementptr inbounds %Person") != null or std.mem.indexOf(u8, llvm_ir, "getelementptr %Person") != null);
     try expect(std.mem.indexOf(u8, llvm_ir, "load i32") != null);
 }

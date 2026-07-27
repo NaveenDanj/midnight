@@ -6,6 +6,7 @@ const Instruction = @import("../../ir/ir.zig").Instruction;
 const Type = @import("../../semantic/types.zig").Type;
 const Value = @import("../../ir/ir.zig").Value;
 const FunctionRef = @import("./lib//function_emitter.zig").FunctionRef;
+const StructStmt = @import("../../ast/stmt.zig").StructStmt;
 
 const realPredicate = @import("./lib/predicates.zig").realPredicate;
 const intPredicate = @import("./lib/predicates.zig").intPredicate;
@@ -17,11 +18,15 @@ const lowerUnaryOp = @import("./lib/unary_op.zig").lowerUnaryOp;
 const lowerAllocArray = @import("./lib/arr_emitter.zig").lowerAllocArray;
 const lowerLoadIndex = @import("./lib/arr_emitter.zig").lowerLoadIndex;
 const lowerStoreIndex = @import("./lib/arr_emitter.zig").lowerStoreIndex;
+const lowerStoreField = @import("./lib/struct_emitter.zig").lowerStoreField;
+const lowerAllocStruct = @import("./lib/struct_emitter.zig").lowerAllocStruct;
+const lowerLoadField = @import("./lib/struct_emitter.zig").lowerLoadField;
 
 pub const LLVMBackendError = error{
     ArgumentCountMismatch,
     FunctionNotFound,
     MissingResolvedType,
+    OutOfMemory,
     UnsupportedBinaryOperation,
     UnsupportedUnaryOperation,
     UnsupportedInstruction,
@@ -72,6 +77,8 @@ pub const LLVMBackend = struct {
     variables: std.StringHashMap(VariableRef),
     global_variables: std.StringHashMap(VariableRef),
     functions: std.StringHashMap(FunctionRef),
+    struct_defs: std.StringHashMap(*StructStmt),
+    struct_types: std.StringHashMap(c.LLVMTypeRef),
     label_blocks: std.AutoHashMap(u32, c.LLVMBasicBlockRef),
     next_name_id: u32,
     current_block_terminated: bool,
@@ -112,6 +119,8 @@ pub const LLVMBackend = struct {
             .variables = std.StringHashMap(VariableRef).init(allocator),
             .global_variables = std.StringHashMap(VariableRef).init(allocator),
             .functions = std.StringHashMap(FunctionRef).init(allocator),
+            .struct_defs = std.StringHashMap(*StructStmt).init(allocator),
+            .struct_types = std.StringHashMap(c.LLVMTypeRef).init(allocator),
             .label_blocks = std.AutoHashMap(u32, c.LLVMBasicBlockRef).init(allocator),
             .next_name_id = 0,
             .current_block_terminated = false,
@@ -130,6 +139,8 @@ pub const LLVMBackend = struct {
             self.allocator.free(entry.value_ptr.param_types);
         }
         self.functions.deinit();
+        self.struct_defs.deinit();
+        self.struct_types.deinit();
         self.label_blocks.deinit();
         c.LLVMDisposeBuilder(self.builder);
         c.LLVMDisposeModule(self.module);
@@ -229,13 +240,14 @@ pub const LLVMBackend = struct {
             },
             .PrintCall => |inst| try lowerPrintCall(self, inst.value, inst.resolvedType orelse return LLVMBackendError.MissingResolvedType),
             .FunctionIR => |inst| try lowerFunction(self, inst),
+            .StructDeclIR => |inst| try self.registerStructDefinition(inst.definition),
             .FunctionCall => |inst| try lowerFunctionCall(self, inst),
             .LoadIndex => |inst| try lowerLoadIndex(self, inst),
             .StoreIndex => |inst| try lowerStoreIndex(self, inst),
+            .StoreField => |inst| try lowerStoreField(self, inst),
+            .AllocStruct => |inst| try lowerAllocStruct(self, inst),
+            .LoadField => |inst| try lowerLoadField(self, inst),
             .ParamBind,
-            .AllocStruct,
-            .StoreField,
-            .LoadField,
             .JumpWhileTrue,
             => return LLVMBackendError.UnsupportedInstruction,
         }
@@ -404,9 +416,55 @@ pub const LLVMBackend = struct {
             .BOOL => c.LLVMInt1TypeInContext(self.context),
             .FLOAT => c.LLVMDoubleTypeInContext(self.context),
             .VOID => c.LLVMVoidTypeInContext(self.context),
-            .STRING, .STRUCT => c.LLVMPointerTypeInContext(self.context, 0),
+            .STRING => c.LLVMPointerTypeInContext(self.context, 0),
+            .STRUCT => c.LLVMPointerType(try self.structBodyType(typ.struct_name orelse return LLVMBackendError.UnsupportedType), 0),
             .FUNCTION, .EMPTY => LLVMBackendError.UnsupportedType,
         };
+    }
+
+    pub fn registerStructDefinition(self: *LLVMBackend, definition: *StructStmt) !void {
+        try self.struct_defs.put(definition.name, definition);
+        _ = try self.structBodyType(definition.name);
+    }
+
+    pub fn structDefinition(self: *LLVMBackend, name: []const u8) !*StructStmt {
+        return self.struct_defs.get(name) orelse return LLVMBackendError.UnsupportedType;
+    }
+
+    pub fn structBodyType(self: *LLVMBackend, name: []const u8) !c.LLVMTypeRef {
+        if (self.struct_types.get(name)) |typ| {
+            return typ;
+        }
+
+        const definition = try self.structDefinition(name);
+        const struct_handle = c.LLVMStructCreateNamed(self.context, try self.toZ(name));
+        try self.struct_types.put(name, struct_handle);
+
+        var property_count: usize = 0;
+        for (definition.fields) |field| {
+            switch (field) {
+                .StructProperty => property_count += 1,
+                .StructMethod => {},
+            }
+        }
+
+        var field_types = try self.allocator.alloc(c.LLVMTypeRef, property_count);
+        defer self.allocator.free(field_types);
+
+        var index: usize = 0;
+        for (definition.fields) |field| {
+            switch (field) {
+                .StructProperty => |property| {
+                    const resolved = @import("../../semantic/type_resolver.zig").resolveTypeRefUnchecked(property.fieldType);
+                    field_types[index] = try self.llvmType(resolved);
+                    index += 1;
+                },
+                .StructMethod => {},
+            }
+        }
+
+        c.LLVMStructSetBody(struct_handle, if (field_types.len == 0) null else field_types.ptr, @intCast(field_types.len), 0);
+        return struct_handle;
     }
 
     fn verifyModule(self: *LLVMBackend) !void {

@@ -274,6 +274,7 @@ pub const X86_64Backend = struct {
             },
 
             .FunctionIR => {},
+            .StructDeclIR => {},
 
             else => {
                 return BackendError.UnsupportedInstruction;

@@ -14,15 +14,23 @@ const typeResolver = @import("type_resolver.zig");
 
 const VarAssign = stmt_ast.VarAssign;
 const VarDecl = stmt_ast.VarDecl;
+const StructStmt = stmt_ast.StructStmt;
 
 pub const AssignmentChecker = struct {
     allocator: std.mem.Allocator,
     context: *SemanticContext,
     scopeStack: *ScopeStack,
     result: *SemanticResult,
+    receiver_struct: ?*const StructStmt,
 
-    pub fn init(allocator: std.mem.Allocator, context: *SemanticContext, scopeStack: *ScopeStack, result: *SemanticResult) AssignmentChecker {
-        return .{ .allocator = allocator, .context = context, .scopeStack = scopeStack, .result = result };
+    pub fn init(allocator: std.mem.Allocator, context: *SemanticContext, scopeStack: *ScopeStack, result: *SemanticResult, receiver_struct: ?*const StructStmt) AssignmentChecker {
+        return .{
+            .allocator = allocator,
+            .context = context,
+            .scopeStack = scopeStack,
+            .result = result,
+            .receiver_struct = receiver_struct,
+        };
     }
 
     pub fn analyzeVarDecl(self: *AssignmentChecker, varDecl: *VarDecl) SemanticError!void {
@@ -30,7 +38,7 @@ pub const AssignmentChecker = struct {
         try self.result.var_decl_types.put(varDecl, varType);
         try self.scopeStack.declareSymbol(varDecl.name, .variable, varType, varDecl.immutable, &[_]types.Type{});
 
-        var exprChecker = ExprTypeChecker.init(self.context, self.scopeStack, self.result);
+        var exprChecker = ExprTypeChecker.init(self.context, self.scopeStack, self.result, self.receiver_struct);
         const initType = try exprChecker.evaluate(varDecl.initializer);
 
         if (varType.isArray and initType.kind == .EMPTY) {
@@ -51,29 +59,31 @@ pub const AssignmentChecker = struct {
     pub fn analyzeVarAssignment(self: *AssignmentChecker, varAssign: *VarAssign) SemanticError!void {
         switch (varAssign.target.*) {
             .Identifier => {
-                const symbol = self.scopeStack.lookupSymbol(varAssign.target.Identifier.name) orelse return SemanticError.UndefinedVariable;
+                if (self.scopeStack.lookupSymbol(varAssign.target.Identifier.name)) |symbol| {
+                    if (symbol.kind != .variable and symbol.kind != .parameter) {
+                        return SemanticError.TypeMismatch;
+                    }
 
-                if (symbol.kind != .variable and symbol.kind != .parameter) {
-                    return SemanticError.TypeMismatch;
+                    if (symbol.isImmutable) {
+                        return SemanticError.SymbolImmutable;
+                    }
+
+                    var exprChecker = ExprTypeChecker.init(self.context, self.scopeStack, self.result, self.receiver_struct);
+                    const exprKind = try exprChecker.evaluate(varAssign.value);
+
+                    if (!typeCompatibility.isAssignable(symbol.symbolType, exprKind)) {
+                        return SemanticError.TypeMismatch;
+                    }
+
+                    try self.result.var_assign_types.put(varAssign, exprKind);
+                    return;
                 }
 
-                if (symbol.isImmutable) {
-                    return SemanticError.SymbolImmutable;
-                }
-
-                var exprChecker = ExprTypeChecker.init(self.context, self.scopeStack, self.result);
-                const symbolType = symbol.symbolType;
-                const exprKind = try exprChecker.evaluate(varAssign.value);
-
-                if (!typeCompatibility.isAssignable(symbolType, exprKind)) {
-                    return SemanticError.TypeMismatch;
-                }
-
-                try self.result.var_assign_types.put(varAssign, exprKind);
+                return try self.analyzeReceiverPropertyAssignment(varAssign);
             },
             .MemberAccess => {
                 const object = varAssign.target.MemberAccess.object orelse return SemanticError.TypeMismatch;
-                var exprChecker = ExprTypeChecker.init(self.context, self.scopeStack, self.result);
+                var exprChecker = ExprTypeChecker.init(self.context, self.scopeStack, self.result, self.receiver_struct);
                 const objectType = try exprChecker.evaluate(object);
                 const memberName = varAssign.target.MemberAccess.memberName;
 
@@ -103,8 +113,7 @@ pub const AssignmentChecker = struct {
                             }
                         },
                         .StructMethod => |method_ptr| {
-                            const method = method_ptr.*;
-                            if (std.mem.eql(u8, method.name, memberName)) {
+                            if (std.mem.eql(u8, method_ptr.name, memberName)) {
                                 return SemanticError.TypeMismatch;
                             }
                         },
@@ -117,7 +126,7 @@ pub const AssignmentChecker = struct {
             },
             .ArrayAccess => {
                 const arrayAccess = varAssign.target.ArrayAccess;
-                var exprChecker = ExprTypeChecker.init(self.context, self.scopeStack, self.result);
+                var exprChecker = ExprTypeChecker.init(self.context, self.scopeStack, self.result, self.receiver_struct);
                 const arrayType = try exprChecker.evaluate(arrayAccess.array);
 
                 if (!arrayType.isArray) {
@@ -135,9 +144,44 @@ pub const AssignmentChecker = struct {
                 }
                 try self.result.var_assign_types.put(varAssign, exprType);
             },
-            else => {
-                return SemanticError.TypeMismatch;
-            },
+            else => return SemanticError.TypeMismatch,
         }
+    }
+
+    fn analyzeReceiverPropertyAssignment(self: *AssignmentChecker, varAssign: *VarAssign) SemanticError!void {
+        const receiver_struct = self.receiver_struct orelse return SemanticError.UndefinedVariable;
+        const property_name = varAssign.target.Identifier.name;
+        var exprChecker = ExprTypeChecker.init(self.context, self.scopeStack, self.result, self.receiver_struct);
+
+        for (receiver_struct.fields) |field| {
+            switch (field) {
+                .StructProperty => |property_ptr| {
+                    const property = property_ptr.*;
+                    if (!std.mem.eql(u8, property.name, property_name)) {
+                        continue;
+                    }
+
+                    if (property.isImmutable) {
+                        return SemanticError.SymbolImmutable;
+                    }
+
+                    const exprType = try exprChecker.evaluate(varAssign.value);
+                    const fieldType = self.result.struct_property_types.get(property_ptr) orelse try typeResolver.resolveTypeRef(self.context, property.fieldType);
+                    if (!typeCompatibility.isAssignable(fieldType, exprType)) {
+                        return SemanticError.TypeMismatch;
+                    }
+
+                    try self.result.var_assign_types.put(varAssign, exprType);
+                    return;
+                },
+                .StructMethod => |method_ptr| {
+                    if (std.mem.eql(u8, method_ptr.name, property_name)) {
+                        return SemanticError.TypeMismatch;
+                    }
+                },
+            }
+        }
+
+        return SemanticError.UndefinedVariable;
     }
 };

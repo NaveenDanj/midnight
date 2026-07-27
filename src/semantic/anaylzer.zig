@@ -18,6 +18,8 @@ const FunctionDecl = stmt_ast.FunctionDecl;
 const IfStatement = stmt_ast.IfStatement;
 const PrintStatement = stmt_ast.PrintStatement;
 const Statement = stmt_ast.Statement;
+const StructMethodField = stmt_ast.StructMethodField;
+const StructStmt = stmt_ast.StructStmt;
 const WhileStatement = stmt_ast.WhileStatement;
 
 pub const SemanticAnalyzer = struct {
@@ -25,12 +27,13 @@ pub const SemanticAnalyzer = struct {
     scopeStack: ScopeStack,
     context: SemanticContext,
     result: SemanticResult,
+    current_receiver_struct: ?*const StructStmt,
 
     pub fn init(allocator: std.mem.Allocator) !SemanticAnalyzer {
         const scopeStack = try ScopeStack.init(allocator);
         const context = try SemanticContext.init(allocator);
         const result = SemanticResult.init(allocator);
-        return .{ .allocator = allocator, .scopeStack = scopeStack, .context = context, .result = result };
+        return .{ .allocator = allocator, .scopeStack = scopeStack, .context = context, .result = result, .current_receiver_struct = null };
     }
 
     pub fn deinit(self: *SemanticAnalyzer) void {
@@ -92,7 +95,7 @@ pub const SemanticAnalyzer = struct {
     }
 
     pub fn evaluateExprType(self: *SemanticAnalyzer, expr: *Expr) SemanticError!types.Type {
-        var checker = ExprTypeChecker.init(&self.context, &self.scopeStack, &self.result);
+        var checker = ExprTypeChecker.init(&self.context, &self.scopeStack, &self.result, self.current_receiver_struct);
         return checker.evaluate(expr);
     }
 
@@ -143,6 +146,7 @@ pub const SemanticAnalyzer = struct {
             .StructDecl => {
                 var checker = self.structChecker();
                 try checker.analyzeStructStatement(stmt.StructDecl);
+                try self.analyzeStructMethods(stmt.StructDecl);
             },
             .ReturnStatement => {
                 var checker = self.functionChecker();
@@ -155,14 +159,39 @@ pub const SemanticAnalyzer = struct {
     }
 
     fn assignmentChecker(self: *SemanticAnalyzer) AssignmentChecker {
-        return AssignmentChecker.init(self.allocator, &self.context, &self.scopeStack, &self.result);
+        return AssignmentChecker.init(self.allocator, &self.context, &self.scopeStack, &self.result, self.current_receiver_struct);
     }
 
     fn functionChecker(self: *SemanticAnalyzer) FunctionChecker {
-        return FunctionChecker.init(self.allocator, &self.context, &self.scopeStack, &self.result);
+        return FunctionChecker.init(self.allocator, &self.context, &self.scopeStack, &self.result, self.current_receiver_struct);
     }
 
     fn structChecker(self: *SemanticAnalyzer) StructChecker {
         return StructChecker.init(self.allocator, &self.context, &self.scopeStack, &self.result);
+    }
+
+    fn analyzeStructMethods(self: *SemanticAnalyzer, structStmt: *StructStmt) SemanticError!void {
+        for (structStmt.fields) |field| {
+            switch (field) {
+                .StructMethod => |method_ptr| try self.analyzeStructMethod(structStmt, method_ptr),
+                .StructProperty => {},
+            }
+        }
+    }
+
+    fn analyzeStructMethod(self: *SemanticAnalyzer, structStmt: *StructStmt, method: *StructMethodField) SemanticError!void {
+        try self.scopeStack.pushScope();
+        defer self.scopeStack.popScope();
+
+        try self.scopeStack.declareSymbol("self", .parameter, .{ .kind = .STRUCT, .struct_name = structStmt.name }, false, &[_]types.Type{});
+
+        const previous_receiver = self.current_receiver_struct;
+        self.current_receiver_struct = structStmt;
+        defer self.current_receiver_struct = previous_receiver;
+
+        var checker = self.functionChecker();
+        try checker.declareMethodParams(method.parameters);
+        try self.analyzeBlock(method.body);
+        try checker.validateMethodReturns(method);
     }
 };

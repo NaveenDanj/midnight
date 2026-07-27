@@ -20,10 +20,26 @@ while(index < 10) {
     index = index + 1;
 }
 
-var string greet = "Hello" + " " + "World";
-print(greet);
-
 struct Person {
     var string first_name;
     var string last_name;
+
+    func greet() string {
+        return "Hello, " + self.first_name + " " + self.last_name;
+    }
+
 }
+
+var Person person1 = Person{
+    first_name = "John",
+    last_name = "Doe"
+};
+
+
+var Person person2 = Person{
+    first_name = "Naveen",
+    last_name = "Hettiwaththa"
+};
+
+print(person1.greet());
+print(person2.greet());
