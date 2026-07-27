@@ -50,9 +50,14 @@ pub const AssignmentChecker = struct {
         }
 
         if (varType.kind == .STRUCT) {
-            const structDef = self.context.structs.get(varType.struct_name orelse return SemanticError.TypeMismatch) orelse return SemanticError.TypeMismatch;
-            var structChecker = StructChecker.init(self.allocator, self.context, self.scopeStack, self.result);
-            try structChecker.analyzeStructFields(structDef, &varDecl.initializer.StructInit);
+            switch (varDecl.initializer.*) {
+                .StructInit => {
+                    const structDef = self.context.structs.get(varType.struct_name orelse return SemanticError.TypeMismatch) orelse return SemanticError.TypeMismatch;
+                    var structChecker = StructChecker.init(self.allocator, self.context, self.scopeStack, self.result);
+                    try structChecker.analyzeStructFields(structDef, &varDecl.initializer.StructInit);
+                },
+                else => {},
+            }
         }
     }
 

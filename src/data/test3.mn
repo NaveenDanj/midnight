@@ -25,7 +25,11 @@ struct Person {
     var string last_name;
 
     func greet() string {
-        return "Hello, " + self.first_name + " " + self.last_name;
+        return "Hello, " + first_name + " " + last_name;
+    }
+
+    func getPerson() Person {
+        return self;
     }
 
 }
@@ -43,3 +47,4 @@ var Person person2 = Person{
 
 print(person1.greet());
 print(person2.greet());
+print(person2.getPerson());
