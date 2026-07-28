@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Midnight — a language that keeps only what it needs</title>
+<meta name="description" content="Midnight is a systems language built on minimal syntactic ceremony. Version 0.1.0-alpha.1.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink:    '#101116',
+          ink2:   '#17181F',
+          paper:  '#ECE9E1',
+          muted:  '#96979E',
+          faint:  '#5B5C64',
+          accent: '#D7A65A',
+          rule:   '#2C2D36',
+        },
+        fontFamily: {
+          display: ['Fraunces', 'serif'],
+          sans: ['"IBM Plex Sans"', 'ui-sans-serif', 'sans-serif'],
+          mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; animation: none !important; }
+  }
+
+  ::selection { background: #D7A65A; color: #101116; }
+
+  body { background-color: #101116; }
+
+  .numeral {
+    font-family: 'Fraunces', serif;
+    font-variant-numeral: oldstyle-nums;
+  }
+
+  /* code panel */
+  .code-panel {
+    background: #15161C;
+    border: 1px solid #2C2D36;
+  }
+  .code-panel-head {
+    border-bottom: 1px solid #2C2D36;
+  }
+  .code-line {
+    display: flex;
+    align-items: baseline;
+  }
+  .ln {
+    flex: 0 0 2.25rem;
+    text-align: right;
+    padding-right: 1rem;
+    color: #4B4C55;
+    user-select: none;
+  }
+  .code-line .stmt { white-space: pre; }
+
+  .tok-kw   { color: #D7A65A; }
+  .tok-str  { color: #A6B98A; }
+  .tok-type { color: #8FAFC9; }
+  .tok-fn   { color: #ECE9E1; }
+  .tok-com  { color: #5B5C64; font-style: italic; }
+  .tok-num  { color: #C89B7B; }
+
+  /* focus visibility */
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid #D7A65A;
+    outline-offset: 3px;
+  }
+
+  .hairline { background-color: #2C2D36; }
+
+  .clause-num {
+    font-family: 'Fraunces', serif;
+    font-optical-sizing: auto;
+  }
+
+  .fade-rule {
+    background: linear-gradient(90deg, #2C2D36, transparent);
+    height: 1px;
+  }
+</style>
+</head>
+
+<body class="bg-ink text-paper font-sans antialiased">
+
+<!-- ============ NAV ============ -->
+<header class="border-b border-rule">
+  <div class="mx-auto max-w-6xl px-6 sm:px-10 py-5 flex items-center justify-between">
+    <a href="#top" class="font-display text-lg tracking-tight">Midnight</a>
+    <nav class="hidden md:flex items-center gap-8 text-sm text-muted">
+      <a href="#why" class="hover:text-paper transition-colors">Why</a>
+      <a href="#philosophy" class="hover:text-paper transition-colors">Philosophy</a>
+      <a href="#different" class="hover:text-paper transition-colors">Difference</a>
+      <a href="#examples" class="hover:text-paper transition-colors">Code</a>
+      <a href="#state" class="hover:text-paper transition-colors">Status</a>
+      <a href="#governance" class="hover:text-paper transition-colors">Governance</a>
+      <a href="#involved" class="hover:text-paper transition-colors">Get Involved</a>
+    </nav>
+    <a href="https://github.com/NaveenDanj/midnight" class="text-sm border border-rule px-4 py-1.5 hover:border-accent hover:text-accent transition-colors">GitHub</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============ HERO ============ -->
+  <section class="mx-auto max-w-6xl px-6 sm:px-10 pt-16 sm:pt-24 pb-20 grid md:grid-cols-2 gap-14 md:gap-10 items-start">
+    <div>
+      <p class="font-mono text-xs text-accent tracking-widest uppercase mb-6">0.1.0-alpha.1</p>
+      <h1 class="font-display font-medium text-[2.75rem] sm:text-6xl leading-[1.05] tracking-tight">
+        Syntax should<br>earn its place.
+      </h1>
+      <p class="mt-7 text-lg text-muted max-w-md leading-relaxed">
+        Midnight is a systems language built on one premise: keep only the syntax
+        that carries real meaning. Nothing survives out of habit.
+      </p>
+      <div class="mt-10 flex flex-wrap items-center gap-4">
+        <a href="#examples" class="inline-flex items-center bg-accent text-ink px-6 py-3 text-sm font-medium hover:bg-[#E4B36C] transition-colors">
+          Read the code
+        </a>
+        <a href="#philosophy" class="inline-flex items-center px-6 py-3 text-sm text-paper border border-rule hover:border-accent hover:text-accent transition-colors">
+          Read the philosophy
+        </a>
+      </div>
+    </div>
+
+    <div class="code-panel">
+      <div class="code-panel-head px-4 py-2.5 flex items-center justify-between">
+        <span class="font-mono text-xs text-faint">hello.mn</span>
+        <span class="font-mono text-xs text-faint">midnight</span>
+      </div>
+      <div class="px-2 py-5 font-mono text-[13.5px] leading-7 overflow-x-auto">
+        <div class="code-line"><span class="ln">1</span><span class="stmt"><span class="tok-fn">print</span>(<span class="tok-str">"Hello, World!"</span>);</span></div>
+        <div class="code-line"><span class="ln">2</span><span class="stmt"></span></div>
+        <div class="code-line"><span class="ln">3</span><span class="stmt"><span class="tok-kw">struct</span> <span class="tok-type">Person</span> {</span></div>
+        <div class="code-line"><span class="ln">4</span><span class="stmt">    <span class="tok-kw">var</span> <span class="tok-type">string</span> first_name;</span></div>
+        <div class="code-line"><span class="ln">5</span><span class="stmt">    <span class="tok-kw">var</span> <span class="tok-type">string</span> last_name;</span></div>
+        <div class="code-line"><span class="ln">6</span><span class="stmt"></span></div>
+        <div class="code-line"><span class="ln">7</span><span class="stmt">    <span class="tok-kw">func</span> <span class="tok-fn">greet</span>() <span class="tok-type">string</span> {</span></div>
+        <div class="code-line"><span class="ln">8</span><span class="stmt">        <span class="tok-kw">return</span> <span class="tok-str">"Hello, "</span> + first_name + <span class="tok-str">" "</span> + last_name;</span></div>
+        <div class="code-line"><span class="ln">9</span><span class="stmt">    }</span></div>
+        <div class="code-line"><span class="ln">10</span><span class="stmt">}</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="mx-auto max-w-6xl px-6 sm:px-10"><div class="hairline h-px"></div></div>
+
+  <!-- ============ WHY MIDNIGHT ============ -->
+  <section id="why" class="mx-auto max-w-6xl px-6 sm:px-10 py-20 sm:py-28">
+    <div class="grid md:grid-cols-[1fr_2fr] gap-8 md:gap-16">
+      <p class="font-mono text-xs text-muted uppercase tracking-widest pt-2">Why Midnight</p>
+      <div class="max-w-2xl">
+        <p class="font-display text-2xl sm:text-3xl leading-snug text-paper">
+          Every language accumulates syntax it no longer needs — grammar kept
+          for history, punctuation kept for parsers, ceremony kept for habit.
+        </p>
+        <p class="mt-6 text-muted leading-relaxed">
+          Midnight starts from a plainer question: what does this line of code
+          actually need to say? If a keyword doesn't change the meaning, it
+          doesn't belong. If a concept isn't relevant yet, it shouldn't be on
+          the page.
+        </p>
+        <p class="mt-5 text-muted leading-relaxed">
+          This isn't about writing fewer characters. It's about removing
+          <em class="text-paper not-italic">accidental</em> complexity so the
+          <em class="text-paper not-italic">essential</em> complexity — the
+          part that's actually hard — stays visible and honest. Simple
+          programs should read simply. Harder ones should reveal their
+          difficulty on their own terms, not because the language demanded
+          ceremony up front.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div class="mx-auto max-w-6xl px-6 sm:px-10"><div class="hairline h-px"></div></div>
+
+  <!-- ============ PHILOSOPHY ============ -->
+  <section id="philosophy" class="mx-auto max-w-6xl px-6 sm:px-10 py-20 sm:py-28">
+    <p class="font-mono text-xs text-muted uppercase tracking-widest mb-12">Philosophy</p>
+
+    <div>
+      <div class="grid grid-cols-[3rem_1fr] sm:grid-cols-[4rem_1fr] gap-y-0 border-t border-rule">
+        <div class="clause-num text-3xl sm:text-4xl text-accent py-8 border-b border-rule">I</div>
+        <div class="py-8 border-b border-rule pl-6 sm:pl-10">
+          <h3 class="font-display text-xl sm:text-2xl">Syntax earns its place.</h3>
+          <p class="mt-2 text-muted max-w-xl leading-relaxed">Only syntax that carries real meaning survives. Everything else — inherited punctuation, legacy grammar — is a candidate for removal.</p>
+        </div>
+
+        <div class="clause-num text-3xl sm:text-4xl text-accent py-8 border-b border-rule">II</div>
+        <div class="py-8 border-b border-rule pl-6 sm:pl-10">
+          <h3 class="font-display text-xl sm:text-2xl">Power arrives progressively.</h3>
+          <p class="mt-2 text-muted max-w-xl leading-relaxed">Advanced control shows up when you reach for it, not before. A beginner's first program and an expert's hardest one shouldn't look like different languages.</p>
+        </div>
+
+        <div class="clause-num text-3xl sm:text-4xl text-accent py-8 border-b border-rule">III</div>
+        <div class="py-8 border-b border-rule pl-6 sm:pl-10">
+          <h3 class="font-display text-xl sm:text-2xl">Code reads like intent.</h3>
+          <p class="mt-2 text-muted max-w-xl leading-relaxed">Names and structure should say plainly what they do. A reader shouldn't need to decode the syntax before they can understand the idea underneath it.</p>
+        </div>
+
+        <div class="clause-num text-3xl sm:text-4xl text-accent py-8 border-b border-rule">IV</div>
+        <div class="py-8 border-b border-rule pl-6 sm:pl-10">
+          <h3 class="font-display text-xl sm:text-2xl">Complexity is exposed, not hidden.</h3>
+          <p class="mt-2 text-muted max-w-xl leading-relaxed">When a real tradeoff matters — ownership, performance, memory — the compiler should explain it, not hide it and not punish you for finding it.</p>
+        </div>
+
+        <div class="clause-num text-3xl sm:text-4xl text-accent py-8 border-b border-rule">V</div>
+        <div class="py-8 border-b border-rule pl-6 sm:pl-10">
+          <h3 class="font-display text-xl sm:text-2xl">Directness over tradition.</h3>
+          <p class="mt-2 text-muted max-w-xl leading-relaxed">A convention being old isn't a reason to keep it. If a cleaner path exists and loses nothing essential, Midnight takes it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="mx-auto max-w-6xl px-6 sm:px-10"><div class="hairline h-px"></div></div>
+
+  <!-- ============ WHAT MAKES IT DIFFERENT ============ -->
+  <section id="different" class="mx-auto max-w-6xl px-6 sm:px-10 py-20 sm:py-28">
+    <p class="font-mono text-xs text-muted uppercase tracking-widest mb-12">What makes it different</p>
+
+    <div class="grid md:grid-cols-3 gap-10 md:gap-8">
+      <div>
+        <h3 class="font-display text-xl mb-3">Structs without repetition</h3>
+        <p class="text-muted leading-relaxed text-[15px]">
+          A struct's fields and methods live in one honest block. There's no
+          separate header to keep in sync, no boilerplate constructor to
+          write by hand for the common case. The declaration is the whole
+          story.
+        </p>
+      </div>
+      <div>
+        <h3 class="font-display text-xl mb-3">Functions that expose the idea</h3>
+        <p class="text-muted leading-relaxed text-[15px]">
+          A function's signature reads as what it computes, not as scaffolding
+          around it. Types are visible where they clarify intent, and quiet
+          where they'd just repeat what the code already says.
+        </p>
+      </div>
+      <div>
+        <h3 class="font-display text-xl mb-3">Control that grows with you</h3>
+        <p class="text-muted leading-relaxed text-[15px]">
+          Everyday control flow — <span class="font-mono text-paper">if</span>,
+          <span class="font-mono text-paper">while</span>, plain assignment —
+          looks plain because it is plain. Systems-level concerns arrive later,
+          when the program actually needs them, not as a tax on line one.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div class="mx-auto max-w-6xl px-6 sm:px-10"><div class="hairline h-px"></div></div>
+
+  <!-- ============ CODE EXAMPLES ============ -->
+  <section id="examples" class="mx-auto max-w-6xl px-6 sm:px-10 py-20 sm:py-28">
+    <p class="font-mono text-xs text-muted uppercase tracking-widest mb-12">Code examples</p>
+
+    <div class="space-y-10">
+
+      <!-- example 1 -->
+      <div class="grid md:grid-cols-[1fr_1.6fr] gap-6 md:gap-10 items-start">
+        <div>
+          <h3 class="font-display text-xl">A program with nothing to spare</h3>
+          <p class="mt-2 text-muted text-[15px] leading-relaxed">One statement. No entry-point ritual, no imports for a print. The smallest program looks exactly as small as it is.</p>
+        </div>
+        <div class="code-panel">
+          <div class="code-panel-head px-4 py-2.5"><span class="font-mono text-xs text-faint">hello.mn</span></div>
+          <div class="px-2 py-5 font-mono text-[13.5px] leading-7 overflow-x-auto">
+            <div class="code-line"><span class="ln">1</span><span class="stmt"><span class="tok-fn">print</span>(<span class="tok-str">"Hello, World!"</span>);</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- example 2 -->
+      <div class="grid md:grid-cols-[1fr_1.6fr] gap-6 md:gap-10 items-start">
+        <div>
+          <h3 class="font-display text-xl">A struct that carries its own behavior</h3>
+          <p class="mt-2 text-muted text-[15px] leading-relaxed">Fields and methods sit together. Member access reads as plainly as the field names themselves.</p>
+        </div>
+        <div class="code-panel">
+          <div class="code-panel-head px-4 py-2.5"><span class="font-mono text-xs text-faint">person.mn</span></div>
+          <div class="px-2 py-5 font-mono text-[13.5px] leading-7 overflow-x-auto">
+            <div class="code-line"><span class="ln">1</span><span class="stmt"><span class="tok-kw">struct</span> <span class="tok-type">Person</span> {</span></div>
+            <div class="code-line"><span class="ln">2</span><span class="stmt">    <span class="tok-kw">var</span> <span class="tok-type">string</span> first_name;</span></div>
+            <div class="code-line"><span class="ln">3</span><span class="stmt">    <span class="tok-kw">var</span> <span class="tok-type">string</span> last_name;</span></div>
+            <div class="code-line"><span class="ln">4</span><span class="stmt"></span></div>
+            <div class="code-line"><span class="ln">5</span><span class="stmt">    <span class="tok-kw">func</span> <span class="tok-fn">greet</span>() <span class="tok-type">string</span> {</span></div>
+            <div class="code-line"><span class="ln">6</span><span class="stmt">        <span class="tok-kw">return</span> <span class="tok-str">"Hello, "</span> + first_name + <span class="tok-str">" "</span> + last_name;</span></div>
+            <div class="code-line"><span class="ln">7</span><span class="stmt">    }</span></div>
+            <div class="code-line"><span class="ln">8</span><span class="stmt">}</span></div>
+            <div class="code-line"><span class="ln">9</span><span class="stmt"></span></div>
+            <div class="code-line"><span class="ln">10</span><span class="stmt"><span class="tok-kw">var</span> <span class="tok-type">Person</span> p = <span class="tok-type">Person</span> { first_name: <span class="tok-str">"Ada"</span>, last_name: <span class="tok-str">"Lovelace"</span> };</span></div>
+            <div class="code-line"><span class="ln">11</span><span class="stmt"><span class="tok-fn">print</span>(p.greet());</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- example 3 -->
+      <div class="grid md:grid-cols-[1fr_1.6fr] gap-6 md:gap-10 items-start">
+        <div>
+          <h3 class="font-display text-xl">Recursion, unadorned</h3>
+          <p class="mt-2 text-muted text-[15px] leading-relaxed">Typed parameters and a typed return say exactly what the function promises. Nothing else is asked of you here.</p>
+        </div>
+        <div class="code-panel">
+          <div class="code-panel-head px-4 py-2.5"><span class="font-mono text-xs text-faint">factorial.mn</span></div>
+          <div class="px-2 py-5 font-mono text-[13.5px] leading-7 overflow-x-auto">
+            <div class="code-line"><span class="ln">1</span><span class="stmt"><span class="tok-kw">func</span> <span class="tok-fn">factorial</span>(<span class="tok-type">int</span> n) <span class="tok-type">int</span> {</span></div>
+            <div class="code-line"><span class="ln">2</span><span class="stmt">    <span class="tok-kw">if</span> (n == <span class="tok-num">1</span>) {</span></div>
+            <div class="code-line"><span class="ln">3</span><span class="stmt">        <span class="tok-kw">return</span> <span class="tok-num">1</span>;</span></div>
+            <div class="code-line"><span class="ln">4</span><span class="stmt">    }</span></div>
+            <div class="code-line"><span class="ln">5</span><span class="stmt"></span></div>
+            <div class="code-line"><span class="ln">6</span><span class="stmt">    <span class="tok-kw">return</span> n * <span class="tok-fn">factorial</span>(n - <span class="tok-num">1</span>);</span></div>
+            <div class="code-line"><span class="ln">7</span><span class="stmt">}</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="mx-auto max-w-6xl px-6 sm:px-10"><div class="hairline h-px"></div></div>
+
+  <!-- ============ CURRENT STATE ============ -->
+  <section id="state" class="mx-auto max-w-6xl px-6 sm:px-10 py-20 sm:py-28">
+    <div class="grid md:grid-cols-[1fr_2fr] gap-8 md:gap-16">
+      <p class="font-mono text-xs text-muted uppercase tracking-widest pt-2">Current state</p>
+      <div class="max-w-2xl">
+        <p class="font-display text-2xl sm:text-3xl leading-snug">
+          Midnight is early. It is also already real.
+        </p>
+        <p class="mt-6 text-muted leading-relaxed">
+          Version <span class="font-mono text-paper">0.1.0-alpha.1</span> already
+          runs typed functions, <span class="font-mono text-paper">if</span> and
+          <span class="font-mono text-paper">while</span>, structs with fields
+          and methods, arrays, and the primitive types
+          (<span class="font-mono text-paper">int</span>,
+          <span class="font-mono text-paper">float</span>,
+          <span class="font-mono text-paper">bool</span>,
+          <span class="font-mono text-paper">string</span>,
+          <span class="font-mono text-paper">void</span>). The examples above
+          run as written.
+        </p>
+        <p class="mt-5 text-muted leading-relaxed">
+          What's missing is still missing on purpose: the language is being
+          built one deliberate piece at a time, in the open, and it will
+          keep changing shape as it grows. Early doesn't mean unfinished in
+          the apologetic sense — it means you're watching the decisions get
+          made.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div class="mx-auto max-w-6xl px-6 sm:px-10"><div class="hairline h-px"></div></div>
+
+  <!-- ============ GOVERNANCE & RFC ============ -->
+  <section id="governance" class="mx-auto max-w-6xl px-6 sm:px-10 py-20 sm:py-28">
+    <div class="grid md:grid-cols-[1fr_2fr] gap-8 md:gap-16">
+      <p class="font-mono text-xs text-muted uppercase tracking-widest pt-2">Governance &amp; RFCs</p>
+      <div class="max-w-2xl">
+        <p class="font-display text-2xl sm:text-3xl leading-snug">
+          Language decisions deserve the same restraint as the language itself.
+        </p>
+        <p class="mt-6 text-muted leading-relaxed">
+          Midnight doesn't have a foundation, a steering committee, or a
+          voting process to point to yet — it's one person's design, made in
+          the open. But syntax is a shared resource: once something ships,
+          everyone who writes Midnight lives with it. So changes that touch
+          the language itself go through a written proposal, not a quiet
+          commit.
+        </p>
+
+        <div class="mt-10 border-t border-rule">
+          <div class="grid grid-cols-[3rem_1fr] sm:grid-cols-[4rem_1fr]">
+            <div class="clause-num text-2xl text-accent py-6 border-b border-rule">01</div>
+            <div class="py-6 border-b border-rule pl-6 sm:pl-10">
+              <h3 class="font-medium text-paper">Open an issue</h3>
+              <p class="mt-1 text-muted text-[15px] leading-relaxed">Describe the problem before the solution. What does the current syntax or behavior get wrong?</p>
+            </div>
+
+            <div class="clause-num text-2xl text-accent py-6 border-b border-rule">02</div>
+            <div class="py-6 border-b border-rule pl-6 sm:pl-10">
+              <h3 class="font-medium text-paper">Discuss it in the open</h3>
+              <p class="mt-1 text-muted text-[15px] leading-relaxed">Alternatives get argued in public, against the philosophy, not around it. A good idea should survive scrutiny.</p>
+            </div>
+
+            <div class="clause-num text-2xl text-accent py-6 border-b border-rule">03</div>
+            <div class="py-6 border-b border-rule pl-6 sm:pl-10">
+              <h3 class="font-medium text-paper">Write the RFC</h3>
+              <p class="mt-1 text-muted text-[15px] leading-relaxed">A short document: the change, the tradeoffs it makes, and the syntax it would add or remove. No feature ships without one.</p>
+            </div>
+
+            <div class="clause-num text-2xl text-accent py-6 border-b border-rule">04</div>
+            <div class="py-6 border-b border-rule pl-6 sm:pl-10">
+              <h3 class="font-medium text-paper">Accept, reject, or reshape</h3>
+              <p class="mt-1 text-muted text-[15px] leading-relaxed">Most RFCs come back changed. That's the process working, not stalling.</p>
+            </div>
+          </div>
+        </div>
+
+        <p class="mt-8 text-muted leading-relaxed">
+          As Midnight grows past one maintainer, this process is meant to
+          grow with it — toward shared ownership, not around a single
+          gatekeeper. If you want to shape that, the RFC template is the
+          place to start.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div class="mx-auto max-w-6xl px-6 sm:px-10"><div class="hairline h-px"></div></div>
+
+  <!-- ============ GET INVOLVED ============ -->
+  <section id="involved" class="mx-auto max-w-6xl px-6 sm:px-10 py-20 sm:py-28">
+    <p class="font-mono text-xs text-muted uppercase tracking-widest mb-12">Get involved</p>
+
+    <div class="grid md:grid-cols-[1.2fr_1fr] gap-12 md:gap-16">
+      <div>
+        <p class="font-display text-2xl sm:text-3xl leading-snug max-w-lg">
+          Midnight is built in the open, by whoever shows up.
+        </p>
+        <p class="mt-6 text-muted leading-relaxed max-w-xl">
+          It's early enough that small contributions still shape the
+          language's direction. Write a program and see where the syntax
+          resists you. Read the compiler and see where the implementation
+          disagrees with the design. Argue for a cleaner way to say something
+          — that argument is exactly what Midnight wants to have.
+        </p>
+
+        <div class="mt-8 flex flex-wrap gap-4">
+          <a href="https://github.com/NaveenDanj/midnight" class="inline-flex items-center bg-accent text-ink px-6 py-3 text-sm font-medium hover:bg-[#E4B36C] transition-colors">
+            Star the repo
+          </a>
+          <a href="https://github.com/NaveenDanj/midnight/issues" class="inline-flex items-center px-6 py-3 text-sm text-paper border border-rule hover:border-accent hover:text-accent transition-colors">
+            Open an issue
+          </a>
+        </div>
+      </div>
+
+      <div class="border-t border-rule pt-6 md:border-t-0 md:pt-0 md:border-l md:pl-10 border-rule">
+        <ul class="space-y-6">
+          <li>
+            <a href="https://github.com/NaveenDanj/midnight" class="font-medium text-paper hover:text-accent transition-colors">Clone the compiler →</a>
+            <p class="mt-1 text-muted text-sm leading-relaxed">Written in Zig. Build it, break it, read it.</p>
+          </li>
+          <li>
+            <a href="https://github.com/NaveenDanj/midnight/issues" class="font-medium text-paper hover:text-accent transition-colors">Report what breaks →</a>
+            <p class="mt-1 text-muted text-sm leading-relaxed">Alpha means rough edges. Precise bug reports move faster than vague ones.</p>
+          </li>
+          <li>
+            <a href="https://github.com/NaveenDanj/midnight/discussions" class="font-medium text-paper hover:text-accent transition-colors">Propose an idea →</a>
+            <p class="mt-1 text-muted text-sm leading-relaxed">Discuss syntax and semantics before it becomes an RFC.</p>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="border-t border-rule">
+  <div class="mx-auto max-w-6xl px-6 sm:px-10 py-16 sm:py-20">
+    <div class="grid sm:grid-cols-[1.4fr_1fr] gap-10">
+      <div>
+        <p class="font-display text-2xl sm:text-3xl leading-snug max-w-md">
+          Explore Midnight, follow its progress, or try it for yourself.
+        </p>
+      </div>
+      <nav class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm content-start">
+        <a href="https://github.com/NaveenDanj/midnight" class="text-muted hover:text-accent transition-colors">GitHub</a>
+        <a href="https://github.com/NaveenDanj/midnight#readme" class="text-muted hover:text-accent transition-colors">Docs</a>
+        <a href="https://github.com/NaveenDanj/midnight/tree/main/examples" class="text-muted hover:text-accent transition-colors">Examples</a>
+        <a href="https://github.com/NaveenDanj/midnight/discussions" class="text-muted hover:text-accent transition-colors">Roadmap</a>
+      </nav>
+    </div>
+    <div class="mt-16 pt-6 border-t border-rule flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+      <p class="font-mono text-xs text-faint">Midnight · 0.1.0-alpha.1 · written in Zig</p>
+      <p class="font-mono text-xs text-faint">A language that only says what it means.</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,21 @@
+extern func midnight_file_read(string path) string;
+extern func midnight_file_write(string path, string buffer) bool;
+extern func midnight_file_exists(string path) string;
+
+struct File {
+    
+    func read(string path) string {
+        return midnight_file_read(path);
+    }
+
+    func write(string path, string buffer) int {
+        return midnight_file_write(path, buffer);
+    }
+
+    func exists(string path) bool {
+        return midnight_file_exists(path, buffer);
+    }
+
+}
+
+export {File};
