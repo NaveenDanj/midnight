@@ -10,6 +10,7 @@ const Statement = stmt_ast.Statement;
 const StructMethodField = stmt_ast.StructMethodField;
 const StructStmt = stmt_ast.StructStmt;
 const Expr = @import("../../ast/expr.zig").Expr;
+const BlockStmt = stmt_ast.BlockStmt;
 
 const Instruction = @import("../ir.zig").Instruction;
 const lowerStatementWithSemanticsAndReceiver = @import("../lower.zig").lowerStatementWithSemanticsAndReceiver;
@@ -35,7 +36,7 @@ pub fn lowerFunctionDeclWithSemantics(
         result.function_return_types.get(funcDecl) orelse typeResolver.resolveTypeRefUnchecked(funcDecl.returnType)
     else
         typeResolver.resolveTypeRefUnchecked(funcDecl.returnType);
-    return lowerCallableBody(builder, funcDecl.name, funcDecl.params, funcDecl.body.statements, return_type, semantic, null);
+    return lowerCallableBody(builder, funcDecl.name, funcDecl.params, funcDecl.body, return_type, semantic, null, funcDecl.isExtern);
 }
 
 pub fn lowerStructMethodWithSemantics(
@@ -55,7 +56,7 @@ pub fn lowerStructMethodWithSemantics(
     else
         typeResolver.resolveTypeRefUnchecked(method.returnType);
 
-    return lowerCallableBody(builder, mangled_name, params, method.body.statements, return_type, semantic, receiver_ctx);
+    return lowerCallableBody(builder, mangled_name, params, method.body, return_type, semantic, receiver_ctx, false);
 }
 
 pub fn lowerFunctionCall(builder: *InstructionBuilder, funcCall: *FunctionCallStmt) anyerror!void {
@@ -110,10 +111,11 @@ fn lowerCallableBody(
     builder: *InstructionBuilder,
     name: []const u8,
     params: []*Param,
-    body_statements: []*Statement,
+    body: ?*BlockStmt,
     return_type: Type,
     semantic: ?*const SemanticResult,
     receiver_ctx: ?ReceiverContext,
+    isExtern: bool,
 ) anyerror!Instruction {
     var newBuilder = InstructionBuilder.init(builder.allocator);
 
@@ -130,13 +132,18 @@ fn lowerCallableBody(
         });
     }
 
-    try lowerBlockWithSemanticsAndReceiver(&newBuilder, body_statements, semantic, receiver_ctx);
+    if (!isExtern) {
+        // TODO: Add proper error handling for when body is null, as it should not be null for non-extern functions.
+        const block = body orelse return error.NotAFunction;
+        try lowerBlockWithSemanticsAndReceiver(&newBuilder, block.statements, semantic, receiver_ctx);
+    }
 
     return .{ .FunctionIR = .{
         .name = name,
         .params = params,
         .body = newBuilder.instructions.items,
         .returnType = return_type,
+        .isExtern = isExtern,
     } };
 }
 

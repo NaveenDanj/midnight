@@ -57,3 +57,6 @@ var Person person2 = Person{
 
 person1.loop();
 person2.loop();
+
+extern func midnight_test() void;
+midnight_test();

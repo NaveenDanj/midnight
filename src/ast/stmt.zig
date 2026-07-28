@@ -25,8 +25,9 @@ pub const BlockStmt = struct {
 pub const FunctionDecl = struct {
     name: []const u8,
     params: []*Param,
-    body: *BlockStmt,
+    body: ?*BlockStmt,
     returnType: TypeRef,
+    isExtern: bool = false,
 };
 
 pub const ReturnStatement = struct {

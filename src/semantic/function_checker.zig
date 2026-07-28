@@ -69,7 +69,9 @@ pub const FunctionChecker = struct {
 
     pub fn validateReturns(self: *FunctionChecker, funcDecl: *FunctionDecl) SemanticError!void {
         const expectedRetType = self.result.function_return_types.get(funcDecl) orelse try typeResolver.resolveTypeRef(self.context, funcDecl.returnType);
-        try self.validateReturnBlock(funcDecl.body.statements, expectedRetType);
+        if (!funcDecl.isExtern) {
+            try self.validateReturnBlock(funcDecl.body.?.statements, expectedRetType);
+        }
     }
 
     pub fn validateMethodReturns(self: *FunctionChecker, method: *StructMethodField) SemanticError!void {
