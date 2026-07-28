@@ -10,6 +10,7 @@ pub const FunctionRef = struct {
     func_type: c.LLVMTypeRef,
     return_type: Type,
     param_types: []Type,
+    isExtern: bool = false,
 };
 
 pub fn lowerFunction(self: *LLVMBackend, inst: @FieldType(Instruction, "FunctionIR")) anyerror!void {
@@ -37,12 +38,11 @@ pub fn lowerFunction(self: *LLVMBackend, inst: @FieldType(Instruction, "Function
     );
     const function = c.LLVMAddFunction(self.module, try self.toZ(inst.name), func_type);
 
-    try self.functions.put(inst.name, .{
-        .value = function,
-        .func_type = func_type,
-        .return_type = return_type,
-        .param_types = semantic_param_types,
-    });
+    try self.functions.put(inst.name, .{ .value = function, .func_type = func_type, .return_type = return_type, .param_types = semantic_param_types, .isExtern = inst.isExtern });
+
+    if (inst.isExtern) {
+        return;
+    }
 
     const old_block = c.LLVMGetInsertBlock(self.builder);
     const old_function = self.current_function;

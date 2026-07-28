@@ -47,7 +47,12 @@ pub fn parseStatement(self: *Parser) ParserError!*Statement {
         statement.* = .{ .WhileStatement = whileStatement };
         return statement;
     } else if (self.check(.KwFunc)) {
-        const funcDecl = try parseFunctionDecl(self);
+        const funcDecl = try parseFunctionDecl(self, false);
+        const statement = try self.allocator.create(Statement);
+        statement.* = .{ .FunctionDecl = funcDecl };
+        return statement;
+    } else if (self.check(.KwExtern)) {
+        const funcDecl = try parseFunctionDecl(self, true);
         const statement = try self.allocator.create(Statement);
         statement.* = .{ .FunctionDecl = funcDecl };
         return statement;

@@ -116,6 +116,7 @@ pub const Instruction = union(enum) {
         params: []*Param,
         body: []Instruction,
         returnType: Type,
+        isExtern: bool = false,
     },
     StructDeclIR: struct {
         definition: *StructStmt,

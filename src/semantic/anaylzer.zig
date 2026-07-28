@@ -58,15 +58,20 @@ pub const SemanticAnalyzer = struct {
         defer self.scopeStack.popScope();
 
         try checker.declareParams(funcDecl);
-        try self.analyzeBlock(funcDecl.body);
-        try checker.validateReturns(funcDecl);
+
+        if (!funcDecl.isExtern) {
+            try self.analyzeBlock(funcDecl.body);
+            try checker.validateReturns(funcDecl);
+        }
     }
 
-    pub fn analyzeBlock(self: *SemanticAnalyzer, block: *BlockStmt) SemanticError!void {
+    pub fn analyzeBlock(self: *SemanticAnalyzer, block: ?*BlockStmt) SemanticError!void {
         try self.scopeStack.pushScope();
         defer self.scopeStack.popScope();
 
-        for (block.statements) |stmt| {
+        if (block == null) return;
+
+        for (block.?.statements) |stmt| {
             try self.analyzeStatement(stmt);
         }
     }

@@ -56,3 +56,8 @@ void midnight_file_free(char *buffer)
 {
     free(buffer);
 }
+
+void midnight_test()
+{
+    printf("Hello from the Midnight runtime!\n");
+}

@@ -11,7 +11,11 @@ const parseType = @import("./parseTypeRef.zig").parseType;
 const parseExpr = @import("parseExpr.zig").parseExpr;
 const parseArgumentList = @import("parseExpr.zig").parseArgumentList;
 
-pub fn parseFunctionDecl(self: *Parser) !*FunctionDecl {
+pub fn parseFunctionDecl(self: *Parser, isExtern: bool) !*FunctionDecl {
+    if (isExtern) {
+        _ = try self.expect(.KwExtern);
+    }
+
     _ = try self.expect(.KwFunc);
     const name = try self.expect(.Identifier);
     _ = try self.expect(.LParen);
@@ -19,16 +23,39 @@ pub fn parseFunctionDecl(self: *Parser) !*FunctionDecl {
 
     const returnType = try parseType(self);
 
-    const body = try parseBlock(self);
-    const func = try self.allocator.create(FunctionDecl);
+    // const body = try parseBlock(self);
+    // const func = try self.allocator.create(FunctionDecl);
 
+    // func.* = .{
+    //     .name = name.lexeme,
+    //     .params = params,
+    //     .body = if (isExtern) null else body,
+    //     .returnType = returnType,
+    //     .isExtern = isExtern,
+    // };
+
+    if (!isExtern) {
+        const body = try parseBlock(self);
+        const func = try self.allocator.create(FunctionDecl);
+        func.* = .{
+            .name = name.lexeme,
+            .params = params,
+            .body = body,
+            .returnType = returnType,
+            .isExtern = isExtern,
+        };
+        return func;
+    }
+
+    const func = try self.allocator.create(FunctionDecl);
     func.* = .{
         .name = name.lexeme,
         .params = params,
-        .body = body,
+        .body = null,
         .returnType = returnType,
+        .isExtern = isExtern,
     };
-
+    _ = try self.expect(.Semicolon);
     return func;
 }
 
