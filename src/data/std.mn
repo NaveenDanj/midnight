@@ -1,0 +1,31 @@
+extern func midnight_file_read(string path) string;
+extern func midnight_file_exists(string path) bool;
+extern func midnight_file_write(string path, string buffer) bool;
+
+struct File {
+    
+    func read(string path) string {
+        return midnight_file_read(path);
+    }
+
+    func exists(string path) bool {
+        return midnight_file_exists(path);
+    }
+
+    func write(string path, string buffer) bool{
+        return midnight_file_write(path, buffer);
+    }
+
+}
+
+var File file = File{};
+var string path = "/tmp/test2.txt";
+
+if(!file.exists(path)){
+    print("File does not exists!");
+    var string message = "This is a string put into a text file if the original file path does not exists";
+    file.write(path, message);
+}else{
+    var string data = file.read(path);
+    print(data);
+}
