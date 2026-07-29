@@ -1,62 +1,7 @@
-var int[10] arr = [];
-var int index = 0;
 
-while(index < 10) {
-
-    if(index == 0) {
-        arr[index] = 10;
-    }else{
-        arr[index] = index *100;
-    }
-
-    index = index + 1;
+if("hello" == "hello") {
+    print("hello world");
+}else{
+    print("Not hello world");
 }
 
-index = 0;
-
-while(index < 10) {
-    print(arr[index]);
-    print("");
-    index = index + 1;
-}
-
-struct Person {
-    var string first_name;
-    var string last_name;
-    var string[2] names;
-
-    func greet() string {
-        return "Hello, " + self.first_name + " " + self.last_name;
-    }
-
-    func getPerson() Person {
-        return self;
-    }
-
-    func loop() void {
-        var int index = 0;
-        while(index < 2) {
-            print(self.names[index]);
-            index = index + 1;
-        }
-    }
-
-}
-
-var Person person1 = Person{
-    first_name = "John",
-    last_name = "Doe",
-    names = ["hello" , "world"]
-};
-
-var Person person2 = Person{
-    first_name = "Naveen",
-    last_name = "Hettiwaththa",
-    names = ["hello" , "naveen"]
-};
-
-person1.loop();
-person2.loop();
-
-extern func midnight_test() void;
-midnight_test();
