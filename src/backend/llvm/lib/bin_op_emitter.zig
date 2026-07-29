@@ -5,6 +5,7 @@ const c = @import("../../../llvm.zig").c;
 const Type = @import("../../../semantic/types.zig").Type;
 const realPredicate = @import("./predicates.zig").realPredicate;
 const intPredicate = @import("./predicates.zig").intPredicate;
+const FunctionRef = @import("./function_emitter.zig").FunctionRef;
 
 pub fn lowerBinaryOp(self: *LLVMBackend, inst: anytype) !void {
     const resolved_type = inst.resolvedType orelse self.inferBinaryType(inst.left, inst.right) orelse return LLVMBackendError.MissingResolvedType;
@@ -55,11 +56,92 @@ pub fn lowerBinaryOp(self: *LLVMBackend, inst: anytype) !void {
             };
             try self.putTemp(inst.dest, result, resolved_type);
         },
-        .Equal, .NotEqual, .LessThan, .LessThanOrEqual, .GreaterThan, .GreaterThanOrEqual => {
+        .Equal,
+        .NotEqual,
+        .LessThan,
+        .LessThanOrEqual,
+        .GreaterThan,
+        .GreaterThanOrEqual,
+        => {
             const operand_type = self.valueType(inst.left) orelse self.valueType(inst.right) orelse Type{ .kind = .INT };
             const left = try self.valueRef(inst.left, operand_type);
             const right = try self.valueRef(inst.right, operand_type);
             const result = switch (operand_type.kind) {
+                .STRING => blk: {
+                    const compare = try getStringCompareFunction(self);
+
+                    var args = [_]c.LLVMValueRef{
+                        left,
+                        right,
+                    };
+
+                    const cmp_result = c.LLVMBuildCall2(
+                        self.builder,
+                        compare.func_type,
+                        compare.value,
+                        &args,
+                        args.len,
+                        try self.nextName("strcmp"),
+                    );
+
+                    const zero = c.LLVMConstInt(
+                        c.LLVMInt32TypeInContext(self.context),
+                        0,
+                        0,
+                    );
+
+                    break :blk switch (inst.op) {
+                        .Equal => c.LLVMBuildICmp(
+                            self.builder,
+                            c.LLVMIntEQ,
+                            cmp_result,
+                            zero,
+                            name,
+                        ),
+
+                        .NotEqual => c.LLVMBuildICmp(
+                            self.builder,
+                            c.LLVMIntNE,
+                            cmp_result,
+                            zero,
+                            name,
+                        ),
+
+                        .LessThan => c.LLVMBuildICmp(
+                            self.builder,
+                            c.LLVMIntSLT,
+                            cmp_result,
+                            zero,
+                            name,
+                        ),
+
+                        .LessThanOrEqual => c.LLVMBuildICmp(
+                            self.builder,
+                            c.LLVMIntSLE,
+                            cmp_result,
+                            zero,
+                            name,
+                        ),
+
+                        .GreaterThan => c.LLVMBuildICmp(
+                            self.builder,
+                            c.LLVMIntSGT,
+                            cmp_result,
+                            zero,
+                            name,
+                        ),
+
+                        .GreaterThanOrEqual => c.LLVMBuildICmp(
+                            self.builder,
+                            c.LLVMIntSGE,
+                            cmp_result,
+                            zero,
+                            name,
+                        ),
+
+                        else => return LLVMBackendError.UnsupportedBinaryOperation,
+                    };
+                },
                 .FLOAT => c.LLVMBuildFCmp(self.builder, try realPredicate(inst.op), left, right, name),
                 .INT, .BOOL => c.LLVMBuildICmp(self.builder, try intPredicate(inst.op), left, right, name),
                 else => return LLVMBackendError.UnsupportedBinaryOperation,
@@ -77,4 +159,49 @@ pub fn lowerBinaryOp(self: *LLVMBackend, inst: anytype) !void {
             try self.putTemp(inst.dest, result, bool_type);
         },
     }
+}
+
+pub fn getStringCompareFunction(self: *LLVMBackend) !FunctionRef {
+    const function_name = "midnight_string_equals";
+
+    if (self.functions.get(function_name)) |function_ref| {
+        return function_ref;
+    }
+
+    const i8_ptr_type = c.LLVMPointerTypeInContext(self.context, 0);
+
+    var llvm_param_types = [_]c.LLVMTypeRef{
+        i8_ptr_type,
+        i8_ptr_type,
+    };
+
+    var param_types = [_]Type{
+        .{ .kind = .STRING },
+        .{ .kind = .STRING },
+    };
+
+    const function_type = c.LLVMFunctionType(
+        c.LLVMInt32TypeInContext(self.context),
+        &llvm_param_types,
+        llvm_param_types.len,
+        0,
+    );
+
+    const function = c.LLVMAddFunction(
+        self.module,
+        function_name,
+        function_type,
+    );
+
+    const function_ref = FunctionRef{
+        .value = function,
+        .func_type = function_type,
+        .return_type = Type{ .kind = .INT },
+        .param_types = try self.allocator.dupe(Type, param_types[0..]),
+        .isExtern = true,
+    };
+
+    try self.functions.put(function_name, function_ref);
+
+    return function_ref;
 }

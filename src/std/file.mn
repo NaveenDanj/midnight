@@ -2,6 +2,8 @@ extern func midnight_file_read(string path) string;
 extern func midnight_file_write(string path, string buffer) bool;
 extern func midnight_file_exists(string path) string;
 
+const float PI = 3.14;
+
 struct File {
     
     func read(string path) string {
@@ -18,4 +20,4 @@ struct File {
 
 }
 
-export {File};
+export {File, PI};
