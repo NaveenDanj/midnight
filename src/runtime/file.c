@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 char *midnight_file_read(const char *path)
 {
@@ -50,6 +51,43 @@ char *midnight_file_read(const char *path)
     buffer[size] = '\0';
 
     return buffer;
+}
+
+bool midnight_file_write(const char *path, const char *content)
+{
+    if (path == NULL || content == NULL)
+    {
+        return false;
+    }
+
+    FILE *file = fopen(path, "wb");
+    if (file == NULL)
+    {
+        return false;
+    }
+
+    size_t content_length = strlen(content);
+    size_t bytes_written = fwrite(content, 1, content_length, file);
+    fclose(file);
+
+    return bytes_written == content_length;
+}
+
+bool midnight_file_exists(const char *path)
+{
+    if (path == NULL)
+    {
+        return false;
+    }
+
+    FILE *file = fopen(path, "rb");
+    if (file != NULL)
+    {
+        fclose(file);
+        return true;
+    }
+
+    return false;
 }
 
 void midnight_file_free(char *buffer)

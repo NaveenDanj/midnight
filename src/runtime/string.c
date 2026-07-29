@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 char *midnight_string_concat(const char *str1, const char *str2)
 {
@@ -15,6 +16,11 @@ char *midnight_string_concat(const char *str1, const char *str2)
     strcpy(result, str1);
     strcat(result, str2);
     return result;
+}
+
+bool midnight_string_equals(const char *str1, const char *str2)
+{
+    return strcmp(str1, str2) == 0;
 }
 
 void midnight_print_string(const char *str)
