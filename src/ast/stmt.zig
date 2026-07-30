@@ -4,6 +4,12 @@ const TypeRef = @import("type_ref.zig").TypeRef;
 pub const Expr = expr_ast.Expr;
 pub const FunctionCallStmt = expr_ast.FunctionCallStmt;
 
+pub const ExportStatement = union(enum) {
+    FunctionDecl: *FunctionDecl,
+    StructDecl: *StructStmt,
+    VariableDecl: *VarDecl,
+};
+
 pub const Statement = union(enum) {
     PrintStatement: *PrintStatement,
     FunctionDecl: *FunctionDecl,
@@ -16,6 +22,8 @@ pub const Statement = union(enum) {
     VarAssignment: *VarAssign,
     FunctionCallStatement: *FunctionCallStmt,
     ExpressionStmt: *Expr,
+    ImportStatement: *ImportStatement,
+    ExportStatement: *ExportStatement,
 };
 
 pub const BlockStmt = struct {
@@ -92,4 +100,10 @@ pub const StructMethodField = struct {
 
 pub const PrintStatement = struct {
     value: *Expr,
+};
+
+pub const ImportStatement = struct {
+    path: []const u8,
+    isLocal: bool,
+    importedStatements: []*ExportStatement,
 };

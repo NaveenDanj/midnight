@@ -17,6 +17,7 @@ const Expr = expr_ast.Expr;
 const FunctionDecl = stmt_ast.FunctionDecl;
 const IfStatement = stmt_ast.IfStatement;
 const PrintStatement = stmt_ast.PrintStatement;
+const ExportStatement = stmt_ast.ExportStatement;
 const Statement = stmt_ast.Statement;
 const StructMethodField = stmt_ast.StructMethodField;
 const StructStmt = stmt_ast.StructStmt;
@@ -160,6 +161,13 @@ pub const SemanticAnalyzer = struct {
             .PrintStatement => {
                 try self.analyzePrintStatement(stmt.PrintStatement);
             },
+            .ImportStatement => {
+                // Imported declarations are materialized as ExportStatement entries
+                // in the surrounding parsed program and analyzed there.
+            },
+            .ExportStatement => {
+                try self.analyzeExportStatement(stmt.ExportStatement);
+            },
         }
     }
 
@@ -173,6 +181,23 @@ pub const SemanticAnalyzer = struct {
 
     fn structChecker(self: *SemanticAnalyzer) StructChecker {
         return StructChecker.init(self.allocator, &self.context, &self.scopeStack, &self.result);
+    }
+
+    fn analyzeExportStatement(self: *SemanticAnalyzer, export_stmt: *ExportStatement) SemanticError!void {
+        switch (export_stmt.*) {
+            .FunctionDecl => |func_decl| {
+                try self.analyzeFunctionDecl(func_decl);
+            },
+            .StructDecl => |struct_decl| {
+                var checker = self.structChecker();
+                try checker.analyzeStructStatement(struct_decl);
+                try self.analyzeStructMethods(struct_decl);
+            },
+            .VariableDecl => |var_decl| {
+                var checker = self.assignmentChecker();
+                try checker.analyzeVarDecl(var_decl);
+            },
+        }
     }
 
     fn analyzeStructMethods(self: *SemanticAnalyzer, structStmt: *StructStmt) SemanticError!void {

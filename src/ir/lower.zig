@@ -1,6 +1,7 @@
 const std = @import("std");
 const InstructionBuilder = @import("./builder.zig").InstructionBuilder;
 const stmt_ast = @import("../ast/stmt.zig");
+const ExportStatement = stmt_ast.ExportStatement;
 const Statement = stmt_ast.Statement;
 const lower_var = @import("./lib/lowerVar.zig");
 const lower_expr = @import("./lib/lowerExpr.zig");
@@ -78,6 +79,12 @@ pub fn lowerStatementWithSemanticsAndReceiver(
         .StructDecl => {
             try lower_struct_decl.lowerStructDeclWithSemantics(builder, stmt.StructDecl, semantic);
         },
+        .ImportStatement => {
+            // try lower_import.lowerImportStatementWithSemanticsAndReceiver(builder, stmt.ImportStatement, semantic, receiver_ctx);
+        },
+        .ExportStatement => {
+            try lowerExportStatement(builder, stmt.ExportStatement, semantic, receiver_ctx);
+        },
         else => {
             return LowerError.UnsupportedStatement;
         },
@@ -100,5 +107,26 @@ pub fn lowerStatementsWithSemanticsAndReceiver(
 ) anyerror!void {
     for (statements) |stmt| {
         try lowerStatementWithSemanticsAndReceiver(builder, stmt, semantic, receiver_ctx);
+    }
+}
+
+fn lowerExportStatement(
+    builder: *InstructionBuilder,
+    export_stmt: *ExportStatement,
+    semantic: ?*const SemanticResult,
+    receiver_ctx: ?ReceiverContext,
+) anyerror!void {
+    switch (export_stmt.*) {
+        .FunctionDecl => |func_decl| {
+            const func_ir = try lower_function.lowerFunctionDeclWithSemantics(builder, func_decl, semantic);
+            try builder.emit(func_ir);
+            std.debug.print("Lowering function declaration: {s}\n", .{func_decl.name});
+        },
+        .StructDecl => |struct_decl| {
+            try lower_struct_decl.lowerStructDeclWithSemantics(builder, struct_decl, semantic);
+        },
+        .VariableDecl => |var_decl| {
+            try lower_var.lowerVarDeclarationWithSemanticsAndReceiver(builder, var_decl, semantic, receiver_ctx);
+        },
     }
 }
