@@ -24,6 +24,7 @@ const parseStructStatement = @import("./parseStruct.zig").parseStructStatement;
 const parseVarAssignment = @import("./parseVarDec.zig").parseVarAssignment;
 const parseExpr = @import("./parseExpr.zig").parseExpr;
 const parsePrintStatement = @import("./parsePrint.zig").parsePrintStatement;
+const parseImportStatement = @import("./parseImport.zig").parseImportStatement;
 
 pub fn parseStatement(self: *Parser) ParserError!*Statement {
     if (self.check(.KwVar) or self.check(.KwConst)) {
@@ -66,7 +67,13 @@ pub fn parseStatement(self: *Parser) ParserError!*Statement {
         const statement = try self.allocator.create(Statement);
         statement.* = .{ .PrintStatement = printStatement };
         return statement;
+    } else if (self.check(.KwImport)) {
+        const importStatement = try parseImportStatement(self);
+        const statement = try self.allocator.create(Statement);
+        statement.* = .{ .ImportStatement = importStatement };
+        return statement;
     } else {
+        std.debug.print("Parsing expression statement\n", .{});
         return try parseExpressionStatement(self);
     }
 }

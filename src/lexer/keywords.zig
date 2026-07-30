@@ -36,6 +36,10 @@ pub fn lookupKeyword(ident: []const u8) ?TokenType {
         return TokenType.KwPrint;
     } else if (std.mem.eql(u8, "extern", ident)) {
         return TokenType.KwExtern;
+    } else if (std.mem.eql(u8, "import", ident)) {
+        return TokenType.KwImport;
+    } else if (std.mem.eql(u8, "export", ident)) {
+        return TokenType.KwExport;
     } else {
         return null;
     }

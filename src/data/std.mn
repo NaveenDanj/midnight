@@ -17,15 +17,3 @@ struct File {
     }
 
 }
-
-var File file = File{};
-var string path = "/tmp/test2.txt";
-
-if(!file.exists(path)){
-    print("File does not exists!");
-    var string message = "This is a string put into a text file if the original file path does not exists";
-    file.write(path, message);
-}else{
-    var string data = file.read(path);
-    print(data);
-}

@@ -21,6 +21,15 @@ pub const Parser = struct {
 
         while (!self.check(.EOF)) {
             const stmt = try parseStatement(self);
+
+            if (stmt.* == .ImportStatement) {
+                for (stmt.ImportStatement.importedStatements) |importedStmt| {
+                    const newStmt = try self.allocator.create(Statement);
+                    newStmt.* = .{ .ExportStatement = importedStmt };
+                    try statements.append(self.allocator, newStmt);
+                }
+            }
+
             try statements.append(self.allocator, stmt);
         }
 
