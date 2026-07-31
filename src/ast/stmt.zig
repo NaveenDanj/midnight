@@ -105,5 +105,4 @@ pub const PrintStatement = struct {
 pub const ImportStatement = struct {
     path: []const u8,
     isLocal: bool,
-    importedStatements: []*ExportStatement,
 };
