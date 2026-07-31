@@ -162,7 +162,7 @@ pub fn lowerBinaryOp(self: *LLVMBackend, inst: anytype) !void {
 }
 
 pub fn getStringCompareFunction(self: *LLVMBackend) !FunctionRef {
-    const function_name = "midnight_string_equals";
+    const function_name = "midnight_string_compare";
 
     if (self.functions.get(function_name)) |function_ref| {
         return function_ref;

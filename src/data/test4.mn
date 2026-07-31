@@ -13,5 +13,12 @@ if(isExists) {
     file.write(path, "hello world naveen");
 }
 
-var int age = input.readInt();
-print(age);
+var string name = "naveen";
+var string name2 = "naveen";
+
+if(name == name2) {
+    print("Naveen");
+}else{
+    print(name);
+    print("Not Naveen");
+}
