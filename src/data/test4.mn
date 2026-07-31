@@ -1,9 +1,17 @@
-import "/run/media/naveendanj/STORAGE/projects/midnight/src/data/std.mn";
+import "./src/data/std.mn";
+
 var File file = File{};
-var bool isExists = file.exists("/run/media/naveendanj/STORAGE/projects/midnight/src/data/std.mn");
+var Input input = Input{};
+
+var string path = "/tmp/naveen.txt";
+var bool isExists = file.exists(path);
 
 if(isExists) {
     print("File is exists");
 }else {
     print("File does not exists");
+    file.write(path, "hello world naveen");
 }
+
+var int age = input.readInt();
+print(age);
