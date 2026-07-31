@@ -18,9 +18,9 @@ char *midnight_string_concat(const char *str1, const char *str2)
     return result;
 }
 
-bool midnight_string_equals(const char *str1, const char *str2)
+int midnight_string_compare(const char *str1, const char *str2)
 {
-    return strcmp(str1, str2) == 0;
+    return strcmp(str1, str2);
 }
 
 void midnight_print_string(const char *str)
