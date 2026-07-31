@@ -1,23 +1,79 @@
 extern func midnight_file_read(string path) string;
 extern func midnight_file_write(string path, string buffer) bool;
-extern func midnight_file_exists(string path) string;
-
-const float PI = 3.14;
+extern func midnight_file_append(string path, string buffer) bool;
+extern func midnight_file_exists(string path) bool;
+extern func midnight_file_delete(string path) bool;
+extern func midnight_file_copy(string source, string destination) bool;
+extern func midnight_file_move(string source, string destination) bool;
+extern func midnight_file_size(string path) int;
+extern func midnight_file_create(string path) bool;
+extern func midnight_file_create_directory(string path) bool;
+extern func midnight_file_remove_directory(string path) bool;
+extern func midnight_file_is_directory(string path) bool;
+extern func midnight_file_is_file(string path) bool;
+extern func midnight_file_current_directory() string;
+extern func midnight_file_absolute(string path) string;
 
 struct File {
-    
+
     func read(string path) string {
         return midnight_file_read(path);
     }
 
-    func write(string path, string buffer) int {
+    func write(string path, string buffer) bool {
         return midnight_file_write(path, buffer);
     }
 
+    func append(string path, string buffer) bool {
+        return midnight_file_append(path, buffer);
+    }
+
     func exists(string path) bool {
-        return midnight_file_exists(path, buffer);
+        return midnight_file_exists(path);
+    }
+
+    func delete(string path) bool {
+        return midnight_file_delete(path);
+    }
+
+    func copy(string source, string destination) bool {
+        return midnight_file_copy(source, destination);
+    }
+
+    func move(string source, string destination) bool {
+        return midnight_file_move(source, destination);
+    }
+
+    func create(string path) bool {
+        return midnight_file_create(path);
+    }
+
+    func createDirectory(string path) bool {
+        return midnight_file_create_directory(path);
+    }
+
+    func removeDirectory(string path) bool {
+        return midnight_file_remove_directory(path);
+    }
+
+    func isDirectory(string path) bool {
+        return midnight_file_is_directory(path);
+    }
+
+    func isFile(string path) bool {
+        return midnight_file_is_file(path);
+    }
+
+    func size(string path) int {
+        return midnight_file_size(path);
+    }
+
+    func currentDirectory() string {
+        return midnight_file_current_directory();
+    }
+
+    func absolute(string path) string {
+        return midnight_file_absolute(path);
     }
 
 }
-
-export {File, PI};

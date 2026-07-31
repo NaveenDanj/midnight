@@ -120,7 +120,6 @@ fn lowerExportStatement(
         .FunctionDecl => |func_decl| {
             const func_ir = try lower_function.lowerFunctionDeclWithSemantics(builder, func_decl, semantic);
             try builder.emit(func_ir);
-            std.debug.print("Lowering function declaration: {s}\n", .{func_decl.name});
         },
         .StructDecl => |struct_decl| {
             try lower_struct_decl.lowerStructDeclWithSemantics(builder, struct_decl, semantic);
