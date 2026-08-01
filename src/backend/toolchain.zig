@@ -30,34 +30,29 @@ pub const BuildArtifact = struct {
 };
 
 pub fn writeAssembly(asm_text: []const u8, path: []const u8) !void {
-    const io = std.Io.Threaded.global_single_threaded.io();
-
     if (std.fs.path.dirname(path)) |dir| {
-        try std.Io.Dir.cwd().createDirPath(io, dir);
+        try std.fs.cwd().makePath(dir);
     }
 
-    try std.Io.Dir.cwd().writeFile(io, .{
+    try std.fs.cwd().writeFile(.{
         .sub_path = path,
         .data = asm_text,
     });
 }
 
 pub fn writeObject(object_bytes: []const u8, path: []const u8) !void {
-    const io = std.Io.Threaded.global_single_threaded.io();
-
     if (std.fs.path.dirname(path)) |dir| {
-        try std.Io.Dir.cwd().createDirPath(io, dir);
+        try std.fs.cwd().makePath(dir);
     }
 
-    try std.Io.Dir.cwd().writeFile(io, .{
+    try std.fs.cwd().writeFile(.{
         .sub_path = path,
         .data = object_bytes,
     });
 }
 
 pub fn assembleAndLink(allocator: std.mem.Allocator, options: ToolchainOptions) !BuildArtifact {
-    const io = std.Io.Threaded.global_single_threaded.io();
-    try std.Io.Dir.cwd().createDirPath(io, options.output_dir);
+    try std.fs.cwd().makePath(options.output_dir);
 
     try writeAssembly(options.asm_text, options.asm_path);
 
@@ -70,11 +65,6 @@ pub fn assembleAndLink(allocator: std.mem.Allocator, options: ToolchainOptions) 
     const asm_path = try allocator.dupe(u8, options.asm_path);
     errdefer allocator.free(asm_path);
 
-    const zig_global_cache = try std.fmt.allocPrint(allocator, "ZIG_GLOBAL_CACHE_DIR={s}/zig-global-cache", .{options.output_dir});
-    defer allocator.free(zig_global_cache);
-    const zig_local_cache = try std.fmt.allocPrint(allocator, "ZIG_LOCAL_CACHE_DIR={s}/zig-local-cache", .{options.output_dir});
-    defer allocator.free(zig_local_cache);
-
     try runCommand(allocator, &.{
         "nasm",
         "-f",
@@ -84,19 +74,14 @@ pub fn assembleAndLink(allocator: std.mem.Allocator, options: ToolchainOptions) 
         object_path,
     });
 
-    try runCommand(allocator, &.{
-        "env",
-        zig_global_cache,
-        zig_local_cache,
-        "zig",
-        "cc",
+    try runZigCC(allocator, options.output_dir, &.{
         object_path,
         "-o",
         executable_path,
     });
 
     if (options.cleanup_object) {
-        std.Io.Dir.cwd().deleteFile(io, object_path) catch {};
+        std.fs.cwd().deleteFile(object_path) catch {};
     }
 
     return .{
@@ -108,8 +93,7 @@ pub fn assembleAndLink(allocator: std.mem.Allocator, options: ToolchainOptions) 
 }
 
 pub fn linkObject(allocator: std.mem.Allocator, options: ObjectLinkOptions) !BuildArtifact {
-    const io = std.Io.Threaded.global_single_threaded.io();
-    try std.Io.Dir.cwd().createDirPath(io, options.output_dir);
+    try std.fs.cwd().makePath(options.output_dir);
 
     try writeObject(options.object_bytes, options.object_path);
 
@@ -122,27 +106,17 @@ pub fn linkObject(allocator: std.mem.Allocator, options: ObjectLinkOptions) !Bui
     const asm_path = try allocator.dupe(u8, "");
     errdefer allocator.free(asm_path);
 
-    const zig_global_cache = try std.fmt.allocPrint(allocator, "ZIG_GLOBAL_CACHE_DIR={s}/zig-global-cache", .{options.output_dir});
-    defer allocator.free(zig_global_cache);
-    const zig_local_cache = try std.fmt.allocPrint(allocator, "ZIG_LOCAL_CACHE_DIR={s}/zig-local-cache", .{options.output_dir});
-    defer allocator.free(zig_local_cache);
-
-    try runCommand(allocator, &.{
-        "env",
-        zig_global_cache,
-        zig_local_cache,
-        "zig",
-        "cc",
+    try runZigCC(allocator, options.output_dir, &.{
         object_path,
-        "runtime/string.o",
-        "runtime/file.o",
-        "runtime/input.o",
+        "src/runtime/string.c",
+        "src/runtime/file.c",
+        "src/runtime/input.c",
         "-o",
         executable_path,
     });
 
     if (options.cleanup_object) {
-        std.Io.Dir.cwd().deleteFile(io, object_path) catch {};
+        std.fs.cwd().deleteFile(object_path) catch {};
     }
 
     return .{
@@ -157,20 +131,45 @@ pub fn runArtifact(allocator: std.mem.Allocator, artifact: BuildArtifact) !void 
     try runCommand(allocator, &.{artifact.executable_path});
 }
 
-fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) !void {
-    var threaded_io = std.Io.Threaded.init(allocator, .{});
-    defer threaded_io.deinit();
-    const io = threaded_io.io();
-    var child = try std.process.spawn(io, .{
-        .argv = argv,
-        .stdin = .inherit,
-        .stdout = .inherit,
-        .stderr = .inherit,
-    });
+fn runZigCC(allocator: std.mem.Allocator, output_dir: []const u8, cc_args: []const []const u8) !void {
+    const argv = try allocator.alloc([]const u8, cc_args.len + 2);
+    defer allocator.free(argv);
+    argv[0] = "zig";
+    argv[1] = "cc";
+    @memcpy(argv[2..], cc_args);
 
-    const term = try child.wait(io);
+    const global_cache_dir = try std.fmt.allocPrint(allocator, "{s}/zig-global-cache", .{output_dir});
+    defer allocator.free(global_cache_dir);
+    const local_cache_dir = try std.fmt.allocPrint(allocator, "{s}/zig-local-cache", .{output_dir});
+    defer allocator.free(local_cache_dir);
+
+    var env_map = try std.process.getEnvMap(allocator);
+    defer env_map.deinit();
+    try env_map.put("ZIG_GLOBAL_CACHE_DIR", global_cache_dir);
+    try env_map.put("ZIG_LOCAL_CACHE_DIR", local_cache_dir);
+
+    var child = std.process.Child.init(argv, allocator);
+    child.stdin_behavior = .Inherit;
+    child.stdout_behavior = .Inherit;
+    child.stderr_behavior = .Inherit;
+    child.env_map = &env_map;
+
+    const term = try child.spawnAndWait();
     switch (term) {
-        .exited => |code| if (code != 0) return error.CommandFailed,
+        .Exited => |code| if (code != 0) return error.CommandFailed,
+        else => return error.CommandFailed,
+    }
+}
+
+fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) !void {
+    var child = std.process.Child.init(argv, allocator);
+    child.stdin_behavior = .Inherit;
+    child.stdout_behavior = .Inherit;
+    child.stderr_behavior = .Inherit;
+
+    const term = try child.spawnAndWait();
+    switch (term) {
+        .Exited => |code| if (code != 0) return error.CommandFailed,
         else => return error.CommandFailed,
     }
 }

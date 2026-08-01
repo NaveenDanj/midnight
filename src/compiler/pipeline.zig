@@ -57,13 +57,13 @@ pub const CompileResult = struct {
 };
 
 pub fn compileFile(allocator: std.mem.Allocator, options: CompileOptions) !CompileResult {
-    const io = std.Io.Threaded.global_single_threaded.io();
-    const file = try std.Io.Dir.cwd().openFile(io, options.source_path, .{});
-    defer file.close(io);
+    const normalized_path = try normalizePath(allocator, options.source_path);
+    defer if (normalized_path) |path| allocator.free(path);
 
-    var file_buffer: [4096]u8 = undefined;
-    var file_reader = file.reader(io, &file_buffer);
-    const source = try file_reader.interface.allocRemaining(allocator, .limited64(1024 * 1024));
+    var file = try std.fs.cwd().openFile(normalized_path orelse options.source_path, .{});
+    defer file.close();
+
+    const source = try file.readToEndAlloc(allocator, 1024 * 1024);
     errdefer allocator.free(source);
 
     var result = try compileSource(allocator, source, options);
@@ -161,4 +161,16 @@ pub fn compileSource(allocator: std.mem.Allocator, source: []const u8, options: 
         .llvm_ir_text = llvm_ir_text,
         .artifact = artifact,
     };
+}
+
+// Rewrites backslashes to forward slashes. Returns null (no allocation) when
+// the path has no backslashes, which covers all normal Linux/macOS paths.
+fn normalizePath(allocator: std.mem.Allocator, path: []const u8) !?[]const u8 {
+    if (std.mem.indexOfScalar(u8, path, '\\') == null) return null;
+
+    const normalized = try allocator.alloc(u8, path.len);
+    for (path, 0..) |char, i| {
+        normalized[i] = if (char == '\\') '/' else char;
+    }
+    return normalized;
 }

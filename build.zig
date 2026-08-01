@@ -85,9 +85,16 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    const llvm_paths = resolveLLVMPaths(b, target.result, llvm_root);
+    const effective_llvm_root = if (llvm_root.len != 0)
+        llvm_root
+    else if (target.result.os.tag == .windows)
+        tryFindLLVMOnWindows(b) orelse ""
+    else
+        "";
 
-    const resolved_llvm_lib_name = resolveLLVMLibName(target.result, llvm_lib_name);
+    const llvm_paths = resolveLLVMPaths(b, target.result, effective_llvm_root);
+
+    const resolved_llvm_lib_name = resolveLLVMLibName(target.result, llvm_lib_name, effective_llvm_root);
 
     configureLLVM(exe.root_module, llvm_paths.include, llvm_paths.lib, resolved_llvm_lib_name);
 
@@ -193,13 +200,7 @@ fn resolveLLVMPaths(b: *std.Build, resolved_target: std.Target, llvm_root: []con
     }
 
     if (resolved_target.os.tag == .windows) {
-        if (tryFindLLVMOnWindows(b)) |path| {
-            return .{
-                .include = b.pathJoin(&.{ path, "include" }),
-                .lib = b.pathJoin(&.{ path, "lib" }),
-            };
-        }
-        @panic("Windows builds require -Dllvm-root=<path to LLVM install> or LLVM in a standard location (C:\\Program Files\\LLVM, C:\\tools\\LLVM, etc.)");
+        @panic("Windows builds require -Dllvm-root=<path to LLVM install> or LLVM in a standard location (C:\\Program Files\\LLVM, C:\\msys64\\ucrt64, etc.)");
     }
 
     return .{
@@ -208,16 +209,42 @@ fn resolveLLVMPaths(b: *std.Build, resolved_target: std.Target, llvm_root: []con
     };
 }
 
+// Candidate LLVM install roots to probe on Windows, in priority order.
+// A candidate is only accepted if include/llvm-c/Core.h actually exists there,
+// since some package managers (e.g. Chocolatey's llvm package) install an
+// incomplete llvm-c header set.
+const windows_llvm_candidates = [_][]const u8{
+    "C:\\Program Files\\LLVM",
+    "C:\\Program Files (x86)\\LLVM",
+    "C:\\tools\\LLVM",
+    "C:\\msys64\\ucrt64",
+    "C:\\msys64-os\\ucrt64",
+    "C:\\msys64\\mingw64",
+    "C:\\msys64-os\\mingw64",
+};
+
 fn tryFindLLVMOnWindows(b: *std.Build) ?[]const u8 {
-    return b.allocator.dupeZ(u8, "C:\\Program Files\\LLVM") catch null;
+    for (windows_llvm_candidates) |path| {
+        const core_header = b.pathJoin(&.{ path, "include", "llvm-c", "Core.h" });
+        std.fs.accessAbsolute(core_header, .{}) catch continue;
+        return path;
+    }
+
+    return null;
 }
 
-fn resolveLLVMLibName(resolved_target: std.Target, override_name: []const u8) []const u8 {
+fn resolveLLVMLibName(resolved_target: std.Target, override_name: []const u8, llvm_root: []const u8) []const u8 {
     if (override_name.len != 0) {
         return override_name;
     }
 
     if (resolved_target.os.tag == .windows) {
+        if (std.mem.indexOf(u8, llvm_root, "msys64") != null) {
+            // MSYS2 ships libLLVM-<ver>.dll.a; Zig's "paths_first" strategy for
+            // `-lNAME` checks NAME.dll, NAME.lib, then libNAME.a, so naming the
+            // library "LLVM-22.dll" makes it resolve to libLLVM-22.dll.a.
+            return "LLVM-22.dll";
+        }
         return "LLVM-C";
     }
 

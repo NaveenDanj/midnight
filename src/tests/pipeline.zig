@@ -123,17 +123,14 @@ test "pipeline can emit target assembly from LLVM backend" {
 
 test "toolchain writes assembly without assembling or running" {
     const path = "/tmp/midnight-pipeline-tests/output.asm";
-    const io = std.Io.Threaded.global_single_threaded.io();
-    std.Io.Dir.cwd().deleteFile(io, path) catch {};
+    std.fs.cwd().deleteFile(path) catch {};
 
     try toolchain.writeAssembly("global main\n", path);
 
-    const file = try std.Io.Dir.cwd().openFile(io, path, .{});
-    defer file.close(io);
+    const file = try std.fs.cwd().openFile(path, .{});
+    defer file.close();
 
-    var buffer: [64]u8 = undefined;
-    var reader = file.reader(io, &buffer);
-    const text = try reader.interface.allocRemaining(std.testing.allocator, .limited64(64));
+    const text = try file.readToEndAlloc(std.testing.allocator, 64);
     defer std.testing.allocator.free(text);
 
     try expect(std.mem.eql(u8, text, "global main\n"));

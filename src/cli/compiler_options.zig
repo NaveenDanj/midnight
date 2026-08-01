@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const cli = @import("../cli/commands.zig");
 const cli_options = @import("../cli/options.zig");
 const pipeline = @import("../compiler/pipeline.zig");
@@ -39,5 +40,11 @@ pub fn makeCompileOptions(
 }
 
 fn defaultOutputDir(allocator: std.mem.Allocator) []const u8 {
-    return std.fmt.allocPrint(allocator, "/tmp/midnight-build-{d}", .{std.os.linux.getpid()}) catch @panic("OOM");
+    if (builtin.os.tag == .windows) {
+        const pid = std.os.windows.GetCurrentProcessId();
+        return std.fmt.allocPrint(allocator, "C:\\temp\\midnight-build-{d}", .{pid}) catch @panic("OOM");
+    } else {
+        const pid = std.os.linux.getpid();
+        return std.fmt.allocPrint(allocator, "/tmp/midnight-build-{d}", .{pid}) catch @panic("OOM");
+    }
 }
