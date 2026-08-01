@@ -97,7 +97,14 @@ pub const ModuleResolver = struct {
         return module;
     }
 
-    fn resolveModuleName(self: *ModuleResolver, modulePath: []const u8) !*Module {
+    pub fn handleImportStatements(self: *ModuleResolver, importStatements: []*ImportStatement) !void {
+        for (importStatements) |importStmt| {
+            const importedModuleName = importStmt.path;
+            try self.resolveModule(importedModuleName);
+        }
+    }
+
+    fn resolveModuleName(self: *ModuleResolver, modulePath: []const u8) !*[]const u8 {
         _ = self;
         var moduleName = "";
 

@@ -79,6 +79,8 @@ pub fn compileSource(allocator: std.mem.Allocator, source: []const u8, options: 
     var parser = Parser.init(allocator, token_list.items);
     const statements = try parser.parseProgram();
 
+    // handle module resolution for import statements
+
     var semanticAnalyzer = try SemanticAnalyzer.init(allocator);
     defer semanticAnalyzer.deinit();
     try semanticAnalyzer.analyzeProgram(statements);
