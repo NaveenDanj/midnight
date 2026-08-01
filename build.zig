@@ -193,13 +193,23 @@ fn resolveLLVMPaths(b: *std.Build, resolved_target: std.Target, llvm_root: []con
     }
 
     if (resolved_target.os.tag == .windows) {
-        @panic("Windows builds require -Dllvm-root=<path to LLVM install> because llvm-config is not available.");
+        if (tryFindLLVMOnWindows(b)) |path| {
+            return .{
+                .include = b.pathJoin(&.{ path, "include" }),
+                .lib = b.pathJoin(&.{ path, "lib" }),
+            };
+        }
+        @panic("Windows builds require -Dllvm-root=<path to LLVM install> or LLVM in a standard location (C:\\Program Files\\LLVM, C:\\tools\\LLVM, etc.)");
     }
 
     return .{
         .include = getOutput(b, &.{ "llvm-config", "--includedir" }),
         .lib = getOutput(b, &.{ "llvm-config", "--libdir" }),
     };
+}
+
+fn tryFindLLVMOnWindows(b: *std.Build) ?[]const u8 {
+    return b.allocator.dupeZ(u8, "C:\\Program Files\\LLVM") catch null;
 }
 
 fn resolveLLVMLibName(resolved_target: std.Target, override_name: []const u8) []const u8 {
