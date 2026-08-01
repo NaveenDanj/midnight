@@ -18,24 +18,22 @@ pub const Command = union(enum) {
     version,
 };
 
-pub fn parseArgs(allocator: std.mem.Allocator, args: std.process.Args) !Command {
-    var iterator = try std.process.Args.Iterator.initAllocator(args, allocator);
-    defer iterator.deinit();
+pub fn parseArgs(_: std.mem.Allocator, args: []const []const u8) !Command {
+    var arg_index: usize = 1;
 
-    _ = iterator.next();
-
-    const command_name = iterator.next() orelse return .help;
+    const command_name = if (arg_index < args.len) args[arg_index] else return .help;
+    arg_index += 1;
 
     if (std.mem.eql(u8, command_name, "help") or std.mem.eql(u8, command_name, "--help") or std.mem.eql(u8, command_name, "-h")) {
         return .help;
     }
 
     if (std.mem.eql(u8, command_name, "run")) {
-        return .{ .run = try parseCommonOptions(&iterator) };
+        return .{ .run = try parseCommonOptions(args, &arg_index) };
     }
 
     if (std.mem.eql(u8, command_name, "build")) {
-        return .{ .build = try parseCommonOptions(&iterator) };
+        return .{ .build = try parseCommonOptions(args, &arg_index) };
     }
 
     if (std.mem.eql(u8, command_name, "version")) {
@@ -45,7 +43,7 @@ pub fn parseArgs(allocator: std.mem.Allocator, args: std.process.Args) !Command 
     return CliError.UnknownCommand;
 }
 
-fn parseCommonOptions(iterator: *std.process.Args.Iterator) !options.CommonOptions {
+fn parseCommonOptions(args: []const []const u8, arg_index: *usize) !options.CommonOptions {
     var source_path: ?[]const u8 = null;
     var output_path: ?[]const u8 = null;
     var backend: pipeline.BackendKind = .llvm;
@@ -53,11 +51,18 @@ fn parseCommonOptions(iterator: *std.process.Args.Iterator) !options.CommonOptio
     var emit_asm = false;
     var emit_llvm_ir = false;
 
-    while (iterator.next()) |arg| {
+    while (arg_index.* < args.len) {
+        const arg = args[arg_index.*];
+        arg_index.* += 1;
+
         if (std.mem.eql(u8, arg, "-o") or std.mem.eql(u8, arg, "--output")) {
-            output_path = iterator.next() orelse return CliError.MissingOptionValue;
+            if (arg_index.* >= args.len) return CliError.MissingOptionValue;
+            output_path = args[arg_index.*];
+            arg_index.* += 1;
         } else if (std.mem.eql(u8, arg, "--backend")) {
-            const backend_name = iterator.next() orelse return CliError.MissingOptionValue;
+            if (arg_index.* >= args.len) return CliError.MissingOptionValue;
+            const backend_name = args[arg_index.*];
+            arg_index.* += 1;
             backend = parseBackend(backend_name) orelse return CliError.InvalidBackend;
         } else if (std.mem.eql(u8, arg, "--emit-ir")) {
             emit_ir = true;

@@ -5,10 +5,15 @@ const cli_options = @import("cli/options.zig");
 const pipeline = @import("compiler/pipeline.zig");
 const makeCompileOptions = @import("cli/compiler_options.zig").makeCompileOptions;
 
-pub fn main(init: std.process.Init) !void {
-    const allocator = init.arena.allocator();
+pub fn main() !void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
 
-    const command = cli.parseArgs(allocator, init.minimal.args) catch |err| {
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
+
+    const command = cli.parseArgs(allocator, args) catch |err| {
         std.debug.print("error: {s}\n\n", .{@errorName(err)});
         cli.printHelp();
         return err;

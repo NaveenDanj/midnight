@@ -8,4 +8,4 @@ pub const ParserError = error{
     OutOfMemory,
     UnknownCharacter,
     UnterminatedString,
-} || std.Io.File.OpenError || std.Io.Reader.LimitedAllocError;
+};
