@@ -5,13 +5,10 @@ const SemanticAnalyzer = @import("../semantic/anaylzer.zig").SemanticAnalyzer;
 const Statement = @import("../ast/stmt.zig").Statement;
 
 pub fn readFile(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
-    const io = std.Io.Threaded.global_single_threaded.io();
-    const file = try std.Io.Dir.cwd().openFile(io, path, .{});
-    defer file.close(io);
+    var file = try std.fs.cwd().openFile(path, .{});
+    defer file.close();
 
-    var reader_buffer: [4096]u8 = undefined;
-    var reader = file.reader(io, &reader_buffer);
-    return try reader.interface.allocRemaining(allocator, .unlimited);
+    return try file.readToEndAlloc(allocator, 1024 * 1024);
 }
 
 pub fn parseFromSource(allocator: std.mem.Allocator, source: []const u8) ![]*Statement {
