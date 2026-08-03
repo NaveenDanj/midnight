@@ -5,7 +5,6 @@ const VariableDecl = @import("../ast/stmt.zig").VarDecl;
 const ImportStatement = @import("../ast/stmt.zig").ImportStatement;
 const readFile = @import("../compiler/parser.zig").readFile;
 const parseFromSource = @import("../compiler/parser.zig").parseFromSource;
-const ExportStatement = stmt.ExportStatement;
 
 pub const Module = struct {
     name: []const u8,
@@ -17,103 +16,133 @@ pub const Module = struct {
 };
 
 pub const ModuleResolver = struct {
-    allocator: *std.mem.Allocator,
+    allocator: std.mem.Allocator,
     resolved: std.StringHashMap(*Module),
     in_progress: std.StringHashMap(u8),
 
-    pub fn init(self: *ModuleResolver, allocator: *std.mem.Allocator) void {
-        self.allocator = allocator;
-        self.resolved = std.StringHashMap(*Module).init(allocator);
-        self.in_progress = std.StringHashMap(u8).init(allocator);
+    pub fn init(allocator: std.mem.Allocator) ModuleResolver {
+        return .{
+            .allocator = allocator,
+            .resolved = std.StringHashMap(*Module).init(allocator),
+            .in_progress = std.StringHashMap(u8).init(allocator),
+        };
     }
 
-    pub fn resolveModule(self: *ModuleResolver, moduleName: []const u8) !*Module {
-        if (self.in_progress.get(moduleName)) |_| {
+    pub fn deinit(self: *ModuleResolver) void {
+        self.resolved.deinit();
+        self.in_progress.deinit();
+    }
+
+    pub fn resolveModule(self: *ModuleResolver, importPath: []const u8, baseDir: []const u8) !*Module {
+        const canonicalPath = try std.fs.path.resolve(self.allocator, &.{ baseDir, importPath });
+
+        if (self.in_progress.get(canonicalPath)) |_| {
             return error.CircularDependency;
         }
 
-        if (self.resolved.get(moduleName)) |resolvedModule| {
+        if (self.resolved.get(canonicalPath)) |resolvedModule| {
             return resolvedModule;
         }
 
-        _ = try self.in_progress.put(moduleName, 1);
+        _ = try self.in_progress.put(canonicalPath, 1);
 
-        const module = try self.loadModule(moduleName);
+        const module = try self.loadModule(canonicalPath);
+        const moduleDir = std.fs.path.dirname(canonicalPath) orelse ".";
 
         for (module.imports) |importStmt| {
-            const importedModuleName = importStmt.path;
-            const importedModule = try self.resolveModule(importedModuleName);
-            _ = try self.resolved.put(importedModuleName, importedModule);
+            _ = try self.resolveModule(importStmt.path, moduleDir);
         }
 
-        _ = try self.resolved.put(moduleName, module);
-        _ = try self.in_progress.remove(moduleName);
+        _ = try self.resolved.put(canonicalPath, module);
+        _ = self.in_progress.remove(canonicalPath);
 
         return module;
     }
 
-    pub fn loadModule(self: *ModuleResolver, moduleName: []const u8) !*Module {
-        const source = try readFile(self.allocator, moduleName);
+    pub fn loadModule(self: *ModuleResolver, path: []const u8) !*Module {
+        const source = try readFile(self.allocator, path);
 
         const statements = try parseFromSource(self.allocator, source);
-        var exportStatements = try std.ArrayList(*ExportStatement).initCapacity(self.allocator, 0);
-        const module = try self.allocator.create(Module);
+
+        var imports = try std.ArrayList(*ImportStatement).initCapacity(self.allocator, 0);
+        var functions = try std.ArrayList(*FunctionDecl).initCapacity(self.allocator, 0);
+        var structs = try std.ArrayList(*stmt.StructStmt).initCapacity(self.allocator, 0);
+        var variables = try std.ArrayList(*VariableDecl).initCapacity(self.allocator, 0);
 
         for (statements) |_stmt| {
             switch (_stmt.*) {
-                .ImportStatement => {
-                    try exportStatements.append(self.allocator, _stmt.ImportStatement);
+                .ImportStatement => |importStmt| {
+                    try imports.append(self.allocator, importStmt);
                 },
-
-                .ExportStatement => {
-                    try exportStatements.append(self.allocator, _stmt.ExportStatement);
+                .FunctionDecl => |funcDecl| {
+                    try functions.append(self.allocator, funcDecl);
                 },
-                .FunctionDecl => {
-                    const export_stmt = try self.allocator.create(ExportStatement);
-                    export_stmt.* = .{ .FunctionDecl = _stmt.FunctionDecl };
-                    try exportStatements.append(self.allocator, export_stmt);
+                .StructDecl => |structDecl| {
+                    try structs.append(self.allocator, structDecl);
                 },
-                .StructDecl => {
-                    const export_stmt = try self.allocator.create(ExportStatement);
-                    export_stmt.* = .{ .StructDecl = _stmt.StructDecl };
-                    try exportStatements.append(self.allocator, export_stmt);
-                },
-                .VariableDecl => {
-                    const export_stmt = try self.allocator.create(ExportStatement);
-                    export_stmt.* = .{ .VariableDecl = _stmt.VariableDecl };
-                    try exportStatements.append(self.allocator, export_stmt);
+                .VariableDecl => |varDecl| {
+                    try variables.append(self.allocator, varDecl);
                 },
                 else => {},
             }
         }
 
+        const module = try self.allocator.create(Module);
         module.* = .{
-            .name = self.resolveModuleName(moduleName),
-            .imports = try std.ArrayList(*ImportStatement).initCapacity(self.allocator, 0),
-            .functions = try std.ArrayList(*FunctionDecl).initCapacity(self.allocator, 0),
-            .structs = try std.ArrayList(*stmt.StructStmt).initCapacity(self.allocator, 0),
-            .variables = try std.ArrayList(*VariableDecl).initCapacity(self.allocator, 0),
+            .name = try self.resolveModuleName(path),
+            .imports = try imports.toOwnedSlice(self.allocator),
+            .functions = try functions.toOwnedSlice(self.allocator),
+            .structs = try structs.toOwnedSlice(self.allocator),
+            .variables = try variables.toOwnedSlice(self.allocator),
         };
         return module;
     }
 
-    pub fn handleImportStatements(self: *ModuleResolver, importStatements: []*ImportStatement) !void {
-        for (importStatements) |importStmt| {
-            const importedModuleName = importStmt.path;
-            try self.resolveModule(importedModuleName);
+    pub fn handleImportStatements(self: *ModuleResolver, statements: []const *stmt.Statement, baseDir: []const u8) !void {
+        for (statements) |statement| {
+            switch (statement.*) {
+                .ImportStatement => |importStmt| {
+                    _ = try self.resolveModule(importStmt.path, baseDir);
+                },
+                else => {},
+            }
         }
     }
 
-    fn resolveModuleName(self: *ModuleResolver, modulePath: []const u8) !*[]const u8 {
-        _ = self;
-        var moduleName = "";
+    pub fn collectStatements(self: *ModuleResolver, statements: []const *stmt.Statement) ![]*stmt.Statement {
+        var all = try std.ArrayList(*stmt.Statement).initCapacity(self.allocator, 0);
+        defer all.deinit(self.allocator);
 
-        const parts = std.mem.split(modulePath, "/");
-        if (parts.len > 0) {
-            moduleName = parts[parts.len - 1];
-        } else {
-            moduleName = modulePath;
+        var it = self.resolved.valueIterator();
+        while (it.next()) |module_ptr| {
+            const module = module_ptr.*;
+
+            for (module.functions) |function_decl| {
+                const module_stmt = try self.allocator.create(stmt.Statement);
+                module_stmt.* = .{ .FunctionDecl = function_decl };
+                try all.append(self.allocator, module_stmt);
+            }
+
+            for (module.structs) |struct_decl| {
+                const module_stmt = try self.allocator.create(stmt.Statement);
+                module_stmt.* = .{ .StructDecl = struct_decl };
+                try all.append(self.allocator, module_stmt);
+            }
+
+            for (module.variables) |variable_decl| {
+                const module_stmt = try self.allocator.create(stmt.Statement);
+                module_stmt.* = .{ .VariableDecl = variable_decl };
+                try all.append(self.allocator, module_stmt);
+            }
         }
-        return modulePath;
+
+        try all.appendSlice(self.allocator, statements);
+
+        return try all.toOwnedSlice(self.allocator);
+    }
+
+    fn resolveModuleName(self: *ModuleResolver, modulePath: []const u8) ![]const u8 {
+        _ = self;
+        return std.fs.path.basename(modulePath);
     }
 };

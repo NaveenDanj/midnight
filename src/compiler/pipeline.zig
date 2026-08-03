@@ -10,6 +10,7 @@ const Lexer = @import("../lexer/lexer.zig").Lexer;
 const Parser = @import("../parser/parser.zig").Parser;
 const SemanticAnalyzer = @import("../semantic/anaylzer.zig").SemanticAnalyzer;
 const Statement = @import("../ast/stmt.zig").Statement;
+const ModuleResolver = @import("../module/module_resolver.zig").ModuleResolver;
 
 pub const BackendKind = enum {
     x86_64,
@@ -80,17 +81,25 @@ pub fn compileSource(allocator: std.mem.Allocator, source: []const u8, options: 
     const statements = try parser.parseProgram();
 
     // handle module resolution for import statements
+    var moduleResolver = ModuleResolver.init(allocator);
+    defer moduleResolver.deinit();
+
+    const base_dir = std.fs.path.dirname(options.source_path) orelse ".";
+    try moduleResolver.handleImportStatements(statements, base_dir);
+
+    // merge imported module declarations with the main program statements
+    const all_statements = try moduleResolver.collectStatements(statements);
 
     var semanticAnalyzer = try SemanticAnalyzer.init(allocator);
     defer semanticAnalyzer.deinit();
-    try semanticAnalyzer.analyzeProgram(statements);
+    try semanticAnalyzer.analyzeProgram(all_statements);
 
     var irBuilder = InstructionBuilder.init(allocator);
     defer {
         irBuilder.var_map.deinit();
         irBuilder.version_map.deinit();
     }
-    try generateIRWithSemantics(&irBuilder, statements, &semanticAnalyzer.result);
+    try generateIRWithSemantics(&irBuilder, all_statements, &semanticAnalyzer.result);
 
     const instructions = try irBuilder.instructions.toOwnedSlice(allocator);
     errdefer allocator.free(instructions);
@@ -155,7 +164,7 @@ pub fn compileSource(allocator: std.mem.Allocator, source: []const u8, options: 
 
     return .{
         .allocator = allocator,
-        .statements = statements,
+        .statements = all_statements,
         .instructions = instructions,
         .asm_text = asm_text,
         .llvm_ir_text = llvm_ir_text,
