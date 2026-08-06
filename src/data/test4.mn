@@ -1,4 +1,4 @@
-import "./src/data/std.mn";
+import "std.mn";
 
 var File file = File{};
 var Input input = Input{};

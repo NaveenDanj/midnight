@@ -1,5 +1,4 @@
 import "std.mn";
-import "std.mn";
 
 func is_prime(int n) bool {
     
@@ -37,11 +36,16 @@ func main() void {
         n = n + 1;
     }
 
-    print(count);
-
 }
 
 main();
 
 var Input input = Input{};
-input.readLine();
+print("Please enter your name: ");
+var string name = input.readLine();
+
+if(name == "naveen"){
+    print("same");
+}else{
+    print("diffalant");
+}

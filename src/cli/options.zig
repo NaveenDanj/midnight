@@ -7,6 +7,7 @@ pub const CommonOptions = struct {
     emit_ir: bool = false,
     emit_asm: bool = false,
     emit_llvm_ir: bool = false,
+    std_lib: []const u8 = "/run/media/naveendanj/STORAGE/projects/midnight/src/std/",
 };
 
 pub const RunOptions = CommonOptions;

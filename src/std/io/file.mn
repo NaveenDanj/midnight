@@ -14,6 +14,13 @@ extern func midnight_file_is_file(string path) bool;
 extern func midnight_file_current_directory() string;
 extern func midnight_file_absolute(string path) string;
 
+
+extern func midnight_input_read_line() string;
+extern func midnight_input_read_int() int;
+extern func midnight_input_read_float() float;
+extern func midnight_input_read_bool() bool;
+
+
 struct File {
 
     func read(string path) string {
@@ -74,6 +81,27 @@ struct File {
 
     func absolute(string path) string {
         return midnight_file_absolute(path);
+    }
+
+}
+
+
+struct Input {
+
+    func readLine() string {
+        return midnight_input_read_line();
+    }
+
+    func readInt() int {
+        return midnight_input_read_int();
+    }
+
+    func readFloat() float {
+        return midnight_input_read_float();
+    }
+
+    func readBool() bool {
+        return midnight_input_read_bool();
     }
 
 }
