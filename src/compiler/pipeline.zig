@@ -22,6 +22,7 @@ pub const CompileOptions = struct {
     output_dir: []const u8 = "/tmp/midnight-build",
     asm_path: []const u8 = "/tmp/midnight-build/output.asm",
     object_path: []const u8 = "/tmp/midnight-build/out.o",
+    std_lib_path: []const u8 = "/run/media/naveendanj/STORAGE/projects/midnight/src/",
     executable_name: []const u8 = "out.exe",
     backend: BackendKind = .x86_64,
     emit_ir: bool = false,
@@ -81,7 +82,7 @@ pub fn compileSource(allocator: std.mem.Allocator, source: []const u8, options: 
     const statements = try parser.parseProgram();
 
     // handle module resolution for import statements
-    var moduleResolver = ModuleResolver.init(allocator);
+    var moduleResolver = ModuleResolver.init(allocator, options.std_lib_path);
     defer moduleResolver.deinit();
 
     const base_dir = std.fs.path.dirname(options.source_path) orelse ".";

@@ -50,6 +50,7 @@ fn parseCommonOptions(args: []const []const u8, arg_index: *usize) !options.Comm
     var emit_ir = false;
     var emit_asm = false;
     var emit_llvm_ir = false;
+    var std_lib_path: []const u8 = "";
 
     while (arg_index.* < args.len) {
         const arg = args[arg_index.*];
@@ -70,6 +71,10 @@ fn parseCommonOptions(args: []const []const u8, arg_index: *usize) !options.Comm
             emit_asm = true;
         } else if (std.mem.eql(u8, arg, "--emit-llvm-ir")) {
             emit_llvm_ir = true;
+        } else if (std.mem.eql(u8, arg, "--std-lib")) {
+            if (arg_index.* >= args.len) return CliError.MissingOptionValue;
+            std_lib_path = args[arg_index.*];
+            arg_index.* += 1;
         } else if (std.mem.startsWith(u8, arg, "-")) {
             return CliError.UnknownOption;
         } else if (source_path == null) {
@@ -86,6 +91,7 @@ fn parseCommonOptions(args: []const []const u8, arg_index: *usize) !options.Comm
         .emit_ir = emit_ir,
         .emit_asm = emit_asm,
         .emit_llvm_ir = emit_llvm_ir,
+        .std_lib = std_lib_path,
     };
 }
 

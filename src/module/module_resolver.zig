@@ -19,12 +19,14 @@ pub const ModuleResolver = struct {
     allocator: std.mem.Allocator,
     resolved: std.StringHashMap(*Module),
     in_progress: std.StringHashMap(u8),
+    std_lib_path: []const u8,
 
-    pub fn init(allocator: std.mem.Allocator) ModuleResolver {
+    pub fn init(allocator: std.mem.Allocator, std_lib_path: []const u8) ModuleResolver {
         return .{
             .allocator = allocator,
             .resolved = std.StringHashMap(*Module).init(allocator),
             .in_progress = std.StringHashMap(u8).init(allocator),
+            .std_lib_path = std_lib_path,
         };
     }
 
@@ -46,7 +48,7 @@ pub const ModuleResolver = struct {
 
         _ = try self.in_progress.put(canonicalPath, 1);
 
-        const module = try self.loadModule(canonicalPath);
+        const module = try self.loadModule(canonicalPath, importPath);
         const moduleDir = std.fs.path.dirname(canonicalPath) orelse ".";
 
         for (module.imports) |importStmt| {
@@ -59,8 +61,14 @@ pub const ModuleResolver = struct {
         return module;
     }
 
-    pub fn loadModule(self: *ModuleResolver, path: []const u8) !*Module {
-        const source = try readFile(self.allocator, path);
+    pub fn loadModule(self: *ModuleResolver, path: []const u8, import_path: []const u8) !*Module {
+        const source = readFile(self.allocator, path) catch |err| switch (err) {
+            error.FileNotFound => blk: {
+                const std_path = try self.resolveStdModule(import_path);
+                break :blk try readFile(self.allocator, std_path);
+            },
+            else => return err,
+        };
 
         const statements = try parseFromSource(self.allocator, source);
 
@@ -144,5 +152,26 @@ pub const ModuleResolver = struct {
     fn resolveModuleName(self: *ModuleResolver, modulePath: []const u8) ![]const u8 {
         _ = self;
         return std.fs.path.basename(modulePath);
+    }
+
+    fn resolveStdModule(self: *ModuleResolver, module_path: []const u8) ![]const u8 {
+        var path = std.ArrayList(u8){};
+        errdefer path.deinit(self.allocator);
+
+        try path.appendSlice(self.allocator, self.std_lib_path);
+        try path.append(self.allocator, std.fs.path.sep);
+
+        var it = std.mem.splitScalar(u8, module_path, '.');
+
+        while (it.next()) |part| {
+            try path.appendSlice(self.allocator, part);
+
+            if (it.peek() != null) {
+                try path.append(self.allocator, std.fs.path.sep);
+            }
+        }
+
+        try path.appendSlice(self.allocator, ".mn");
+        return path.toOwnedSlice(self.allocator);
     }
 };
