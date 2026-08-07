@@ -1,4 +1,6 @@
 import "std.io.file";
+import "std.io.input";
+
 
 var File file = File{};
 var Input input = Input{};

@@ -4,6 +4,8 @@ on:
   release:
     types: [published]
 
+  workflow_dispatch:
+
 permissions:
   contents: write
 
@@ -16,12 +18,12 @@ jobs:
           - os: ubuntu-latest
             binary_name: midnight
             asset_name: midnight-linux-x86_64
-            archive_cmd: tar -czf ../${ASSET_NAME}.tar.gz midnight
+            archive_cmd: tar -czf ../${ASSET_NAME}.tar.gz *
             archive_ext: tar.gz
           - os: windows-latest
             binary_name: midnight.exe
             asset_name: midnight-windows-x86_64
-            archive_cmd: 7z a ../${ASSET_NAME}.zip midnight.exe
+            archive_cmd: 7z a ../${ASSET_NAME}.zip *
             archive_ext: zip
 
     runs-on: ${{ matrix.os }}
@@ -64,6 +66,12 @@ jobs:
         if: runner.os == 'Windows'
         run: zig build -Doptimize=ReleaseFast
 
+      # The binary links LLVM dynamically (no monolithic static libLLVM.a is
+      # available from either apt.llvm.org or MSYS2), so the shared
+      # library/DLL it depends on is bundled alongside it here instead -
+      # build.zig points the Linux binary at its own directory via an
+      # `$ORIGIN` rpath, and Windows already searches the exe's directory
+      # for DLLs by default, so no extra runtime configuration is needed.
       - name: Package
         shell: bash
         env:
@@ -71,6 +79,14 @@ jobs:
         run: |
           mkdir -p dist
           cp "zig-out/bin/${{ matrix.binary_name }}" dist/
+
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            LLVM_LIBDIR=$(llvm-config --libdir)
+            cp -P "$LLVM_LIBDIR"/libLLVM.so.21* dist/
+          else
+            cp /c/msys64/ucrt64/bin/*LLVM*.dll dist/
+          fi
+
           cd dist
           ${{ matrix.archive_cmd }}
 

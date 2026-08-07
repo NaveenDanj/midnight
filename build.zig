@@ -98,6 +98,14 @@ pub fn build(b: *std.Build) void {
 
     configureLLVM(exe.root_module, llvm_paths.include, llvm_paths.lib, resolved_llvm_lib_name);
 
+    // Let a release build find a bundled libLLVM sitting next to the binary
+    // instead of requiring one to be installed system-wide (Windows already
+    // checks the executable's own directory for DLLs, so this only matters
+    // on ELF targets).
+    if (target.result.os.tag != .windows) {
+        exe.addRPath(.{ .cwd_relative = "$ORIGIN" });
+    }
+
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default
     // step). By default the install prefix is `zig-out/` but can be overridden
