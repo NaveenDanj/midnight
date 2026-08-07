@@ -6,8 +6,10 @@
 source (.mn)
   -> lexer
   -> parser
+  -> module resolution (import statements)
   -> semantic analyzer
   -> IR lowering
+  -> module compilation (LLVM backend)
   -> backend emission
   -> link
   -> optional run
@@ -45,15 +47,18 @@ midnight version
 
 ### Compiler Pipeline
 
-- `src/compiler/pipeline.zig`
+- `src/compiler/pipeline.zig` (`compileFile` / `compileSource`)
 
 Responsibilities:
 
 - read source text
-- run lexer, parser, semantic analyzer, and IR lowering
+- run the lexer, parser, module resolver, semantic analyzer, and IR lowering
+- compile imported modules into separate object files (LLVM backend)
 - optionally emit assembly or LLVM IR
 - optionally link an executable
 - optionally run the executable
+
+This is the central orchestration point — read it first when tracing how a `.mn` file becomes an executable.
 
 ### AST Layer
 
@@ -61,7 +66,7 @@ Responsibilities:
 - `src/ast/stmt.zig`
 - `src/ast/type_ref.zig`
 
-This layer is the shared syntax model consumed by parser, semantic analysis, and IR lowering.
+This layer is the shared syntax model consumed by the parser, semantic analysis, module resolution, and IR lowering.
 
 ### Lexer Layer
 
@@ -80,20 +85,39 @@ This layer is the shared syntax model consumed by parser, semantic analysis, and
 - `src/parser/lib/parseIf.zig`
 - `src/parser/lib/parseWhile.zig`
 - `src/parser/lib/parseBlock.zig`
+- `src/parser/lib/parseArray.zig`
 - `src/parser/lib/parseTypeRef.zig`
+- `src/parser/lib/parseImport.zig`
+- `src/parser/lib/parsePrint.zig`
+- `src/parser/lib/operator.zig` — precedence table
+
+### Module Layer
+
+- `src/module/module_resolver.zig`
+- `src/module/module_compiler.zig`
+
+Responsibilities:
+
+- `ModuleResolver` walks `import` statements, resolves each dotted path (`std.io.file`) to a source file under the standard library root or the importing file's directory, parses it, and recursively resolves its own imports, detecting circular dependencies along the way
+- `ModuleCompiler` (LLVM backend only) takes the resolved module graph, lowers and emits each module into its own object file, and synthesizes the `extern` declarations the entry file's IR needs to call across module boundaries
+- resolved modules and the entry file are analyzed together into one shared top-level semantic scope, so declarations from an imported module stay visible without merging ASTs together
+
+The x86_64 backend does not yet drive `ModuleCompiler` — imports are resolved, but per-module object compilation is LLVM-only today.
 
 ### Semantic Layer
 
-- `src/semantic/anaylzer.zig`
+- `src/semantic/anaylzer.zig` (entrypoint: `SemanticAnalyzer`)
 - `src/semantic/expr_type_checker.zig`
 - `src/semantic/function_checker.zig`
 - `src/semantic/assignment_checker.zig`
 - `src/semantic/struct_checker.zig`
 - `src/semantic/type_compatibility.zig`
+- `src/semantic/type_resolver.zig`
 - `src/semantic/context.zig`
 - `src/semantic/scope.zig`
 - `src/semantic/symbol.zig`
 - `src/semantic/types.zig`
+- `src/semantic/result.zig`
 
 Responsibilities:
 
@@ -104,11 +128,13 @@ Responsibilities:
 - struct declaration and struct initialization validation
 - print statement validation
 
+IR lowering consumes `SemanticAnalyzer.result` for resolved type info.
+
 ### IR Layer
 
-- `src/ir/ir.zig`
-- `src/ir/builder.zig`
-- `src/ir/lower.zig`
+- `src/ir/ir.zig` — the `Instruction` model
+- `src/ir/builder.zig` (`InstructionBuilder`) — assigns temps and labels
+- `src/ir/lower.zig` (`generateIRWithSemantics`) — drives lowering
 - `src/ir/lib/lowerExpr.zig`
 - `src/ir/lib/lowerFlowControl.zig`
 - `src/ir/lib/lowerFunction.zig`
@@ -124,28 +150,25 @@ Responsibilities:
 
 ### Backend Layer
 
-- `src/backend/llvm/`
-- `src/backend/x86_64/`
-- `src/backend/toolchain.zig`
+Two independent codegen paths consume the same `[]Instruction` slice:
 
-Current backend split:
-
-- LLVM backend can emit LLVM IR, assembly, and object files
-- x86_64 backend emits assembly
-- toolchain support links and runs final artifacts
+- `src/backend/llvm/` — `llvm_backend.zig` is the entrypoint (`emitLLVMAssembly`, `emitLLVMIR`, `emitLLVMObject`); `llvm_context.zig` and `llvm_type_mapper.zig` hold shared state and type mapping; `llvm_emitter.zig` dispatches to per-construct emitters under `backend/llvm/lib/` (`function_emitter.zig`, `bin_op_emitter.zig`, `arr_emitter.zig`, `struct_emitter.zig`, `print_emitter.zig`, `unary_op.zig`, `predicates.zig`). Bindings to the LLVM C API live in `src/llvm.zig`.
+- `src/backend/x86_64/x86_64_backend.zig` — emits assembly directly, using `src/backend/asm_builder.zig`.
+- `src/backend/toolchain.zig` — assembles/links/runs produced artifacts for both backends (`assembleAndLink`, `linkObjects`, `runArtifact`).
 
 ## AST Summary
 
 ### Statement variants
 
 - `PrintStatement`
-- `FunctionDecl`
+- `FunctionDecl` (with an `isExtern` flag for extern declarations)
 - `Block`
 - `VariableDecl`
 - `ReturnStatement`
 - `IfStatement`
 - `WhileStatement`
 - `StructDecl`
+- `ImportStatement`
 - `VarAssignment`
 - `FunctionCallStatement`
 - `ExpressionStmt`
@@ -168,17 +191,19 @@ Current backend split:
 
 ## Build System Notes
 
-`build.zig` currently:
+`build.zig`:
 
 - defines the reusable `midnight` module at `src/root.zig`
 - defines the CLI executable at `src/main.zig`
-- configures LLVM include and library paths through `llvm-config`
-- exposes `zig build run`
-- exposes `zig build test`
+- configures LLVM include and library paths through `llvm-config` (non-Windows), or `-Dllvm-root=<path>` / `-Dllvm-lib-name=<name>` on Windows
+- exposes `zig build run` and `zig build test`
+
+Release builds (`.github/workflows/release.yml`) produce Linux and Windows x86_64 archives on tagged GitHub Releases, bundling the compiled binary together with the LLVM shared library/DLL it links against.
 
 ## Current Architectural Constraints
 
 - diagnostics are still error-set driven, not structured diagnostic objects
 - control-flow and return analysis are still shallow compared to a CFG-based design
 - some IR instruction variants exist ahead of complete backend support
+- module compilation into separate object files is implemented for the LLVM backend only
 - the sample programs under `src/data/` mix stable coverage examples with experimental inputs

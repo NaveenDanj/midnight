@@ -59,7 +59,7 @@ Each layer only depends on layers before it in this list; the AST (`src/ast/`) i
   - `backend/llvm/`: `llvm_backend.zig` is the entrypoint (`emitLLVMAssembly`, `emitLLVMIR`, `emitLLVMObject`); `llvm_context.zig` and `llvm_type_mapper.zig` hold shared state/type mapping; `llvm_emitter.zig` dispatches to per-construct emitters under `backend/llvm/lib/` (`function_emitter.zig`, `bin_op_emitter.zig`, `arr_emitter.zig`, `struct_emitter.zig`, `print_emitter.zig`, `unary_op.zig`, `predicates.zig`). Bindings to the LLVM C API live in `src/llvm.zig`.
   - `backend/x86_64/x86_64_backend.zig`: emits assembly directly, using `backend/asm_builder.zig`.
   - `backend/toolchain.zig`: assembles/links/runs produced artifacts for both backends (`assembleAndLink`, `linkObject`, `runArtifact`).
-- **Module resolution** (`src/module/module_resolver.zig`): resolves `import` statements into `Module`s (functions/structs/variables), with circular-dependency detection. This is newly added and not yet wired into `pipeline.compileSource` (see the "handle module resolution for import statements" comment there) — treat it as in-progress infrastructure, not a finished feature.
+- **Module resolution** (`src/module/`): `module_resolver.zig` resolves `import` statements into `Module`s (functions/structs/variables), with circular-dependency detection; `module_compiler.zig` compiles each resolved module into its own object file and synthesizes cross-module `extern` declarations. Both are wired into `pipeline.compileSource` — the entry file and every transitively imported module are analyzed together into one shared top-level semantic scope, then lowered/emitted separately. Module object compilation currently only runs for the LLVM backend (`options.backend == .llvm`); the x86_64 path resolves imports but does not yet compile them into linkable objects.
 
 ### Runtime
 
@@ -71,14 +71,15 @@ There are no structured diagnostic objects yet — all errors (parser, semantic,
 
 ## Language Surface (current)
 
-`var`/`const` declarations, typed functions with returns, `if`/`else`, `while`, assignments, function calls, primitives (`int`, `float`, `bool`, `string`, `void`), unary (`-`, `!`) and binary operators, structs (fields + methods, initialization, member access/assignment), array literals/type syntax, `print`. Sample `.mn` programs live in `src/data/`. Full spec: `docs/language-spec.md`; more examples: `docs/examples.md`.
+`var`/`const` declarations, typed functions with returns, `extern func` declarations (no body, bound to the C runtime), `if`/`else`, `while`, assignments, function calls, `import "dotted.path";` for modules/standard library, primitives (`int`, `float`, `bool`, `string`, `void`), unary (`-`, `!`) and binary operators, structs (fields + methods, initialization, member access/assignment), array literals/type syntax, `print`. A small standard library lives under `src/std/` (`std.io.file`, `std.io.input`). Sample `.mn` programs live in `src/data/`. Full spec: `docs/language-spec.md`; more examples: `docs/examples.md`.
 
 ## Known Gaps (don't treat as bugs to silently "fix" without checking docs/roadmap.md)
 
 - Array indexing/element assignment exist in the IR model but aren't fully wired end-to-end.
 - Struct method receiver semantics are incomplete.
 - Return-flow analysis is shallow (not path-sensitive/CFG-based).
-- `import`/module resolution (`src/module/module_resolver.zig`) exists but isn't yet called from the compile pipeline.
+- Module object compilation (`src/module/module_compiler.zig`) only runs for the LLVM backend.
+- The `--std-lib` CLI flag is parsed but never forwarded into `pipeline.CompileOptions` — the standard library path is currently a hardcoded default in `src/cli/options.zig`/`src/compiler/pipeline.zig` rather than actually configurable.
 - Diagnostics are raw Zig errors, not structured/user-friendly compiler messages.
 
 ## Docs

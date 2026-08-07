@@ -1,79 +1,102 @@
 # Examples
 
-This page collects small Midnight programs that match the current implementation more closely than the older all-in-one samples.
+Small, runnable Midnight programs, one per language feature. Save any snippet as `example.mn` and run it:
 
-## 1. Minimal Arithmetic
+```bash
+zig build run -- run example.mn
+```
+
+## Hello, World
+
+```mn
+print("Hello, World!");
+```
+
+No entry-point function, no imports — the smallest program looks exactly as small as it is.
+
+## Variables and Arithmetic
 
 ```mn
 var int x = 100;
 var int y = 200;
 var int total = x + y;
 
+total = total * 2;
+
 print(total);
 ```
 
-Exercises:
+- `var` declares a mutable binding with an explicit type.
+- Reassignment (`total = ...`) requires a prior `var` declaration — reassigning a `const` is a compile error.
+- Arithmetic operators: `+ - * / %`.
 
-- variable declarations
-- arithmetic expressions
-- identifier lookup
-- print statements
-
-## 2. Function Declaration And Call
+## Constants
 
 ```mn
-func add(int a, int b) int {
-    return a + b;
-}
+const float PI = 3.14159;
+const string GREETING = "hello";
 
-var int total = add(10, 20);
-print(total);
+print(GREETING);
 ```
 
-Exercises:
+`const` bindings must be initialized and can never be reassigned.
 
-- typed function declarations
-- return statements
-- function calls in expression position
-
-## 3. Bare Call Statement
+## Booleans and Comparisons
 
 ```mn
-func greet() int {
-    print("hello");
-    return 0;
-}
+var int a = 10;
+var int b = 20;
 
-greet();
+var bool isLess = a < b;
+var bool isEqual = a == b;
+var bool combined = isLess && !isEqual;
+
+print(combined);
 ```
 
-Exercises:
+Comparison (`< <= > >=`), equality (`== !=`), boolean (`&& ||`), and unary (`- !`) operators all return the expected types — comparisons and equality produce `bool`, boolean operators require `bool` operands.
 
-- top-level function declaration
-- function call as a standalone statement
-- print inside a function body
-
-## 4. Recursive Function
+## String Concatenation
 
 ```mn
-func factorial(int n) int {
-    if (n == 1) {
-        return 1;
+var string first = "Ada";
+var string last = "Lovelace";
+var string full = first + " " + last;
+
+print(full);
+```
+
+`+` concatenates when both operands are `string`, and performs arithmetic otherwise — there's no separate concatenation operator.
+
+## if / else
+
+```mn
+var int score = 72;
+
+if (score >= 90) {
+    print("A");
+} else {
+    print("not an A");
+}
+```
+
+`else if` chains are written as a nested `if` inside the `else` block, since `else` always takes a block:
+
+```mn
+var int score = 72;
+
+if (score >= 90) {
+    print("A");
+} else {
+    if (score >= 70) {
+        print("B");
+    } else {
+        print("C or below");
     }
-
-    return n * factorial(n - 1);
 }
-
-print(factorial(5));
 ```
 
-Exercises:
-
-- recursion
-- conditional return
-- nested function calls
-
-## 5. While Loop With Mutation
+## while Loops
 
 ```mn
 func countdown(int start) int {
@@ -90,28 +113,69 @@ func countdown(int start) int {
 countdown(3);
 ```
 
-Exercises:
+## Functions and Recursion
 
-- while loops
-- mutable local variables
-- repeated reassignment
+```mn
+func factorial(int n) int {
+    if (n == 1) {
+        return 1;
+    }
 
-## 6. Arrays
+    return n * factorial(n - 1);
+}
+
+print(factorial(5));
+```
+
+Every function has a fully typed signature and an explicit return type. A bare function call is also valid as a standalone statement:
+
+```mn
+func greet() int {
+    print("hello");
+    return 0;
+}
+
+greet();
+```
+
+## Arrays
 
 ```mn
 var int[] values = [1, 2, 3];
 var string[] names = ["midnight", "zig"];
+var int[] empty_list = [];
 
 print(values[0]);
 ```
 
-Status note:
+- Array types are written as `T[]` for any type `T`, including struct types.
+- Array literals must be homogeneous (every element the same type).
+- The empty literal `[]` can initialize any typed array.
+- Indexing (`values[0]`) parses and type-checks, but full end-to-end support across every backend is still being completed — see [Language Specification § Known Limits](./language-spec.md#known-limits).
 
-- array type syntax and array literals are implemented
-- homogeneous element checking is implemented
-- full array indexing support is still incomplete across the whole compiler, so treat indexing examples as aspirational unless you have already verified them against the current branch
+## Structs: Fields and Methods
 
-## 7. Struct Initialization And Member Assignment
+```mn
+struct Person {
+    var string first_name;
+    var string last_name;
+
+    func greet() string {
+        return "Hello, " + first_name + " " + last_name;
+    }
+}
+
+var Person p = Person{
+    first_name = "Ada",
+    last_name = "Lovelace"
+};
+
+print(p.greet());
+```
+
+Struct initializer fields use `=`, not `:`. Fields and methods live in the same declaration — there's no separate header or constructor to write for the common case.
+
+## Structs: Nesting and Member Assignment
 
 ```mn
 struct Sample {
@@ -119,55 +183,94 @@ struct Sample {
     var int b;
 }
 
-struct Person {
-    var string first_name;
+struct Container {
+    var string label;
     var Sample sample;
 }
 
-var Person person = Person{
-    first_name = "Naveen",
-    sample = Sample{
-        a = 10,
-        b = 20
-    }
+var Container c = Container{
+    label = "outer",
+    sample = Sample{ a = 10, b = 20 }
 };
 
-person.sample.a = 99;
-print(person.first_name);
+c.sample.a = 99;
+
+print(c.sample.a);
 ```
 
-Exercises:
+Member-access chains (`c.sample.a`) work as both expressions and assignment targets.
 
-- struct declarations
-- nested struct initialization
-- member access and member assignment
-
-## 8. Repository Sample: `src/data/test3.mn`
-
-Current repository sample:
+## Structs with Arrays
 
 ```mn
-func matrixBenchmark() int {
+struct Team {
+    var string name;
+    var int[] scores;
+}
 
-    var int size = 200;
+var Team t = Team{
+    name = "Falcons",
+    scores = [10, 20, 30]
+};
 
+print(t.name);
+```
+
+## Extern Functions
+
+```mn
+extern func midnight_file_exists(string path) bool;
+
+var bool exists = midnight_file_exists("/tmp/example.txt");
+print(exists);
+```
+
+`extern` declares a function with no Midnight body — its implementation lives in the bundled C runtime (`runtime/`). It's how the standard library modules below are built.
+
+## Imports and the Standard Library
+
+Midnight ships a small standard library under `src/std/`. Import a module by its dotted path and use the structs/functions it exports:
+
+```mn
+import "std.io.file";
+import "std.io.input";
+
+var File file = File{};
+var Input input = Input{};
+
+var string path = "/tmp/example.txt";
+
+if (file.exists(path)) {
+    print("file exists");
+} else {
+    file.write(path, "hello from midnight");
+}
+
+var string name = input.readLine();
+print(name);
+```
+
+Available standard modules today:
+
+| Import path | Provides |
+|---|---|
+| `std.io.file` | `File` — `read`, `write`, `append`, `exists`, `delete`, `copy`, `move`, `create`, `createDirectory`, `removeDirectory`, `isDirectory`, `isFile`, `size`, `currentDirectory`, `absolute` |
+| `std.io.input` | `Input` — `readLine`, `readInt`, `readFloat`, `readBool` |
+
+## A Larger Sample: Nested Loops
+
+Adapted from `src/data/test3.mn`:
+
+```mn
+func matrixSum(int size) int {
     var int i = 0;
-    var int j = 0;
-    var int k = 0;
-
     var int result = 0;
 
-    while(i < size) {
-        j = 0;
+    while (i < size) {
+        var int j = 0;
 
-        while(j < size) {
-            k = 0;
-
-            while(k < size) {
-                result = result + (i * j) + k;
-                k = k + 1;
-            }
-
+        while (j < size) {
+            result = result + (i * j);
             j = j + 1;
         }
 
@@ -177,14 +280,8 @@ func matrixBenchmark() int {
     return result;
 }
 
-print(matrixBenchmark());
+print(matrixSum(200));
 ```
-
-Exercises:
-
-- nested loops
-- repeated assignment
-- function call inside print
 
 ## Running Examples
 
@@ -206,8 +303,12 @@ Inspect lowered IR:
 zig build run -- run example.mn --emit-ir
 ```
 
-Inspect LLVM IR:
+Inspect generated LLVM IR:
 
 ```bash
 zig build run -- run example.mn --emit-llvm-ir
 ```
+
+Programs that `import` standard library modules (`std.io.file`, `std.io.input`) currently resolve against a standard library path baked in at build time (see [Getting Started § Known Limitation: Standard Library Path](./getting-started.md#known-limitation-standard-library-path)) — run them from within a checkout of this repository until that's fixed.
+
+More sample programs, including ones that mix several features together, live in [`src/data/`](../src/data/).

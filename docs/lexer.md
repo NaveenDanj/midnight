@@ -42,7 +42,7 @@ If no keyword matches, token kind remains `Identifier`.
 
 Current keyword set includes:
 
-- control/declaration keywords (`return`, `if`, `else`, `func`, `var`, `while`, `const`, `struct`)
+- control/declaration keywords (`return`, `if`, `else`, `func`, `var`, `while`, `const`, `struct`, `extern`, `import`)
 - type keywords (`int`, `float`, `bool`, `string`)
 - boolean keywords (`true`, `false`)
 - array-related keyword (`empty`)
@@ -60,9 +60,15 @@ Current keyword set includes:
 - Newlines inside strings increment line counters.
 - Unterminated string currently returns EOF token as error fallback.
 
+## Lexer Errors
+
+`LexerError` (`src/lexer/lexer.zig`):
+
+- `UnknownCharacter` — an unrecognized character is encountered
+- `UnterminatedString` — a string literal reaches end-of-file before its closing `"`
+
 ## Known Lexer Issues and Notes
 
-- Invalid/unknown characters currently fall through to EOF token instead of dedicated lexical error token.
 - Column tracks increment with each `advance()`, but token column currently stores ending position rather than start position.
 - Comments are not yet implemented.
 - `KwNull` exists in token definitions but `null` is not currently mapped in keyword lookup.

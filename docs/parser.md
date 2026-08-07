@@ -17,9 +17,12 @@
 - `if` -> if statement
 - `while` -> while statement
 - `func` -> function declaration
+- `extern` -> extern function declaration (`parseFunctionDecl` with `isExtern = true`; body is omitted, declaration ends at `;`)
 - `struct` -> struct declaration
+- `import` -> import statement (`parseImportStatement`, `src/parser/lib/parseImport.zig`)
+- `print` -> print statement (`parsePrint.zig`)
 - otherwise parse as expression statement:
-	- `expr = expr;` becomes assignment statement (target can be identifier or member access)
+	- `expr = expr;` becomes assignment statement (target can be identifier, member access, or array access)
 	- `expr;` becomes expression statement
 
 ## Expression Parsing
@@ -94,15 +97,25 @@ Struct initialization expressions are parsed in expression context:
 - Empty array literals are valid: `[]`.
 - Variable declarations support array type suffix after type: `int[]`, `string[]`, and so on.
 
+## Import Parsing Model
+
+`import "path";` is parsed into an `ImportStatement` (`stmt.path`, `stmt.isLocal`) by `parseImportStatement`. The path is a plain string literal with a dotted module path (`std.io.file`) or a relative source path (`std.mn`); resolving that path to an actual file happens later, in the module resolver — see [Compiler Architecture § Module Layer](./compiler-architecture.md#module-layer).
+
+## Extern Function Parsing Model
+
+`extern func name(params) returnType;` reuses `parseFunctionDecl` with `isExtern = true`: it parses the signature exactly like a normal function declaration, then expects `;` instead of a block body.
+
 ## Parser Error Handling
 
-Parser returns `ParserError` values:
+Parser functions return `ParserError`, which also carries the lexer's own error set (the parser drives tokenization via `lexAll`):
 
 - `UnexpectedEndOfFile`
 - `UnExpectedToken`
 - `UnExpectedEndOfLine`
 - `TokenNotFound`
 - `OutOfMemory`
+- `UnknownCharacter`
+- `UnterminatedString`
 
 Current strategy is fail-fast with no synchronization/recovery.
 

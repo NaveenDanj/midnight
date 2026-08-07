@@ -59,6 +59,14 @@ Parameters are tracked distinctly from variables, which matters for assignment s
 - bare function calls such as `loop(100);` are accepted
 - non-call expression statements are still rejected as unsupported semantic statements
 
+### Import statements
+
+`ImportStatement` nodes are a no-op at this stage — by the time semantic analysis runs, the module resolver has already turned each imported module's top-level declarations into statements analyzed in the same shared scope, so there's nothing left for `ImportStatement` itself to check.
+
+### Extern function declarations
+
+Extern functions (`funcDecl.isExtern`) skip body analysis (there is no body to analyze) but are still registered as callable function symbols like any other declaration.
+
 ## Type System Snapshot
 
 Current type kinds:
@@ -138,6 +146,10 @@ Notable rules:
 - equality and comparison operators return `bool`
 - boolean operators expect boolean operands
 - member access resolves through struct metadata
+
+## Modules and Shared Scope
+
+The compile pipeline analyzes the entry file and every transitively imported module into one shared top-level scope (`SemanticAnalyzer.beginSharedScope` / `endSharedScope`), so declarations made while analyzing one module stay visible while analyzing the file that imports it — without merging their ASTs together. Each module is still lowered and emitted separately; see [Compiler Architecture § Module Layer](./compiler-architecture.md#module-layer).
 
 ## Current Weak Spots
 

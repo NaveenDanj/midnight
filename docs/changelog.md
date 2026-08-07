@@ -1,72 +1,44 @@
 # Recent Changes Since Last Docs Update
 
-This document summarizes compiler and language changes made after the previous documentation update commit (`c54177b`).
+This document summarizes compiler and language changes made since the previous documentation refresh (2026-07-25).
+
+## Language
+
+- Added `extern func name(params) returnType;` — declares a function with no Midnight body, implemented outside the language (currently the bundled C runtime under `runtime/`). Parsed via `isExtern` on the shared `parseFunctionDecl` path; semantic analysis registers extern functions as ordinary callable symbols and skips body analysis.
+- Added `import "path";` — resolves a dotted module path (`std.io.file`) or relative source path against the standard library root or the importing file's directory, and brings the target module's top-level functions, structs, and variables into scope.
+- Fixed a string-comparison bug (`==`/`!=` over `string` values).
+
+## Module Resolution
+
+- Added `src/module/module_resolver.zig` (`ModuleResolver`), which walks `import` statements, resolves and parses each target module, and detects circular imports.
+- Added `src/module/module_compiler.zig` (`ModuleCompiler`), which compiles each resolved module into its own object file (LLVM backend) and synthesizes the `extern` declarations the entry file's IR needs to call across module boundaries.
+- Wired module resolution and compilation into `pipeline.compileSource` — this is no longer unwired, in-progress infrastructure. The entry file and every transitively imported module are now analyzed together into one shared top-level semantic scope.
+- The x86_64 backend does not yet drive `ModuleCompiler`; module object compilation is LLVM-only for now.
+
+## Standard Library
+
+- Added `src/std/io/file.mn` (`File` struct) and `src/std/io/input.mn` (`Input` struct), both built on `extern` bindings into the C runtime.
+- Added sample programs demonstrating standard library usage: `src/data/test4.mn`, `src/data/test5.mn`.
 
 ## CLI
 
-- Added command parsing for:
-  - `midnight run <file.mn>`
-  - `midnight build <file.mn> [-o output]`
-- `run` compiles, links, and executes the selected Midnight source file.
-- `build` compiles and links the selected Midnight source file, then prints the generated executable path.
-- Added CLI options:
-  - `--backend llvm|x86_64`
-  - `--emit-ir`
-  - `--emit-asm`
-  - `--emit-llvm-ir`
-  - `-o, --output <path>`
-- Default generated artifacts are placed in per-process `/tmp/midnight-build-<pid>` directories to avoid executable permission issues when the repository lives on a mounted `vfat` drive.
+- Added a `--std-lib <path>` flag to `run`/`build` (parsed, but not yet forwarded into the compile pipeline — see [Roadmap](./roadmap.md)).
 
-Example:
+## Build and Platform Support
 
-```bash
-zig build run -- run src/data/test3.mn
-zig build run -- build src/data/test3.mn -o /tmp/midnight-build/app
-```
+- Added Windows support: `build.zig` auto-detects LLVM under common MSYS2/UCRT64 locations before falling back to `-Dllvm-root`, instead of panicking outright.
+- Added a release workflow (`.github/workflows/release.yml`) that builds Linux and Windows x86_64 binaries on tagged GitHub Releases, bundling the LLVM shared library/DLL alongside the binary.
+- Tagged `v0.1.0-alpha.2`.
 
-## Parser and AST
+## Lexer
 
-- Added expression statements, so standalone expressions like `call();` and `a + b;` are parsed as statement nodes.
-- Assignment parsing now accepts expression targets and supports member-access lvalues like `person.age = 20;` and nested chains like `person.sample.a = 500;`.
-- Added postfix member access and call chaining support in expressions (`obj.field`, `obj.method(...)`).
-- Added unary prefix expression parsing for `-expr` and `!expr`.
-- Added array literal parsing (`[1, 2, 3]`) and `ArrayLiteral` AST node.
-- Added array type parsing in variable declarations (`int[]`, `string[]`, etc.).
-
-## Lexer and Tokens
-
-- Added `[` and `]` token kinds (`LBracket`, `RBracket`).
-- Added `empty` keyword token (`KwEmpty`) and keyword mapping.
-- Added `KwNull` token type in the token enum (currently token kind is defined, but keyword mapping does not yet map `null`).
-
-## Semantic Analysis
-
-- Semantic analysis is now executed from the main program path.
-- Implemented semantic handling for:
-  - expression statements
-  - member-access type resolution for struct fields and methods
-  - member-access assignment validation (field existence, mutability, and type compatibility)
-  - unary operator type checking
-  - array literal element type checking
-- Added support for empty array typing through `EMPTY` type kind (`TypeKind.EMPTY`) and array compatibility path for declarations.
-- Struct declarations are now registered in semantic context and symbol scope as structure symbols.
-- Struct initialization field checks are now enforced for type and initialization completeness.
-
-## Type System
-
-- `Type` now tracks array shape with `isArray: bool`.
-- `TypeKind` now includes `EMPTY` for empty-array inference/compatibility flow.
+- Added dedicated `LexerError` values (`UnknownCharacter`, `UnterminatedString`) instead of falling through to an EOF token on invalid input or an unterminated string.
 
 ## Tests
 
-- Added parser and semantic regression tests for expression statements and member-access assignments.
-- Added dedicated array tests:
-  - array literal parsing
-  - semantic acceptance for homogeneous arrays
-  - semantic rejection for mixed-type arrays
-- Test runner now includes `src/tests/arrays.zig`.
+- Added regression coverage for the array, expression-statement, and member-access-assignment behavior introduced in the prior update cycle, plus coverage growth alongside the extern/import/module work above.
 
 ## Notes
 
-- Struct method body analysis is still limited in places (method fields are collected in struct metadata, but method-body semantics for receiver-scoped properties are not fully modeled yet).
-- Array indexing expressions are still a planned extension.
+- Struct method receiver semantics are still limited — this remains a known gap, not new breakage.
+- Array indexing is still not fully wired end-to-end; treat it as a planned extension, not a regression.
