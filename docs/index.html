@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Midnight — a language that keeps only what it needs</title>
-<meta name="description" content="Midnight is a systems language built on minimal syntactic ceremony. Version 0.1.0-alpha.1.">
+<meta name="description" content="Midnight is a systems language built on minimal syntactic ceremony. Version 0.1.0-alpha.2.">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -111,9 +111,11 @@
       <a href="#examples" class="hover:text-paper transition-colors">Code</a>
       <a href="#state" class="hover:text-paper transition-colors">Status</a>
       <a href="#governance" class="hover:text-paper transition-colors">Governance</a>
+      <a href="#download" class="hover:text-paper transition-colors">Download</a>
       <a href="#involved" class="hover:text-paper transition-colors">Get Involved</a>
+      <a href="https://github.com/NaveenDanj/midnight" class="hover:text-paper transition-colors">GitHub</a>
     </nav>
-    <a href="https://github.com/NaveenDanj/midnight" class="text-sm border border-rule px-4 py-1.5 hover:border-accent hover:text-accent transition-colors">GitHub</a>
+    <a href="#download" class="text-sm border border-rule px-4 py-1.5 hover:border-accent hover:text-accent transition-colors">Download</a>
   </div>
 </header>
 
@@ -122,7 +124,7 @@
   <!-- ============ HERO ============ -->
   <section class="mx-auto max-w-6xl px-6 sm:px-10 pt-16 sm:pt-24 pb-20 grid md:grid-cols-2 gap-14 md:gap-10 items-start">
     <div>
-      <p class="font-mono text-xs text-accent tracking-widest uppercase mb-6">0.1.0-alpha.1</p>
+      <p class="font-mono text-xs text-accent tracking-widest uppercase mb-6">0.1.0-alpha.2</p>
       <h1 class="font-display font-medium text-[2.75rem] sm:text-6xl leading-[1.05] tracking-tight">
         Syntax should<br>earn its place.
       </h1>
@@ -307,7 +309,7 @@
             <div class="code-line"><span class="ln">7</span><span class="stmt">    }</span></div>
             <div class="code-line"><span class="ln">8</span><span class="stmt">}</span></div>
             <div class="code-line"><span class="ln">9</span><span class="stmt"></span></div>
-            <div class="code-line"><span class="ln">10</span><span class="stmt"><span class="tok-kw">var</span> <span class="tok-type">Person</span> p = <span class="tok-type">Person</span> { first_name: <span class="tok-str">"Ada"</span>, last_name: <span class="tok-str">"Lovelace"</span> };</span></div>
+            <div class="code-line"><span class="ln">10</span><span class="stmt"><span class="tok-kw">var</span> <span class="tok-type">Person</span> p = <span class="tok-type">Person</span>{ first_name = <span class="tok-str">"Ada"</span>, last_name = <span class="tok-str">"Lovelace"</span> };</span></div>
             <div class="code-line"><span class="ln">11</span><span class="stmt"><span class="tok-fn">print</span>(p.greet());</span></div>
           </div>
         </div>
@@ -333,6 +335,29 @@
         </div>
       </div>
 
+      <!-- example 4 -->
+      <div class="grid md:grid-cols-[1fr_1.6fr] gap-6 md:gap-10 items-start">
+        <div>
+          <h3 class="font-display text-xl">A standard library, imported by name</h3>
+          <p class="mt-2 text-muted text-[15px] leading-relaxed">Dotted import paths pull a module's structs straight into scope. No package manifest, no namespace ceremony.</p>
+        </div>
+        <div class="code-panel">
+          <div class="code-panel-head px-4 py-2.5"><span class="font-mono text-xs text-faint">notes.mn</span></div>
+          <div class="px-2 py-5 font-mono text-[13.5px] leading-7 overflow-x-auto">
+            <div class="code-line"><span class="ln">1</span><span class="stmt"><span class="tok-kw">import</span> <span class="tok-str">"std.io.file"</span>;</span></div>
+            <div class="code-line"><span class="ln">2</span><span class="stmt"></span></div>
+            <div class="code-line"><span class="ln">3</span><span class="stmt"><span class="tok-kw">var</span> <span class="tok-type">File</span> file = <span class="tok-type">File</span>{};</span></div>
+            <div class="code-line"><span class="ln">4</span><span class="stmt"><span class="tok-kw">var</span> <span class="tok-type">string</span> path = <span class="tok-str">"/tmp/notes.txt"</span>;</span></div>
+            <div class="code-line"><span class="ln">5</span><span class="stmt"></span></div>
+            <div class="code-line"><span class="ln">6</span><span class="stmt"><span class="tok-kw">if</span> (file.exists(path)) {</span></div>
+            <div class="code-line"><span class="ln">7</span><span class="stmt">    <span class="tok-fn">print</span>(<span class="tok-str">"already there"</span>);</span></div>
+            <div class="code-line"><span class="ln">8</span><span class="stmt">} <span class="tok-kw">else</span> {</span></div>
+            <div class="code-line"><span class="ln">9</span><span class="stmt">    file.write(path, <span class="tok-str">"hello from midnight"</span>);</span></div>
+            <div class="code-line"><span class="ln">10</span><span class="stmt">}</span></div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -347,10 +372,12 @@
           Midnight is early. It is also already real.
         </p>
         <p class="mt-6 text-muted leading-relaxed">
-          Version <span class="font-mono text-paper">0.1.0-alpha.1</span> already
+          Version <span class="font-mono text-paper">0.1.0-alpha.2</span> already
           runs typed functions, <span class="font-mono text-paper">if</span> and
           <span class="font-mono text-paper">while</span>, structs with fields
-          and methods, arrays, and the primitive types
+          and methods, arrays, <span class="font-mono text-paper">extern</span>
+          functions, <span class="font-mono text-paper">import</span>-based
+          modules with a small standard library, and the primitive types
           (<span class="font-mono text-paper">int</span>,
           <span class="font-mono text-paper">float</span>,
           <span class="font-mono text-paper">bool</span>,
@@ -428,6 +455,73 @@
 
   <div class="mx-auto max-w-6xl px-6 sm:px-10"><div class="hairline h-px"></div></div>
 
+  <!-- ============ DOWNLOAD ============ -->
+  <section id="download" class="mx-auto max-w-6xl px-6 sm:px-10 py-20 sm:py-28">
+    <div class="grid md:grid-cols-[1fr_2fr] gap-8 md:gap-16">
+      <p class="font-mono text-xs text-muted uppercase tracking-widest pt-2">Download</p>
+      <div class="max-w-2xl">
+        <p class="font-display text-2xl sm:text-3xl leading-snug">
+          Get the compiler, or build it yourself.
+        </p>
+        <p class="mt-6 text-muted leading-relaxed">
+          Every tagged release publishes prebuilt <span class="font-mono text-paper">midnight</span>
+          binaries for Linux and Windows (x86_64) on GitHub, each bundled with
+          the LLVM shared library it links against — no separate LLVM
+          install required to run one.
+        </p>
+
+        <div class="mt-10 grid sm:grid-cols-2 gap-4">
+          <div class="code-panel p-6">
+            <div class="flex items-center justify-between">
+              <span class="font-display text-lg">Linux</span>
+              <span class="font-mono text-xs text-faint">x86_64</span>
+            </div>
+            <p class="mt-2 text-muted text-sm leading-relaxed">tar.gz archive with the binary and its LLVM shared library.</p>
+            <a href="https://github.com/NaveenDanj/midnight/releases/latest" class="mt-5 inline-flex items-center bg-accent text-ink px-5 py-2.5 text-sm font-medium hover:bg-[#E4B36C] transition-colors">
+              Download for Linux
+            </a>
+          </div>
+
+          <div class="code-panel p-6">
+            <div class="flex items-center justify-between">
+              <span class="font-display text-lg">Windows</span>
+              <span class="font-mono text-xs text-faint">x86_64</span>
+            </div>
+            <p class="mt-2 text-muted text-sm leading-relaxed">zip archive with midnight.exe and the required LLVM DLLs.</p>
+            <a href="https://github.com/NaveenDanj/midnight/releases/latest" class="mt-5 inline-flex items-center bg-accent text-ink px-5 py-2.5 text-sm font-medium hover:bg-[#E4B36C] transition-colors">
+              Download for Windows
+            </a>
+          </div>
+        </div>
+
+        <div class="mt-10">
+          <p class="font-mono text-xs text-muted uppercase tracking-widest mb-4">Build from source</p>
+          <div class="code-panel">
+            <div class="code-panel-head px-4 py-2.5 flex items-center justify-between">
+              <span class="font-mono text-xs text-faint">shell</span>
+            </div>
+            <div class="px-4 py-4 font-mono text-[13px] leading-6 overflow-x-auto text-paper">
+              <div>git clone https://github.com/NaveenDanj/midnight.git</div>
+              <div>cd midnight</div>
+              <div>zig build</div>
+              <div>./zig-out/bin/midnight run src/data/simple.mn</div>
+            </div>
+          </div>
+          <p class="mt-4 text-muted text-sm leading-relaxed">
+            Requires Zig <span class="font-mono text-paper">0.15.x</span> and LLVM dev
+            tools discoverable via <span class="font-mono text-paper">llvm-config</span>
+            (pass <span class="font-mono text-paper">-Dllvm-root=&lt;path&gt;</span> on
+            Windows, where <span class="font-mono text-paper">llvm-config</span> isn't
+            available). Full instructions in the
+            <a href="https://github.com/NaveenDanj/midnight/blob/main/docs/getting-started.md" class="text-paper underline decoration-rule hover:decoration-accent hover:text-accent transition-colors">Getting Started guide</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="mx-auto max-w-6xl px-6 sm:px-10"><div class="hairline h-px"></div></div>
+
   <!-- ============ GET INVOLVED ============ -->
   <section id="involved" class="mx-auto max-w-6xl px-6 sm:px-10 py-20 sm:py-28">
     <p class="font-mono text-xs text-muted uppercase tracking-widest mb-12">Get involved</p>
@@ -487,13 +581,15 @@
       </div>
       <nav class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm content-start">
         <a href="https://github.com/NaveenDanj/midnight" class="text-muted hover:text-accent transition-colors">GitHub</a>
-        <a href="https://github.com/NaveenDanj/midnight#readme" class="text-muted hover:text-accent transition-colors">Docs</a>
-        <a href="https://github.com/NaveenDanj/midnight/tree/main/examples" class="text-muted hover:text-accent transition-colors">Examples</a>
+        <a href="https://github.com/NaveenDanj/midnight/tree/main/docs" class="text-muted hover:text-accent transition-colors">Docs</a>
+        <a href="https://github.com/NaveenDanj/midnight/tree/main/src/data" class="text-muted hover:text-accent transition-colors">Examples</a>
+        <a href="https://github.com/NaveenDanj/midnight/releases" class="text-muted hover:text-accent transition-colors">Releases</a>
         <a href="https://github.com/NaveenDanj/midnight/discussions" class="text-muted hover:text-accent transition-colors">Roadmap</a>
+        <a href="#download" class="text-muted hover:text-accent transition-colors">Download</a>
       </nav>
     </div>
     <div class="mt-16 pt-6 border-t border-rule flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-      <p class="font-mono text-xs text-faint">Midnight · 0.1.0-alpha.1 · written in Zig</p>
+      <p class="font-mono text-xs text-faint">Midnight · 0.1.0-alpha.2 · written in Zig</p>
       <p class="font-mono text-xs text-faint">A language that only says what it means.</p>
     </div>
   </div>
