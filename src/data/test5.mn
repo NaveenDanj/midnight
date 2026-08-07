@@ -1,0 +1,15 @@
+import "std.io.input";
+
+var bool runner = true;
+var Input input = Input{};
+
+while(runner) {
+    print("Enter your name: ");
+    var string name = input.readLine();
+    
+    if(name == "exit") {
+        runner = false;
+    }
+    
+    print(name);
+}
