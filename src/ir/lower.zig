@@ -17,7 +17,7 @@ pub fn generateIR(builder: *InstructionBuilder, statements: []*Statement) anyerr
     try generateIRWithSemantics(builder, statements, null);
 }
 
-pub fn generateIRWithSemantics(builder: *InstructionBuilder, statements: []*Statement, semantic: ?*const SemanticResult) anyerror!void {
+pub fn generateIRWithSemantics(builder: *InstructionBuilder, statements: []const *Statement, semantic: ?*const SemanticResult) anyerror!void {
     for (statements) |stmt| {
         try lowerStatementWithSemantics(builder, stmt, semantic);
     }

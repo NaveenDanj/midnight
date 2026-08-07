@@ -1,0 +1,24 @@
+extern func midnight_input_read_line() string;
+extern func midnight_input_read_int() int;
+extern func midnight_input_read_float() float;
+extern func midnight_input_read_bool() bool;
+
+struct Input {
+
+    func readLine() string {
+        return midnight_input_read_line();
+    }
+
+    func readInt() int {
+        return midnight_input_read_int();
+    }
+
+    func readFloat() float {
+        return midnight_input_read_float();
+    }
+
+    func readBool() bool {
+        return midnight_input_read_bool();
+    }
+
+}
