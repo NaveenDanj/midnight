@@ -13,12 +13,39 @@ pub const Module = struct {
     functions: []*FunctionDecl,
     structs: []*stmt.StructStmt,
     variables: []*VariableDecl,
+    allocator: std.mem.Allocator,
+
+    pub fn getAllStatements(self: *Module) ![]const *stmt.Statement {
+        var all = std.ArrayList(*stmt.Statement){};
+        errdefer all.deinit(self.allocator);
+
+        for (self.functions) |function_decl| {
+            const module_stmt = try self.allocator.create(stmt.Statement);
+            module_stmt.* = .{ .FunctionDecl = function_decl };
+            try all.append(self.allocator, module_stmt);
+        }
+
+        for (self.structs) |struct_decl| {
+            const module_stmt = try self.allocator.create(stmt.Statement);
+            module_stmt.* = .{ .StructDecl = struct_decl };
+            try all.append(self.allocator, module_stmt);
+        }
+
+        for (self.variables) |variable_decl| {
+            const module_stmt = try self.allocator.create(stmt.Statement);
+            module_stmt.* = .{ .VariableDecl = variable_decl };
+            try all.append(self.allocator, module_stmt);
+        }
+
+        return try all.toOwnedSlice(self.allocator);
+    }
 };
 
 pub const ModuleResolver = struct {
     allocator: std.mem.Allocator,
     resolved: std.StringHashMap(*Module),
     in_progress: std.StringHashMap(u8),
+    order: std.ArrayList(*Module),
     std_lib_path: []const u8,
 
     pub fn init(allocator: std.mem.Allocator, std_lib_path: []const u8) ModuleResolver {
@@ -26,6 +53,7 @@ pub const ModuleResolver = struct {
             .allocator = allocator,
             .resolved = std.StringHashMap(*Module).init(allocator),
             .in_progress = std.StringHashMap(u8).init(allocator),
+            .order = std.ArrayList(*Module){},
             .std_lib_path = std_lib_path,
         };
     }
@@ -33,6 +61,7 @@ pub const ModuleResolver = struct {
     pub fn deinit(self: *ModuleResolver) void {
         self.resolved.deinit();
         self.in_progress.deinit();
+        self.order.deinit(self.allocator);
     }
 
     pub fn resolveModule(self: *ModuleResolver, importPath: []const u8, baseDir: []const u8) !*Module {
@@ -56,6 +85,7 @@ pub const ModuleResolver = struct {
         }
 
         _ = try self.resolved.put(canonicalPath, module);
+        try self.order.append(self.allocator, module);
         _ = self.in_progress.remove(canonicalPath);
 
         return module;
@@ -102,6 +132,7 @@ pub const ModuleResolver = struct {
             .functions = try functions.toOwnedSlice(self.allocator),
             .structs = try structs.toOwnedSlice(self.allocator),
             .variables = try variables.toOwnedSlice(self.allocator),
+            .allocator = self.allocator,
         };
         return module;
     }
@@ -173,5 +204,11 @@ pub const ModuleResolver = struct {
 
         try path.appendSlice(self.allocator, ".mn");
         return path.toOwnedSlice(self.allocator);
+    }
+
+    // Returns modules in dependency-first order (a module's imports always
+    // precede it), matching the DFS post-order built up in resolveModule.
+    pub fn getResolvedModules(self: *ModuleResolver) []const *Module {
+        return self.order.items;
     }
 };

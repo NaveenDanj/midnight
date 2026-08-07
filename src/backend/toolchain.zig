@@ -97,17 +97,46 @@ pub fn linkObject(allocator: std.mem.Allocator, options: ObjectLinkOptions) !Bui
 
     try writeObject(options.object_bytes, options.object_path);
 
-    const object_path = try allocator.dupe(u8, options.object_path);
-    errdefer allocator.free(object_path);
+    const artifact = try linkObjects(allocator, .{
+        .object_paths = &.{options.object_path},
+        .output_dir = options.output_dir,
+        .executable_name = options.executable_name,
+        .cleanup_objects = options.cleanup_object,
+    });
+    allocator.free(artifact.asm_path);
+    allocator.free(artifact.object_path);
+
+    return .{
+        .allocator = allocator,
+        .asm_path = try allocator.dupe(u8, ""),
+        .object_path = try allocator.dupe(u8, options.object_path),
+        .executable_path = artifact.executable_path,
+    };
+}
+
+pub const ObjectsLinkOptions = struct {
+    object_paths: []const []const u8,
+    output_dir: []const u8 = "/tmp/midnight-build",
+    executable_name: []const u8 = "out.exe",
+    cleanup_objects: bool = true,
+};
+
+// Links any number of already-written object files together (e.g. one per
+// compiled module plus the entry object) alongside the runtime C sources,
+// producing a single executable. This is what makes separate compilation
+// (module_compiler.zig) work: each module/entry object only needs to declare
+// externs for symbols it doesn't define itself, and this final step is what
+// actually resolves them against whichever object defines them.
+pub fn linkObjects(allocator: std.mem.Allocator, options: ObjectsLinkOptions) !BuildArtifact {
+    try std.fs.cwd().makePath(options.output_dir);
 
     const executable_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ options.output_dir, options.executable_name });
     errdefer allocator.free(executable_path);
 
-    const asm_path = try allocator.dupe(u8, "");
-    errdefer allocator.free(asm_path);
-
-    try runZigCC(allocator, options.output_dir, &.{
-        object_path,
+    var cc_args = try std.ArrayList([]const u8).initCapacity(allocator, options.object_paths.len + 5);
+    defer cc_args.deinit(allocator);
+    try cc_args.appendSlice(allocator, options.object_paths);
+    try cc_args.appendSlice(allocator, &.{
         "src/runtime/string.c",
         "src/runtime/file.c",
         "src/runtime/input.c",
@@ -115,14 +144,18 @@ pub fn linkObject(allocator: std.mem.Allocator, options: ObjectLinkOptions) !Bui
         executable_path,
     });
 
-    if (options.cleanup_object) {
-        std.fs.cwd().deleteFile(object_path) catch {};
+    try runZigCC(allocator, options.output_dir, cc_args.items);
+
+    if (options.cleanup_objects) {
+        for (options.object_paths) |object_path| {
+            std.fs.cwd().deleteFile(object_path) catch {};
+        }
     }
 
     return .{
         .allocator = allocator,
-        .asm_path = asm_path,
-        .object_path = object_path,
+        .asm_path = try allocator.dupe(u8, ""),
+        .object_path = try allocator.dupe(u8, options.object_paths[options.object_paths.len - 1]),
         .executable_path = executable_path,
     };
 }

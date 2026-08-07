@@ -42,13 +42,30 @@ pub const SemanticAnalyzer = struct {
         self.context.deinit();
     }
 
-    pub fn analyzeProgram(self: *SemanticAnalyzer, statements: []*Statement) SemanticError!void {
+    pub fn analyzeProgram(self: *SemanticAnalyzer, statements: []const *Statement) SemanticError!void {
         try self.scopeStack.pushScope();
         defer self.scopeStack.popScope();
 
+        try self.analyzeStatements(statements);
+    }
+
+    // Analyzes statements into whatever scope is currently on top of the stack,
+    // without pushing/popping one of its own. Used to compile multiple
+    // translation units (modules) into a single shared top-level scope, so
+    // declarations made while analyzing one module stay visible while
+    // analyzing the next. Pair with beginSharedScope/endSharedScope.
+    pub fn analyzeStatements(self: *SemanticAnalyzer, statements: []const *Statement) SemanticError!void {
         for (statements) |stmt| {
             try self.analyzeStatement(stmt);
         }
+    }
+
+    pub fn beginSharedScope(self: *SemanticAnalyzer) !void {
+        try self.scopeStack.pushScope();
+    }
+
+    pub fn endSharedScope(self: *SemanticAnalyzer) void {
+        self.scopeStack.popScope();
     }
 
     pub fn analyzeFunctionDecl(self: *SemanticAnalyzer, funcDecl: *FunctionDecl) SemanticError!void {

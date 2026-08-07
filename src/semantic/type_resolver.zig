@@ -29,6 +29,29 @@ pub fn resolveTypeRef(context: *SemanticContext, type_ref: TypeRef) SemanticErro
     return resolved;
 }
 
+// Inverse of resolveTypeRefUnchecked: turns a resolved semantic Type back into
+// AST-level type syntax. Used to synthesize parameter declarations for extern
+// (cross-module) function signatures, where only the resolved Type is known
+// (from a Symbol looked up in scope), not the original TypeRef.
+pub fn typeToTypeRef(typ: types.Type) TypeRef {
+    const name = switch (typ.kind) {
+        .INT => "int",
+        .FLOAT => "float",
+        .BOOL => "bool",
+        .VOID => "void",
+        .STRING => "string",
+        .STRUCT => typ.struct_name orelse "void",
+        .FUNCTION, .EMPTY => "void",
+    };
+
+    return .{
+        .name = name,
+        .is_array = typ.isArray,
+        .dynamic_array = typ.dynamicArray,
+        .static_length = typ.staticLength,
+    };
+}
+
 pub fn resolveTypeRefUnchecked(type_ref: TypeRef) types.Type {
     var resolved = if (std.mem.eql(u8, type_ref.name, "int"))
         types.Type{ .kind = .INT }

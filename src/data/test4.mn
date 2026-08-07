@@ -1,4 +1,4 @@
-import "std.mn";
+import "std.io.file";
 
 var File file = File{};
 var Input input = Input{};

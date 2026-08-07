@@ -11,6 +11,8 @@ const Parser = @import("../parser/parser.zig").Parser;
 const SemanticAnalyzer = @import("../semantic/anaylzer.zig").SemanticAnalyzer;
 const Statement = @import("../ast/stmt.zig").Statement;
 const ModuleResolver = @import("../module/module_resolver.zig").ModuleResolver;
+const ModuleCompiler = @import("../module/module_compiler.zig").ModuleCompiler;
+const writeObject = @import("../backend/toolchain.zig").writeObject;
 
 pub const BackendKind = enum {
     x86_64,
@@ -88,19 +90,47 @@ pub fn compileSource(allocator: std.mem.Allocator, source: []const u8, options: 
     const base_dir = std.fs.path.dirname(options.source_path) orelse ".";
     try moduleResolver.handleImportStatements(statements, base_dir);
 
-    // merge imported module declarations with the main program statements
-    const all_statements = try moduleResolver.collectStatements(statements);
-
     var semanticAnalyzer = try SemanticAnalyzer.init(allocator);
     defer semanticAnalyzer.deinit();
-    try semanticAnalyzer.analyzeProgram(all_statements);
+
+    // Every module this file (transitively) imports, plus this file's own
+    // top-level statements, are analyzed into one shared top-level scope so
+    // that declarations made while analyzing one module stay visible while
+    // analyzing modules/the main file that import it - without merging their
+    // ASTs together. See module_compiler.zig for how each module is then
+    // separately lowered/emitted into its own object file.
+    try semanticAnalyzer.beginSharedScope();
+    defer semanticAnalyzer.endSharedScope();
+
+    var module_objects: []const []const u8 = try allocator.alloc([]const u8, 0);
+
+    var moduleCompiler: ?ModuleCompiler = null;
+    defer if (moduleCompiler) |*mc| mc.deinit();
+
+    if (options.backend == .llvm) {
+        moduleCompiler = ModuleCompiler.init(allocator);
+
+        try moduleCompiler.?.registerStatements(statements);
+        module_objects = try moduleCompiler.?.compileModules(&moduleResolver, &semanticAnalyzer, options.output_dir);
+    }
+
+    try semanticAnalyzer.analyzeStatements(statements);
 
     var irBuilder = InstructionBuilder.init(allocator);
     defer {
         irBuilder.var_map.deinit();
         irBuilder.version_map.deinit();
     }
-    try generateIRWithSemantics(&irBuilder, all_statements, &semanticAnalyzer.result);
+
+    try generateIRWithSemantics(&irBuilder, statements, &semanticAnalyzer.result);
+
+    // The entry file's own instructions can reference functions/structs
+    // defined in an imported module (which now lives in a separate object),
+    // so it needs the same extern declarations synthesized for it as any
+    // other module - see module_compiler.zig.
+    if (moduleCompiler) |*mc| {
+        try mc.augmentInstructions(&irBuilder.instructions, &semanticAnalyzer);
+    }
 
     const instructions = try irBuilder.instructions.toOwnedSlice(allocator);
     errdefer allocator.free(instructions);
@@ -149,9 +179,15 @@ pub fn compileSource(allocator: std.mem.Allocator, source: []const u8, options: 
                 const object_bytes = try llvm_backend.emitLLVMObject(allocator, instructions);
                 defer allocator.free(object_bytes);
 
-                break :blk try toolchain.linkObject(allocator, .{
-                    .object_bytes = object_bytes,
-                    .object_path = options.object_path,
+                try writeObject(object_bytes, options.object_path);
+
+                var all_object_paths = try std.ArrayList([]const u8).initCapacity(allocator, module_objects.len + 1);
+                defer all_object_paths.deinit(allocator);
+                try all_object_paths.appendSlice(allocator, module_objects);
+                try all_object_paths.append(allocator, options.object_path);
+
+                break :blk try toolchain.linkObjects(allocator, .{
+                    .object_paths = all_object_paths.items,
                     .output_dir = options.output_dir,
                     .executable_name = options.executable_name,
                 });
@@ -159,13 +195,16 @@ pub fn compileSource(allocator: std.mem.Allocator, source: []const u8, options: 
         };
     }
 
+    for (module_objects) |path| allocator.free(path);
+    allocator.free(module_objects);
+
     if (options.run) {
         try toolchain.runArtifact(allocator, artifact orelse return error.MissingBuildArtifact);
     }
 
     return .{
         .allocator = allocator,
-        .statements = all_statements,
+        .statements = statements,
         .instructions = instructions,
         .asm_text = asm_text,
         .llvm_ir_text = llvm_ir_text,

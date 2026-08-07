@@ -57,6 +57,19 @@ pub fn emitLLVMObject(allocator: std.mem.Allocator, instructions: []const Instru
     return try backend.generateObject(instructions);
 }
 
+// Like emitLLVMObject, but names the synthetic top-level entry function
+// `entry_name` (instead of "main") and gives it internal linkage. Used when
+// compiling a single module (translation unit) of a multi-object build to its
+// own .o file: only the program's actual entry object should export "main",
+// so every other object needs a non-colliding, non-exported stand-in to hold
+// any top-level instructions (struct/function registration has no such
+// instructions today, but this keeps module objects link-safe regardless).
+pub fn emitLLVMObjectNamed(allocator: std.mem.Allocator, instructions: []const Instruction, entry_name: []const u8) ![]const u8 {
+    var backend = try LLVMBackend.initEntry(allocator, entry_name, true);
+    defer backend.deinit();
+    return try backend.generateObject(instructions);
+}
+
 pub const LLVMBackend = struct {
     allocator: std.mem.Allocator,
     context: c.LLVMContextRef,
@@ -89,13 +102,22 @@ pub const LLVMBackend = struct {
     };
 
     pub fn init(allocator: std.mem.Allocator) !LLVMBackend {
+        return initEntry(allocator, "main", false);
+    }
+
+    pub fn initEntry(allocator: std.mem.Allocator, entry_name: []const u8, internal_linkage: bool) !LLVMBackend {
         const context = c.LLVMContextCreate();
         const module = c.LLVMModuleCreateWithNameInContext("midnight", context);
         const builder = c.LLVMCreateBuilderInContext(context);
 
         const i32_type = c.LLVMInt32TypeInContext(context);
         const main_type = c.LLVMFunctionType(i32_type, null, 0, 0);
-        const main_function = c.LLVMAddFunction(module, "main", main_type);
+        const entry_name_z = try allocator.dupeZ(u8, entry_name);
+        defer allocator.free(entry_name_z);
+        const main_function = c.LLVMAddFunction(module, entry_name_z, main_type);
+        if (internal_linkage) {
+            c.LLVMSetLinkage(main_function, c.LLVMInternalLinkage);
+        }
         const entry = c.LLVMAppendBasicBlockInContext(context, main_function, "entry");
         c.LLVMPositionBuilderAtEnd(builder, entry);
 
