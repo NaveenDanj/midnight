@@ -16,6 +16,13 @@ pub const ReceiverContext = struct {
     receiver_name: []const u8,
 };
 
+fn isReceiverMemberIdentifier(semantic: ?*const SemanticResult, expr: *const Expr, struct_decl: *const StructStmt) bool {
+    if (semantic) |result| {
+        return result.receiver_member_exprs.contains(expr);
+    }
+    return receiverHasProperty(struct_decl, expr.Identifier.name);
+}
+
 pub fn lowerExpression(builder: *InstructionBuilder, expr: *Expr) !Value {
     return lowerExpressionWithSemanticsAndExpectedTypeAndReceiver(builder, expr, null, null, null);
 }
@@ -79,7 +86,7 @@ pub fn lowerExpressionWithSemanticsAndExpectedTypeAndReceiver(
         },
         .Identifier => {
             if (receiver_ctx) |ctx| {
-                if (receiverHasProperty(ctx.struct_decl, expr.Identifier.name)) {
+                if (isReceiverMemberIdentifier(semantic, expr, ctx.struct_decl)) {
                     const t = builder.newTemp();
                     try builder.emit(.{ .LoadField = .{
                         .object = .{ .variable = ctx.receiver_name },
@@ -228,6 +235,14 @@ pub fn lowerExpressionWithSemanticsAndExpectedTypeAndReceiver(
             });
             return .{ .temp = t };
         },
+        .NullLiteral => {
+            const t = builder.newTemp();
+            try builder.emit(.{ .LoadConstNull = .{
+                .dest = t,
+                .resolvedType = .{ .isArray = false, .kind = .NULL, .struct_name = null },
+            } });
+            return .{ .temp = t };
+        },
         else => return LowerError.UnsupportedExpression,
     }
 }
@@ -261,7 +276,7 @@ pub fn lowerLValueWithSemanticsAndReceiverAndType(
     switch (expr.*) {
         .Identifier => {
             if (receiver_ctx) |ctx| {
-                if (receiverHasProperty(ctx.struct_decl, expr.Identifier.name)) {
+                if (isReceiverMemberIdentifier(semantic, expr, ctx.struct_decl)) {
                     try builder.emit(.{
                         .StoreField = .{
                             .object = .{ .variable = ctx.receiver_name },

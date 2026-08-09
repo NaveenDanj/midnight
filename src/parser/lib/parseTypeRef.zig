@@ -9,6 +9,12 @@ const primitive_type_tokens = [_]TokenType{ .KwInt, .KwFloat, .KwBool, .KwVoid, 
 pub fn parseType(self: *Parser) ParserError!TypeRef {
     var base_type = try parseBaseType(self);
     base_type = try parseArraySuffix(self, base_type);
+
+    if (self.check(.QuestionMark)) {
+        _ = try self.expect(.QuestionMark);
+        base_type.is_nullable = true;
+    }
+
     return base_type;
 }
 

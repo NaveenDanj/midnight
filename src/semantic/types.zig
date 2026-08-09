@@ -16,7 +16,7 @@ pub const STRUCT = Type{ .kind = .STRUCT };
 
 pub const EMPTY = Type{ .kind = .EMPTY };
 
-pub const NULL = Type{ .kind = .EMPTY, .is_nullable = true };
+pub const NULL = Type{ .kind = .NULL, .is_nullable = true };
 
 pub const TypeError = error{
     TypeMismatch,
@@ -25,7 +25,7 @@ pub const TypeError = error{
     NotAVariable,
 };
 
-pub const TypeKind = enum { INT, BOOL, FLOAT, VOID, STRING, FUNCTION, STRUCT, EMPTY };
+pub const TypeKind = enum { INT, BOOL, FLOAT, VOID, STRING, FUNCTION, STRUCT, EMPTY, NULL };
 
 pub const Type = struct {
     kind: TypeKind,

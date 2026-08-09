@@ -52,6 +52,8 @@ pub const StructChecker = struct {
             const actualType = try exprChecker.evaluate(field.value);
 
             if (!typeCompatibility.isAssignable(expectedType, actualType)) {
+                std.debug.print("Expected type: {}\n", .{expectedType});
+                std.debug.print("Actual type: {}\n", .{actualType});
                 return SemanticError.StructFieldMismatch;
             }
         }

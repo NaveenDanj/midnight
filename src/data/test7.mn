@@ -7,3 +7,10 @@ var Node node = Node{
     val = 10,
     next = null
 };
+
+node.next = Node{
+    val = 20,
+    next = null
+};
+
+print(node.next.val);

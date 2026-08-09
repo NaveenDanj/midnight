@@ -85,9 +85,15 @@ pub fn parseStructVariableDecl(self: *Parser) ParserError!*StructPropertyField {
         return ParserError.UnExpectedToken;
     }
 
-    const propType = try parseType(self);
+    var propType = try parseType(self);
 
     const fieldNameToken = try self.expect(.Identifier);
+
+    if (self.check(.QuestionMark)) {
+        _ = try self.expect(.QuestionMark);
+        propType.is_nullable = true;
+    }
+
     _ = try self.expect(.Semicolon);
 
     const propertyField = try self.allocator.create(StructPropertyField);

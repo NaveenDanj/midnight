@@ -1,7 +1,6 @@
-
 struct Node {
     var int value;
-    var Node next;
+    var Node? next;
 }
 
 struct LinkedList {
@@ -25,11 +24,14 @@ struct LinkedList {
     }
 
     func walk() void {
-        var Node current = self.head;
-        while(current.next != null){
+        var Node? current = self.head;
+        while(current != null){
             print(current.value);
+            print("");
             current = current.next;
         }
+
+        print("====================================");
     }
 
 }
@@ -42,11 +44,13 @@ var LinkedList linkedList = LinkedList{
         value = values[0],
         next = null
     }
-}
+};
 
 while(index < 6) {
     linkedList.appendNode(values[index]);
-    index += 1;
+    index = index + 1;
 }
 
+linkedList.walk();
+linkedList.appendNode(7);
 linkedList.walk();

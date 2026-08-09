@@ -235,7 +235,9 @@ pub fn parseBoolean(self: *Parser) ParserError!*Expr {
 
 pub fn parseNull(self: *Parser) ParserError!*Expr {
     _ = try self.expect(.KwNull);
-    const nullLiteral = ast.NullLiteral{};
+    const nullLiteral = ast.NullLiteral{
+        .value = "null",
+    };
     const expr = try self.allocator.create(Expr);
     expr.* = .{ .NullLiteral = nullLiteral };
     return expr;

@@ -15,6 +15,7 @@ pub const SemanticResult = struct {
     param_types: std.AutoHashMap(*const stmt_ast.Param, Type),
     struct_property_types: std.AutoHashMap(*const stmt_ast.StructPropertyField, Type),
     struct_method_return_types: std.AutoHashMap(*const stmt_ast.StructMethodField, Type),
+    receiver_member_exprs: std.AutoHashMap(*const expr_ast.Expr, void),
 
     pub fn init(allocator: std.mem.Allocator) SemanticResult {
         return .{
@@ -28,6 +29,7 @@ pub const SemanticResult = struct {
             .param_types = std.AutoHashMap(*const stmt_ast.Param, Type).init(allocator),
             .struct_property_types = std.AutoHashMap(*const stmt_ast.StructPropertyField, Type).init(allocator),
             .struct_method_return_types = std.AutoHashMap(*const stmt_ast.StructMethodField, Type).init(allocator),
+            .receiver_member_exprs = std.AutoHashMap(*const expr_ast.Expr, void).init(allocator),
         };
     }
 
@@ -41,5 +43,6 @@ pub const SemanticResult = struct {
         self.param_types.deinit();
         self.struct_property_types.deinit();
         self.struct_method_return_types.deinit();
+        self.receiver_member_exprs.deinit();
     }
 };

@@ -142,6 +142,39 @@ pub fn lowerBinaryOp(self: *LLVMBackend, inst: anytype) !void {
                         else => return LLVMBackendError.UnsupportedBinaryOperation,
                     };
                 },
+                .STRUCT, .NULL => blk2: {
+                    const left_is_null = c.LLVMBuildICmp(
+                        self.builder,
+                        c.LLVMIntEQ,
+                        left,
+                        c.LLVMConstNull(try self.llvmType(operand_type)),
+                        try self.nextName("left_is_null"),
+                    );
+
+                    const right_is_null = c.LLVMBuildICmp(
+                        self.builder,
+                        c.LLVMIntEQ,
+                        right,
+                        c.LLVMConstNull(try self.llvmType(operand_type)),
+                        try self.nextName("right_is_null"),
+                    );
+
+                    break :blk2 switch (inst.op) {
+                        .Equal => c.LLVMBuildAnd(
+                            self.builder,
+                            left_is_null,
+                            right_is_null,
+                            name,
+                        ),
+                        .NotEqual => c.LLVMBuildOr(
+                            self.builder,
+                            c.LLVMBuildNot(self.builder, left_is_null, try self.nextName("not_left_is_null")),
+                            c.LLVMBuildNot(self.builder, right_is_null, try self.nextName("not_right_is_null")),
+                            name,
+                        ),
+                        else => return LLVMBackendError.UnsupportedBinaryOperation,
+                    };
+                },
                 .FLOAT => c.LLVMBuildFCmp(self.builder, try realPredicate(inst.op), left, right, name),
                 .INT, .BOOL => c.LLVMBuildICmp(self.builder, try intPredicate(inst.op), left, right, name),
                 else => return LLVMBackendError.UnsupportedBinaryOperation,

@@ -269,6 +269,11 @@ pub const LLVMBackend = struct {
             .StoreField => |inst| try lowerStoreField(self, inst),
             .AllocStruct => |inst| try lowerAllocStruct(self, inst),
             .LoadField => |inst| try lowerLoadField(self, inst),
+            .LoadConstNull => |inst| {
+                const typ = inst.resolvedType orelse return LLVMBackendError.MissingResolvedType;
+                const value = c.LLVMConstNull(try self.llvmType(typ));
+                try self.putTemp(inst.dest, value, typ);
+            },
             .ParamBind,
             .JumpWhileTrue,
             => return LLVMBackendError.UnsupportedInstruction,
@@ -441,6 +446,7 @@ pub const LLVMBackend = struct {
             .STRING => c.LLVMPointerTypeInContext(self.context, 0),
             .STRUCT => c.LLVMPointerType(try self.structBodyType(typ.struct_name orelse return LLVMBackendError.UnsupportedType), 0),
             .FUNCTION, .EMPTY => LLVMBackendError.UnsupportedType,
+            .NULL => c.LLVMPointerTypeInContext(self.context, 0),
         };
     }
 
