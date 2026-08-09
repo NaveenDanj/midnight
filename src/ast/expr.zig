@@ -6,6 +6,7 @@ pub const Expr = union(enum) {
     FloatLiteral: FloatLiteral,
     BoolLiteral: BooleanLiteral,
     StringLiteral: StringLiteral,
+    NullLiteral: NullLiteral,
     Identifier: IdentifierExpr,
     ArrayLiteral: ArrayExpression,
     ArrayAccess: ArrayAccess,
@@ -76,3 +77,5 @@ pub const BooleanLiteral = struct {
 pub const StringLiteral = struct {
     value: []const u8,
 };
+
+pub const NullLiteral = struct { value: []const u8 = "null" };

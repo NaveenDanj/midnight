@@ -87,6 +87,7 @@ pub const Lexer = struct {
             '/' => return self.makeToken(TokenType.Slash),
             '"' => return try self.scanString(),
             '%' => return self.makeToken(TokenType.Modulo),
+            '?' => return self.makeToken(TokenType.QuestionMark),
 
             '!' => return if (self.isMatch('='))
                 self.makeToken(TokenType.NotEqual)

@@ -177,6 +177,7 @@ pub const AssignmentChecker = struct {
                     }
 
                     try self.result.var_assign_types.put(varAssign, exprType);
+                    try self.result.receiver_member_exprs.put(varAssign.target, {});
                     return;
                 },
                 .StructMethod => |method_ptr| {

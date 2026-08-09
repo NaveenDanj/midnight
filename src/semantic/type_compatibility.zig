@@ -21,6 +21,10 @@ pub fn equals(a: Type, b: Type) bool {
 pub fn isAssignable(expected: Type, actual: Type) bool {
     if (expected.kind == .VOID) return false;
 
+    if (expected.is_nullable and actual.kind == .NULL and actual.is_nullable) {
+        return true;
+    }
+
     if (expected.kind == .STRUCT) {
         return equals(expected, actual);
     }

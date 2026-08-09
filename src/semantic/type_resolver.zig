@@ -16,6 +16,8 @@ pub fn resolveTypeRef(context: *SemanticContext, type_ref: TypeRef) SemanticErro
         types.Type{ .kind = .VOID }
     else if (std.mem.eql(u8, type_ref.name, "string"))
         types.Type{ .kind = .STRING }
+    else if (std.mem.eql(u8, type_ref.name, "null"))
+        types.Type{ .kind = .NULL, .is_nullable = true }
     else blk: {
         if (!context.structs.contains(type_ref.name)) {
             return SemanticError.UndefinedVariable;
@@ -26,6 +28,7 @@ pub fn resolveTypeRef(context: *SemanticContext, type_ref: TypeRef) SemanticErro
     resolved.isArray = type_ref.is_array;
     resolved.dynamicArray = type_ref.dynamic_array;
     resolved.staticLength = type_ref.static_length;
+    resolved.is_nullable = type_ref.is_nullable;
     return resolved;
 }
 
@@ -42,6 +45,7 @@ pub fn typeToTypeRef(typ: types.Type) TypeRef {
         .STRING => "string",
         .STRUCT => typ.struct_name orelse "void",
         .FUNCTION, .EMPTY => "void",
+        .NULL => "null",
     };
 
     return .{
@@ -49,6 +53,7 @@ pub fn typeToTypeRef(typ: types.Type) TypeRef {
         .is_array = typ.isArray,
         .dynamic_array = typ.dynamicArray,
         .static_length = typ.staticLength,
+        .is_nullable = typ.is_nullable,
     };
 }
 
@@ -63,11 +68,14 @@ pub fn resolveTypeRefUnchecked(type_ref: TypeRef) types.Type {
         types.Type{ .kind = .VOID }
     else if (std.mem.eql(u8, type_ref.name, "string"))
         types.Type{ .kind = .STRING }
+    else if (std.mem.eql(u8, type_ref.name, "null"))
+        types.Type{ .kind = .NULL }
     else
         types.Type{ .kind = .STRUCT, .struct_name = type_ref.name };
 
     resolved.isArray = type_ref.is_array;
     resolved.dynamicArray = type_ref.dynamic_array;
     resolved.staticLength = type_ref.static_length;
+    resolved.is_nullable = type_ref.is_nullable;
     return resolved;
 }

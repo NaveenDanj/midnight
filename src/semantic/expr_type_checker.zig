@@ -35,12 +35,14 @@ pub const ExprTypeChecker = struct {
             .FloatLiteral => return try self.record(expr, types.FLOAT),
             .BoolLiteral => return try self.record(expr, types.BOOL),
             .StringLiteral => return try self.record(expr, types.STRING),
+            .NullLiteral => return try self.record(expr, types.NULL),
             .Identifier => {
                 const idExpr = expr.Identifier;
                 if (self.scopeStack.lookupSymbol(idExpr.name)) |symbol| {
                     return try self.record(expr, symbol.symbolType);
                 }
                 if (try self.resolveReceiverMemberType(idExpr.name)) |member_type| {
+                    try self.result.receiver_member_exprs.put(expr, {});
                     return try self.record(expr, member_type);
                 }
                 return SemanticError.UndefinedVariable;
@@ -81,6 +83,11 @@ pub const ExprTypeChecker = struct {
                     return SemanticError.TypeMismatch;
                 }
                 symbol.symbolType.struct_name = structInit.structName;
+
+                for (structInit.fields) |field| {
+                    _ = try self.evaluate(field.value);
+                }
+
                 return try self.record(expr, symbol.symbolType);
             },
             .ExpressionStmt => return try self.record(expr, try self.evaluate(expr.ExpressionStmt)),

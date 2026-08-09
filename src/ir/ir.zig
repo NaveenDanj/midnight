@@ -55,6 +55,10 @@ pub const Instruction = union(enum) {
         dest: u32,
         resolvedType: ?Type,
     },
+    LoadConstNull: struct {
+        dest: u32,
+        resolvedType: ?Type,
+    },
     AllocArray: struct {
         length: u32,
         dest: u32,

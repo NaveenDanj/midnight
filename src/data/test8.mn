@@ -1,0 +1,84 @@
+struct Node {
+    var int val;
+    var Node? left;
+    var Node? right;
+}
+
+struct Tree {
+    var Node? head;
+
+    func getHead() Node? {
+        return self.head;
+    }
+
+    func createNode(int val) Node { 
+        var Node newNode = Node{
+            val = val,
+            left = null,
+            right = null
+        };
+        return newNode;
+    }
+
+    func insertNode(Node head, int val) void {
+
+        if(head.val > val){
+            
+            if(head.left == null){
+                head.left = self.createNode(val);
+            } else {
+                self.insertNode(head.left, val);
+            }
+
+        } else {
+
+            if(head.right == null){
+                head.right = self.createNode(val);
+            } else {
+                self.insertNode(head.right, val);
+            }
+        }
+
+    }
+
+    func walkNode(Node? node) int {
+
+        if(node == null){
+            return 1;
+        }
+
+        self.walkNode(node.left);
+
+        print(node.val);
+        print(" ");
+
+        self.walkNode(node.right);
+
+        return 1;
+    }
+
+    func walk() void {
+        self.walkNode(self.head);
+    }
+
+}
+
+var int[6] values = [45,1,78,32,56,12];
+var int index = 1;
+
+var Tree tree = Tree{
+    head = Node{
+        val = values[0],
+        left = null,
+        right = null
+    }
+};
+
+while(index < 6) {
+    tree.insertNode(tree.head, values[index]);
+    index = index + 1;
+}
+
+tree.walk();
+var Node? head = tree.getHead();
+print(head.val);
