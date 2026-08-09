@@ -16,6 +16,8 @@ pub const STRUCT = Type{ .kind = .STRUCT };
 
 pub const EMPTY = Type{ .kind = .EMPTY };
 
+pub const NULL = Type{ .kind = .EMPTY, .is_nullable = true };
+
 pub const TypeError = error{
     TypeMismatch,
     InvalidType,
@@ -31,6 +33,7 @@ pub const Type = struct {
     isArray: bool = false,
     dynamicArray: bool = false,
     staticLength: ?u32 = null,
+    is_nullable: bool = false,
 
     pub fn isNumeric(self: Type) bool {
         return self.kind == .INT or self.kind == .FLOAT;

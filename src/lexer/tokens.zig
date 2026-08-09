@@ -13,6 +13,7 @@ pub const TokenType = enum {
     Dot,
     Pipe,
     Ampersand,
+    QuestionMark,
     // operators
     Equal,
     DoubleEqual,

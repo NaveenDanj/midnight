@@ -176,6 +176,10 @@ pub fn parsePrimary(self: *Parser) ParserError!*Expr {
         return try parseBoolean(self);
     }
 
+    if (self.check(.KwNull)) {
+        return try parseNull(self);
+    }
+
     if (self.match(.LParen)) {
         const expr = try parseExpr(self);
         _ = try self.expect(.RParen);
@@ -227,6 +231,14 @@ pub fn parseBoolean(self: *Parser) ParserError!*Expr {
         expr.* = .{ .BoolLiteral = boolLiteral };
         return expr;
     }
+}
+
+pub fn parseNull(self: *Parser) ParserError!*Expr {
+    _ = try self.expect(.KwNull);
+    const nullLiteral = ast.NullLiteral{};
+    const expr = try self.allocator.create(Expr);
+    expr.* = .{ .NullLiteral = nullLiteral };
+    return expr;
 }
 
 pub fn parseString(self: *Parser) ParserError!*Expr {

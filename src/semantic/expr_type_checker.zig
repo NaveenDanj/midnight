@@ -35,6 +35,7 @@ pub const ExprTypeChecker = struct {
             .FloatLiteral => return try self.record(expr, types.FLOAT),
             .BoolLiteral => return try self.record(expr, types.BOOL),
             .StringLiteral => return try self.record(expr, types.STRING),
+            .NullLiteral => return try self.record(expr, types.NULL),
             .Identifier => {
                 const idExpr = expr.Identifier;
                 if (self.scopeStack.lookupSymbol(idExpr.name)) |symbol| {

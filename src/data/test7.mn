@@ -1,0 +1,9 @@
+struct Node {
+    var int val;
+    var Node? next;
+}
+
+var Node node = Node{
+    val = 10,
+    next = null
+};
