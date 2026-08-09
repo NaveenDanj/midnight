@@ -5,7 +5,11 @@ struct Node {
 }
 
 struct Tree {
-    var Node head;
+    var Node? head;
+
+    func getHead() Node? {
+        return self.head;
+    }
 
     func createNode(int val) Node { 
         var Node newNode = Node{
@@ -38,8 +42,9 @@ struct Tree {
     }
 
     func walkNode(Node? node) int {
+
         if(node == null){
-            return 0;
+            return 1;
         }
 
         self.walkNode(node.left);
@@ -49,7 +54,7 @@ struct Tree {
 
         self.walkNode(node.right);
 
-        return 0;
+        return 1;
     }
 
     func walk() void {
@@ -57,7 +62,6 @@ struct Tree {
     }
 
 }
-
 
 var int[6] values = [45,1,78,32,56,12];
 var int index = 1;
@@ -76,3 +80,5 @@ while(index < 6) {
 }
 
 tree.walk();
+var Node? head = tree.getHead();
+print(head.val);
